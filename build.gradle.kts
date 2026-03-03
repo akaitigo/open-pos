@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "2.1.10" apply false
+    kotlin("jvm") version "2.3.10" apply false
     kotlin("plugin.allopen") version "2.1.10" apply false
     kotlin("plugin.noarg") version "2.1.10" apply false
     id("io.quarkus") version "3.17.8" apply false
