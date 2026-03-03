@@ -8,10 +8,12 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "vitest run"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
+    "vitest": "^4.0.18",
     "zod": "^3.24.0"
   },
   "peerDependencies": {
