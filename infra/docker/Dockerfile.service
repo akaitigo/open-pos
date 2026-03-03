@@ -1,0 +1,18 @@
+# Multi-stage build for Quarkus services
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /app
+COPY gradle gradle
+COPY gradlew .
+COPY settings.gradle.kts .
+COPY build.gradle.kts .
+COPY gradle.properties .
+ARG SERVICE_NAME
+COPY services/${SERVICE_NAME} services/${SERVICE_NAME}
+RUN chmod +x gradlew && ./gradlew :services:${SERVICE_NAME}:quarkusBuild -Dquarkus.package.jar.type=uber-jar
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+ARG SERVICE_NAME
+COPY --from=build /app/services/${SERVICE_NAME}/build/*-runner.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,0 +1,141 @@
+{
+  "users": [
+    {
+      "name": "openpos",
+      "password_hash": "",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": "administrator"
+    }
+  ],
+  "vhosts": [
+    {"name": "/"}
+  ],
+  "permissions": [
+    {
+      "user": "openpos",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "openpos.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false
+    },
+    {
+      "name": "openpos.events.dlx",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false
+    }
+  ],
+  "queues": [
+    {
+      "name": "inventory.sale-completed",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "openpos.events.dlx",
+        "x-dead-letter-routing-key": "dlq.inventory.sale-completed"
+      }
+    },
+    {
+      "name": "analytics.sale-completed",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "openpos.events.dlx",
+        "x-dead-letter-routing-key": "dlq.analytics.sale-completed"
+      }
+    },
+    {
+      "name": "inventory.sale-voided",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "openpos.events.dlx",
+        "x-dead-letter-routing-key": "dlq.inventory.sale-voided"
+      }
+    },
+    {
+      "name": "analytics.sale-voided",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "openpos.events.dlx",
+        "x-dead-letter-routing-key": "dlq.analytics.sale-voided"
+      }
+    },
+    {
+      "name": "gateway.product-updated",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "openpos.events.dlx",
+        "x-dead-letter-routing-key": "dlq.gateway.product-updated"
+      }
+    },
+    {
+      "name": "openpos.events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "openpos.events",
+      "vhost": "/",
+      "destination": "inventory.sale-completed",
+      "destination_type": "queue",
+      "routing_key": "sale.completed"
+    },
+    {
+      "source": "openpos.events",
+      "vhost": "/",
+      "destination": "analytics.sale-completed",
+      "destination_type": "queue",
+      "routing_key": "sale.completed"
+    },
+    {
+      "source": "openpos.events",
+      "vhost": "/",
+      "destination": "inventory.sale-voided",
+      "destination_type": "queue",
+      "routing_key": "sale.voided"
+    },
+    {
+      "source": "openpos.events",
+      "vhost": "/",
+      "destination": "analytics.sale-voided",
+      "destination_type": "queue",
+      "routing_key": "sale.voided"
+    },
+    {
+      "source": "openpos.events",
+      "vhost": "/",
+      "destination": "gateway.product-updated",
+      "destination_type": "queue",
+      "routing_key": "product.updated"
+    },
+    {
+      "source": "openpos.events.dlx",
+      "vhost": "/",
+      "destination": "openpos.events.dlq",
+      "destination_type": "queue",
+      "routing_key": "#"
+    }
+  ]
+}

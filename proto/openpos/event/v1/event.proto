@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+// openpos.event.v1 パッケージはサービス間イベントメッセージングの型を提供します
+// RabbitMQ 経由でサービス間に配信されるイベントのスキーマ定義です
+package openpos.event.v1;
+
+// イベントエンベロープ（全イベント共通のラッパー）
+// RabbitMQ メッセージのボディとして使用します
+// event_id は冪等性キーとして重複排除に利用します
+message EventEnvelope {
+  // イベントID（UUID、冪等性キー）
+  string event_id = 1;
+  // イベントタイプ（例: "sale.completed", "stock.low"）
+  string event_type = 2;
+  // イベント発生日時（ISO 8601 形式）
+  string timestamp = 3;
+  // テナントID（マルチテナント対応用）
+  string organization_id = 4;
+  // イベントペイロード（JSON エンコードされたバイト列）
+  bytes payload = 5;
+  // イベント発生元サービス（例: "pos-service", "inventory-service"）
+  string source = 6;
+}
+
+// 売上完了イベントペイロード
+// POS サービスが取引確定時に発行します
+// 在庫サービス・分析サービスが購読します
+message SaleCompletedEvent {
+  // 取引ID
+  string transaction_id = 1;
+  // 店舗ID
+  string store_id = 2;
+  // 端末ID
+  string terminal_id = 3;
+  // 取引明細
+  repeated SaleItem items = 4;
+  // 合計金額（税込、銭単位）
+  int64 total_amount = 5;
+  // 取引日時（ISO 8601 形式）
+  string transacted_at = 6;
+}
+
+// 売上明細（イベント用）
+// SaleCompletedEvent および SaleVoidedEvent で使用します
+message SaleItem {
+  // 商品ID
+  string product_id = 1;
+  // 数量
+  int32 quantity = 2;
+  // 単価（銭単位）
+  int64 unit_price = 3;
+  // 小計（銭単位）
+  int64 subtotal = 4;
+}
+
+// 売上取消イベントペイロード
+// POS サービスが取引無効化時に発行します
+// 在庫サービスが購読し、在庫を戻します
+message SaleVoidedEvent {
+  // 元の取引ID
+  string original_transaction_id = 1;
+  // 取消取引ID
+  string void_transaction_id = 2;
+  // 店舗ID
+  string store_id = 3;
+  // 取消明細（在庫戻し対象）
+  repeated SaleItem items = 4;
+}
+
+// 商品更新イベントペイロード
+// 商品サービスが商品マスタ変更時に発行します
+// POS キャッシュ無効化に利用します
+message ProductUpdatedEvent {
+  // 商品ID
+  string product_id = 1;
+  // 更新種別
+  UpdateType update_type = 2;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 3;
+}
+
+// 更新種別
+// ProductUpdatedEvent で使用する操作の種類を示します
+enum UpdateType {
+  // 未指定（デフォルト値。通常このまま使用しません）
+  UPDATE_TYPE_UNSPECIFIED = 0;
+  // 作成
+  UPDATE_TYPE_CREATED = 1;
+  // 更新
+  UPDATE_TYPE_UPDATED = 2;
+  // 削除
+  UPDATE_TYPE_DELETED = 3;
+}
+
+// 在庫低下イベントペイロード
+// 在庫サービスが在庫数がアラート閾値を下回った際に発行します
+// 通知サービスや発注推奨機能が購読します
+message StockLowEvent {
+  // 商品ID
+  string product_id = 1;
+  // 店舗ID
+  string store_id = 2;
+  // 現在在庫数
+  int32 current_quantity = 3;
+  // アラート閾値（この値以下でイベント発行）
+  int32 threshold = 4;
+}

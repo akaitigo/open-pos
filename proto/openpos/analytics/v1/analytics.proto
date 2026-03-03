@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+// openpos.analytics.v1 パッケージは売上分析の型とサービスを提供します
+package openpos.analytics.v1;
+
+import "openpos/common/v1/common.proto";
+
+// 売上分析サービス
+// 日次・商品別・時間帯別の売上集計を提供します
+// データは SaleCompleted イベントを非同期に集計して保持します
+service AnalyticsService {
+  // 日次売上を取得する（日付範囲指定、インボイス対応の税率別内訳含む）
+  rpc GetDailySales(GetDailySalesRequest) returns (GetDailySalesResponse);
+  // 商品別売上を取得する（販売数・売上金額でソート可）
+  rpc GetProductSales(GetProductSalesRequest) returns (GetProductSalesResponse);
+  // 時間帯別売上を取得する（特定日のピーク時間帯分析に使用）
+  rpc GetHourlySales(GetHourlySalesRequest) returns (GetHourlySalesResponse);
+  // 売上サマリーを取得する（期間合計・客単価・支払方法別集計）
+  rpc GetSalesSummary(GetSalesSummaryRequest) returns (SalesSummary);
+}
+
+// 日次売上
+// 店舗ごとに1日1レコード集計します
+// 金額フィールドはすべて銭単位（10000 = 100円）です
+message DailySales {
+  // 集計日（ISO 8601 日付形式: 例 "2024-01-15"）
+  string date = 1;
+  // 店舗ID
+  string store_id = 2;
+  // 税込総売上（銭単位）
+  int64 gross_amount = 3;
+  // 税抜売上（銭単位）
+  int64 net_amount = 4;
+  // 税額（銭単位）
+  int64 tax_amount = 5;
+  // 割引額（銭単位）
+  int64 discount_amount = 6;
+  // 取引件数
+  int32 transaction_count = 7;
+  // 現金売上額（銭単位）
+  int64 cash_amount = 8;
+  // クレジットカード売上額（銭単位）
+  int64 card_amount = 9;
+  // QRコード決済売上額（銭単位）
+  int64 qr_amount = 10;
+}
+
+// 商品別売上
+// 指定期間内の商品ごとの販売集計です
+message ProductSales {
+  // 商品ID
+  string product_id = 1;
+  // 商品名（集計時点のスナップショット）
+  string product_name = 2;
+  // 販売数量
+  int32 quantity_sold = 3;
+  // 合計売上金額（税込、銭単位）
+  int64 total_amount = 4;
+  // 販売に含まれた取引件数
+  int32 transaction_count = 5;
+}
+
+// 時間帯別売上
+// 指定日の時間帯（0-23時）ごとの集計です
+// ピーク時間帯の把握・シフト計画に活用します
+message HourlySales {
+  // 時間帯（0〜23）
+  int32 hour = 1;
+  // 売上金額（税込、銭単位）
+  int64 amount = 2;
+  // 取引件数
+  int32 transaction_count = 3;
+}
+
+// 売上サマリー
+// 指定期間の合計・客単価・支払方法別集計をまとめたサマリーです
+message SalesSummary {
+  // 集計期間
+  openpos.common.v1.DateRange period = 1;
+  // 税込総売上（銭単位）
+  int64 total_gross = 2;
+  // 税抜総売上（銭単位）
+  int64 total_net = 3;
+  // 総税額（銭単位）
+  int64 total_tax = 4;
+  // 総割引額（銭単位）
+  int64 total_discount = 5;
+  // 総取引件数
+  int32 total_transactions = 6;
+  // 客単価（税込合計 / 取引件数、銭単位）
+  int64 average_transaction = 7;
+}
+
+// === リクエスト/レスポンス ===
+
+// 日次売上取得リクエスト
+message GetDailySalesRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 集計期間（必須、最大365日を推奨）
+  openpos.common.v1.DateRange date_range = 2;
+}
+
+// 日次売上取得レスポンス
+message GetDailySalesResponse {
+  // 日次売上リスト（日付昇順）
+  repeated DailySales daily_sales = 1;
+}
+
+// 商品別売上取得リクエスト
+message GetProductSalesRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 集計期間（必須）
+  openpos.common.v1.DateRange date_range = 2;
+  // ページネーション条件
+  openpos.common.v1.PaginationRequest pagination = 3;
+  // ソート基準（"quantity": 販売数降順、"amount": 売上金額降順）
+  string sort_by = 4;
+}
+
+// 商品別売上取得レスポンス
+message GetProductSalesResponse {
+  // 商品別売上リスト
+  repeated ProductSales product_sales = 1;
+  // ページネーション情報
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+// 時間帯別売上取得リクエスト
+message GetHourlySalesRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 集計対象日（ISO 8601 日付形式: 例 "2024-01-15"）
+  string date = 2;
+}
+
+// 時間帯別売上取得レスポンス
+message GetHourlySalesResponse {
+  // 時間帯別売上リスト（0〜23時の全時間帯、取引ゼロの時間帯も含む）
+  repeated HourlySales hourly_sales = 1;
+}
+
+// 売上サマリー取得リクエスト
+message GetSalesSummaryRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 集計期間（必須）
+  openpos.common.v1.DateRange date_range = 2;
+}

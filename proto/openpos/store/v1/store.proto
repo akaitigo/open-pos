@@ -1,0 +1,342 @@
+syntax = "proto3";
+
+// openpos.store.v1 パッケージは組織・店舗・端末・スタッフ管理の型とサービスを提供します
+package openpos.store.v1;
+
+import "openpos/common/v1/common.proto";
+
+// 店舗管理サービス
+// マルチテナント構成の組織・店舗・端末・スタッフの CRUD と PIN 認証を提供します
+service StoreService {
+  // 組織を作成する（テナント登録）
+  rpc CreateOrganization(CreateOrganizationRequest) returns (Organization);
+  // 組織を取得する
+  rpc GetOrganization(GetOrganizationRequest) returns (Organization);
+  // 組織を更新する（適格請求書発行事業者番号等）
+  rpc UpdateOrganization(UpdateOrganizationRequest) returns (Organization);
+
+  // 店舗を作成する
+  rpc CreateStore(CreateStoreRequest) returns (Store);
+  // 店舗を取得する
+  rpc GetStore(GetStoreRequest) returns (Store);
+  // 店舗一覧を取得する
+  rpc ListStores(ListStoresRequest) returns (ListStoresResponse);
+  // 店舗を更新する
+  rpc UpdateStore(UpdateStoreRequest) returns (Store);
+
+  // 端末を登録する（POS 端末の初回セットアップ）
+  rpc RegisterTerminal(RegisterTerminalRequest) returns (Terminal);
+  // 端末一覧を取得する
+  rpc ListTerminals(ListTerminalsRequest) returns (ListTerminalsResponse);
+  // 端末の最終同期日時を更新する（ハートビート）
+  rpc UpdateTerminalSync(UpdateTerminalSyncRequest) returns (Terminal);
+
+  // スタッフを作成する
+  rpc CreateStaff(CreateStaffRequest) returns (Staff);
+  // スタッフを取得する
+  rpc GetStaff(GetStaffRequest) returns (Staff);
+  // スタッフ一覧を取得する
+  rpc ListStaff(ListStaffRequest) returns (ListStaffResponse);
+  // スタッフを更新する
+  rpc UpdateStaff(UpdateStaffRequest) returns (Staff);
+  // PIN で認証する（POS 画面のスタッフログイン）
+  rpc AuthenticateByPin(AuthenticateByPinRequest) returns (AuthenticateByPinResponse);
+}
+
+// スタッフロール
+// 権限制御に使用します（オーナー > マネージャー > キャッシャー）
+enum StaffRole {
+  // 未指定（デフォルト値）
+  STAFF_ROLE_UNSPECIFIED = 0;
+  // オーナー（全操作権限）
+  STAFF_ROLE_OWNER = 1;
+  // マネージャー（レポート・スタッフ管理権限）
+  STAFF_ROLE_MANAGER = 2;
+  // キャッシャー（取引操作権限）
+  STAFF_ROLE_CASHIER = 3;
+}
+
+// 組織
+// マルチテナント構成の最上位エンティティです
+// インボイス対応: invoice_number に適格請求書発行事業者番号を保持します
+message Organization {
+  // 組織ID（UUID）
+  string id = 1;
+  // 組織名（法人名または屋号）
+  string name = 2;
+  // 業態（例: "retail", "restaurant", "cafe"）
+  string business_type = 3;
+  // インボイス登録番号（適格請求書発行事業者番号: 例 "T1234567890123"）
+  string invoice_number = 4;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 5;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 6;
+}
+
+// 店舗
+// 組織配下の実店舗を表します
+// settings は店舗固有設定（レシート文言、営業時間等）を JSON で保持します
+message Store {
+  // 店舗ID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 店舗名
+  string name = 3;
+  // 住所
+  string address = 4;
+  // 電話番号
+  string phone = 5;
+  // タイムゾーン（IANA tz 名: 例 "Asia/Tokyo"）
+  string timezone = 6;
+  // 店舗設定（JSON 形式: レシートフッター・消費税端数処理方法等）
+  string settings = 7;
+  // 有効フラグ（false にすると POS ログイン不可）
+  bool is_active = 8;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 9;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 10;
+}
+
+// 端末
+// POS 端末（タブレット・スマートフォン等）を表します
+// terminal_code は端末ラベルに印刷する人間向けの識別コードです
+message Terminal {
+  // 端末ID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 店舗ID
+  string store_id = 3;
+  // 端末コード（人間向け識別子: 例 "POS-01"）
+  string terminal_code = 4;
+  // 端末名（例: "レジ1番"）
+  string name = 5;
+  // 有効フラグ
+  bool is_active = 6;
+  // 最終同期日時（ISO 8601 形式、オフライン検知に使用）
+  string last_sync_at = 7;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 8;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 9;
+}
+
+// スタッフ
+// POS を操作するスタッフアカウントです
+// hydra_subject は ORY Hydra の OAuth2 サブジェクトとの紐付けに使用します
+// PIN 認証は POS 画面での素早いログインに使用し、Hydra 認証とは独立しています
+message Staff {
+  // スタッフID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 所属店舗ID
+  string store_id = 3;
+  // 表示名
+  string name = 4;
+  // メールアドレス（Hydra ログイン用）
+  string email = 5;
+  // ORY Hydra のサブジェクト識別子（OAuth2 連携）
+  string hydra_subject = 6;
+  // ロール
+  StaffRole role = 7;
+  // 有効フラグ
+  bool is_active = 8;
+  // PIN 認証失敗回数（一定回数超でロック）
+  int32 failed_pin_attempts = 9;
+  // ロックフラグ（PIN 失敗超過またはマネージャーによるロック）
+  bool is_locked = 10;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 11;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 12;
+}
+
+// === リクエスト/レスポンス ===
+
+// 組織作成リクエスト
+message CreateOrganizationRequest {
+  // 組織名（必須）
+  string name = 1;
+  // 業態（必須）
+  string business_type = 2;
+  // インボイス登録番号（省略可、後から設定可能）
+  string invoice_number = 3;
+}
+
+// 組織取得リクエスト
+message GetOrganizationRequest {
+  // 組織ID（UUID）
+  string id = 1;
+}
+
+// 組織更新リクエスト
+message UpdateOrganizationRequest {
+  // 組織ID（必須）
+  string id = 1;
+  // 組織名
+  string name = 2;
+  // 業態
+  string business_type = 3;
+  // インボイス登録番号
+  string invoice_number = 4;
+}
+
+// 店舗作成リクエスト
+message CreateStoreRequest {
+  // 店舗名（必須）
+  string name = 1;
+  // 住所
+  string address = 2;
+  // 電話番号
+  string phone = 3;
+  // タイムゾーン（省略時は "Asia/Tokyo"）
+  string timezone = 4;
+  // 店舗設定（JSON 形式）
+  string settings = 5;
+}
+
+// 店舗取得リクエスト
+message GetStoreRequest {
+  // 店舗ID（UUID）
+  string id = 1;
+}
+
+// 店舗一覧取得リクエスト
+message ListStoresRequest {
+  // ページネーション条件
+  openpos.common.v1.PaginationRequest pagination = 1;
+}
+
+// 店舗一覧取得レスポンス
+message ListStoresResponse {
+  // 店舗リスト
+  repeated Store stores = 1;
+  // ページネーション情報
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+// 店舗更新リクエスト
+message UpdateStoreRequest {
+  // 店舗ID（必須）
+  string id = 1;
+  // 店舗名
+  string name = 2;
+  // 住所
+  string address = 3;
+  // 電話番号
+  string phone = 4;
+  // タイムゾーン
+  string timezone = 5;
+  // 店舗設定（JSON 形式）
+  string settings = 6;
+  // 有効フラグ
+  bool is_active = 7;
+}
+
+// 端末登録リクエスト
+message RegisterTerminalRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 端末コード（必須、店舗内一意）
+  string terminal_code = 2;
+  // 端末名（必須）
+  string name = 3;
+}
+
+// 端末一覧取得リクエスト
+message ListTerminalsRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+}
+
+// 端末一覧取得レスポンス
+message ListTerminalsResponse {
+  // 端末リスト
+  repeated Terminal terminals = 1;
+}
+
+// 端末同期日時更新リクエスト
+// 端末が定期的に呼び出してオンライン状態を通知します
+message UpdateTerminalSyncRequest {
+  // 端末ID（UUID）
+  string terminal_id = 1;
+}
+
+// スタッフ作成リクエスト
+// PIN はハッシュ化してサーバー側で保存します（平文送信は TLS 前提）
+message CreateStaffRequest {
+  // 所属店舗ID（必須）
+  string store_id = 1;
+  // 表示名（必須）
+  string name = 2;
+  // メールアドレス（必須、組織内一意）
+  string email = 3;
+  // ロール（必須）
+  StaffRole role = 4;
+  // PIN（4〜8桁の数字、必須）
+  string pin = 5;
+}
+
+// スタッフ取得リクエスト
+message GetStaffRequest {
+  // スタッフID（UUID）
+  string id = 1;
+}
+
+// スタッフ一覧取得リクエスト
+message ListStaffRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // ページネーション条件
+  openpos.common.v1.PaginationRequest pagination = 2;
+}
+
+// スタッフ一覧取得レスポンス
+message ListStaffResponse {
+  // スタッフリスト
+  repeated Staff staff = 1;
+  // ページネーション情報
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+// スタッフ更新リクエスト
+message UpdateStaffRequest {
+  // スタッフID（必須）
+  string id = 1;
+  // 表示名
+  string name = 2;
+  // メールアドレス
+  string email = 3;
+  // ロール
+  StaffRole role = 4;
+  // 新 PIN（変更する場合のみ設定）
+  string pin = 5;
+  // 有効フラグ
+  bool is_active = 6;
+}
+
+// PIN 認証リクエスト
+// POS 端末でのスタッフ切り替え時に使用します
+// レート制限: 1分間に10回失敗でロック
+message AuthenticateByPinRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // スタッフID（必須）
+  string staff_id = 2;
+  // PIN（4〜8桁の数字）
+  string pin = 3;
+}
+
+// PIN 認証レスポンス
+message AuthenticateByPinResponse {
+  // 認証成功フラグ
+  bool success = 1;
+  // 認証成功時のスタッフ情報
+  Staff staff = 2;
+  // 認証失敗理由（例: "INVALID_PIN", "ACCOUNT_LOCKED", "ACCOUNT_INACTIVE"）
+  string reason = 3;
+}

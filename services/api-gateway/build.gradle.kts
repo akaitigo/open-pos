@@ -1,0 +1,42 @@
+plugins {
+    kotlin("jvm")
+    kotlin("plugin.allopen")
+    id("io.quarkus")
+}
+
+val quarkusPlatformGroupId: String by project
+val quarkusPlatformArtifactId: String by project
+val quarkusPlatformVersion: String by project
+
+dependencies {
+    implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
+    implementation("io.quarkus:quarkus-kotlin")
+    implementation("io.quarkus:quarkus-rest")
+    implementation("io.quarkus:quarkus-rest-jackson")
+    implementation("io.quarkus:quarkus-grpc")
+    implementation("io.quarkus:quarkus-smallrye-jwt")
+    implementation("io.quarkus:quarkus-redis-client")
+    implementation("io.quarkus:quarkus-smallrye-health")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib")
+    implementation("io.quarkus:quarkus-arc")
+
+    testImplementation("io.quarkus:quarkus-junit5")
+    testImplementation("io.rest-assured:rest-assured")
+}
+
+allOpen {
+    annotation("jakarta.ws.rs.Path")
+    annotation("jakarta.enterprise.context.ApplicationScoped")
+    annotation("jakarta.enterprise.context.RequestScoped")
+    annotation("io.quarkus.test.junit.QuarkusTest")
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    kotlinOptions.jvmTarget = JavaVersion.VERSION_21.toString()
+    kotlinOptions.javaParameters = true
+}

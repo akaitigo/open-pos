@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+// openpos.common.v1 パッケージは全サービス共通の型を提供します
+package openpos.common.v1;
+
+// 金額を表す型（銭単位: 10000 = 100円）
+// 浮動小数点を避けるため int64 を使用し、端数誤差を排除します
+message Money {
+  // 金額値（銭単位）
+  int64 amount = 1;
+  // 通貨コード（ISO 4217）例: "JPY"
+  string currency = 2;
+}
+
+// ページネーションリクエスト
+// 全ての一覧取得 RPC に共通して利用します
+message PaginationRequest {
+  // ページ番号（1始まり）
+  int32 page = 1;
+  // 1ページあたりの件数（最大100を推奨）
+  int32 page_size = 2;
+}
+
+// ページネーションレスポンス
+// 一覧取得 RPC のレスポンスに埋め込みます
+message PaginationResponse {
+  // 現在のページ番号
+  int32 page = 1;
+  // 1ページあたりの件数
+  int32 page_size = 2;
+  // 総件数
+  int64 total_count = 3;
+  // 総ページ数
+  int32 total_pages = 4;
+}
+
+// エラー詳細
+// gRPC Status の details フィールドに含めるエラー情報
+message ErrorDetail {
+  // エラーコード（例: "INVALID_BARCODE"）
+  string code = 1;
+  // エラーメッセージ（人間向けの説明）
+  string message = 2;
+  // フィールド名（バリデーションエラーの場合に設定）
+  string field = 3;
+}
+
+// タイムスタンプ範囲
+// 日付・期間を指定する RPC に共通して利用します
+message DateRange {
+  // 開始日時（ISO 8601 形式、例: "2024-01-01T00:00:00+09:00"）
+  string start = 1;
+  // 終了日時（ISO 8601 形式、例: "2024-01-31T23:59:59+09:00"）
+  string end = 2;
+}

@@ -1,0 +1,17 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: java_multiple_files
+      value: true
+    - file_option: java_package_prefix
+      value: com.openpos
+plugins:
+  - remote: buf.build/grpc/java
+    out: ../services
+    opt:
+      - lite
+  - remote: buf.build/protocolbuffers/java
+    out: ../services
+    opt:
+      - lite

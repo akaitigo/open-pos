@@ -1,0 +1,273 @@
+syntax = "proto3";
+
+// openpos.inventory.v1 パッケージは在庫管理の型とサービスを提供します
+package openpos.inventory.v1;
+
+import "openpos/common/v1/common.proto";
+
+// 在庫管理サービス
+// 店舗ごとの在庫数管理・在庫移動履歴・発注管理を提供します
+// 在庫調整は POS 取引確定（SaleCompleted イベント）を受けて自動実行されます
+service InventoryService {
+  // 在庫を取得する（店舗×商品）
+  rpc GetStock(GetStockRequest) returns (Stock);
+  // 店舗の在庫一覧を取得する（在庫低下アラートフィルタ対応）
+  rpc ListStocks(ListStocksRequest) returns (ListStocksResponse);
+  // 在庫を調整する（手動調整・取引連動・発注入荷）
+  rpc AdjustStock(AdjustStockRequest) returns (Stock);
+  // 在庫移動履歴を取得する
+  rpc ListStockMovements(ListStockMovementsRequest) returns (ListStockMovementsResponse);
+  // 発注を作成する
+  rpc CreatePurchaseOrder(CreatePurchaseOrderRequest) returns (PurchaseOrder);
+  // 発注を取得する
+  rpc GetPurchaseOrder(GetPurchaseOrderRequest) returns (PurchaseOrder);
+  // 発注一覧を取得する
+  rpc ListPurchaseOrders(ListPurchaseOrdersRequest) returns (ListPurchaseOrdersResponse);
+  // 発注ステータスを更新する（入荷確認時に RECEIVED にする）
+  rpc UpdatePurchaseOrderStatus(UpdatePurchaseOrderStatusRequest) returns (PurchaseOrder);
+}
+
+// 在庫移動種別
+// StockMovement.movement_type に設定します
+enum MovementType {
+  // 未指定（デフォルト値）
+  MOVEMENT_TYPE_UNSPECIFIED = 0;
+  // 販売による減少
+  MOVEMENT_TYPE_SALE = 1;
+  // 返品による増加
+  MOVEMENT_TYPE_RETURN = 2;
+  // 発注入荷による増加
+  MOVEMENT_TYPE_RECEIPT = 3;
+  // 手動調整（棚卸・廃棄等）
+  MOVEMENT_TYPE_ADJUSTMENT = 4;
+  // 店舗間移動
+  MOVEMENT_TYPE_TRANSFER = 5;
+}
+
+// 発注ステータス
+enum PurchaseOrderStatus {
+  // 未指定（デフォルト値）
+  PURCHASE_ORDER_STATUS_UNSPECIFIED = 0;
+  // 下書き（未発注）
+  PURCHASE_ORDER_STATUS_DRAFT = 1;
+  // 発注済み（サプライヤーへ送付完了）
+  PURCHASE_ORDER_STATUS_ORDERED = 2;
+  // 入荷済み（在庫に反映済み）
+  PURCHASE_ORDER_STATUS_RECEIVED = 3;
+  // キャンセル
+  PURCHASE_ORDER_STATUS_CANCELLED = 4;
+}
+
+// 在庫
+// 店舗×商品の現在在庫数を保持します
+message Stock {
+  // 在庫ID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 店舗ID
+  string store_id = 3;
+  // 商品ID
+  string product_id = 4;
+  // 現在の在庫数
+  int32 quantity = 5;
+  // 在庫低下アラート閾値（この値以下で StockLowEvent を発行）
+  int32 low_stock_threshold = 6;
+  // 最終更新日時（ISO 8601 形式）
+  string updated_at = 7;
+}
+
+// 在庫移動履歴
+// 全ての在庫変動を記録します（監査・分析に使用）
+message StockMovement {
+  // 移動履歴ID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 店舗ID
+  string store_id = 3;
+  // 商品ID
+  string product_id = 4;
+  // 移動種別
+  MovementType movement_type = 5;
+  // 変動数量（プラス: 増加、マイナス: 減少）
+  int32 quantity = 6;
+  // 参照ID（取引ID または発注ID）
+  string reference_id = 7;
+  // 備考（手動調整時の理由等）
+  string note = 8;
+  // 移動日時（ISO 8601 形式）
+  string created_at = 9;
+}
+
+// 発注
+// サプライヤーへの発注を管理します
+message PurchaseOrder {
+  // 発注ID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 発注元店舗ID
+  string store_id = 3;
+  // 発注ステータス
+  PurchaseOrderStatus status = 4;
+  // 発注明細リスト
+  repeated PurchaseOrderItem items = 5;
+  // サプライヤー名
+  string supplier_name = 6;
+  // 備考
+  string note = 7;
+  // 発注日時（ISO 8601 形式、ORDERED に変更した日時）
+  string ordered_at = 8;
+  // 入荷日時（ISO 8601 形式、RECEIVED に変更した日時）
+  string received_at = 9;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 10;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 11;
+}
+
+// 発注明細
+// 発注した商品と入荷確認数量を管理します
+message PurchaseOrderItem {
+  // 発注明細ID（UUID）
+  string id = 1;
+  // 商品ID
+  string product_id = 2;
+  // 発注数量
+  int32 ordered_quantity = 3;
+  // 入荷確認数量（RECEIVED 更新時に設定）
+  int32 received_quantity = 4;
+  // 仕入単価（銭単位）
+  int64 unit_cost = 5;
+}
+
+// === リクエスト/レスポンス ===
+
+// 在庫取得リクエスト
+message GetStockRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 商品ID（必須）
+  string product_id = 2;
+}
+
+// 在庫一覧取得リクエスト
+message ListStocksRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // ページネーション条件
+  openpos.common.v1.PaginationRequest pagination = 2;
+  // true の場合は在庫低下商品（quantity <= low_stock_threshold）のみ返す
+  bool low_stock_only = 3;
+}
+
+// 在庫一覧取得レスポンス
+message ListStocksResponse {
+  // 在庫リスト
+  repeated Stock stocks = 1;
+  // ページネーション情報
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+// 在庫調整リクエスト
+// quantity_change に正の値を指定すると増加、負の値を指定すると減少します
+message AdjustStockRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 商品ID（必須）
+  string product_id = 2;
+  // 変動数量（プラス: 増加、マイナス: 減少）
+  int32 quantity_change = 3;
+  // 移動種別（必須）
+  MovementType movement_type = 4;
+  // 参照ID（取引ID や発注ID）
+  string reference_id = 5;
+  // 備考（手動調整の場合は理由を記述）
+  string note = 6;
+}
+
+// 在庫移動履歴取得リクエスト
+message ListStockMovementsRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 商品ID（省略時は店舗全商品）
+  string product_id = 2;
+  // ページネーション条件
+  openpos.common.v1.PaginationRequest pagination = 3;
+  // 日付範囲フィルタ
+  openpos.common.v1.DateRange date_range = 4;
+}
+
+// 在庫移動履歴取得レスポンス
+message ListStockMovementsResponse {
+  // 在庫移動履歴リスト（作成日時降順）
+  repeated StockMovement movements = 1;
+  // ページネーション情報
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+// 発注作成リクエスト
+message CreatePurchaseOrderRequest {
+  // 発注元店舗ID（必須）
+  string store_id = 1;
+  // サプライヤー名（必須）
+  string supplier_name = 2;
+  // 備考
+  string note = 3;
+  // 発注明細リスト（1件以上必須）
+  repeated PurchaseOrderItemInput items = 4;
+}
+
+// 発注明細入力
+message PurchaseOrderItemInput {
+  // 商品ID（必須）
+  string product_id = 1;
+  // 発注数量（1以上）
+  int32 ordered_quantity = 2;
+  // 仕入単価（銭単位）
+  int64 unit_cost = 3;
+}
+
+// 発注取得リクエスト
+message GetPurchaseOrderRequest {
+  // 発注ID（UUID）
+  string id = 1;
+}
+
+// 発注一覧取得リクエスト
+message ListPurchaseOrdersRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // ステータスフィルタ（省略時は全ステータス）
+  PurchaseOrderStatus status = 2;
+  // ページネーション条件
+  openpos.common.v1.PaginationRequest pagination = 3;
+}
+
+// 発注一覧取得レスポンス
+message ListPurchaseOrdersResponse {
+  // 発注リスト（作成日時降順）
+  repeated PurchaseOrder purchase_orders = 1;
+  // ページネーション情報
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+// 発注ステータス更新リクエスト
+// ORDERED → RECEIVED に更新する場合は received_items も指定します
+message UpdatePurchaseOrderStatusRequest {
+  // 発注ID（UUID、必須）
+  string id = 1;
+  // 新ステータス（必須）
+  PurchaseOrderStatus status = 2;
+  // 入荷確認明細（RECEIVED 更新時のみ指定）
+  repeated ReceivedItemInput received_items = 3;
+}
+
+// 入荷確認明細入力
+message ReceivedItemInput {
+  // 商品ID（必須）
+  string product_id = 1;
+  // 実際の入荷数量（発注数量と異なる場合も記録）
+  int32 received_quantity = 2;
+}

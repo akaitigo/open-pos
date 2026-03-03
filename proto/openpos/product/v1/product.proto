@@ -1,0 +1,445 @@
+syntax = "proto3";
+
+// openpos.product.v1 パッケージは商品マスタ管理の型とサービスを提供します
+package openpos.product.v1;
+
+import "openpos/common/v1/common.proto";
+
+// 商品管理サービス
+// 商品・カテゴリ・税率・割引・クーポンの CRUD を提供します
+service ProductService {
+  // 商品を作成する
+  rpc CreateProduct(CreateProductRequest) returns (Product);
+  // 商品を取得する
+  rpc GetProduct(GetProductRequest) returns (Product);
+  // 商品一覧を取得する（カテゴリ・フリーワード絞り込み対応）
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  // 商品を更新する
+  rpc UpdateProduct(UpdateProductRequest) returns (Product);
+  // 商品を削除する（論理削除）
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+  // バーコードで商品を検索する（POS スキャン時に使用）
+  rpc GetProductByBarcode(GetProductByBarcodeRequest) returns (Product);
+
+  // カテゴリを作成する
+  rpc CreateCategory(CreateCategoryRequest) returns (Category);
+  // カテゴリ一覧を取得する（親カテゴリ指定でサブカテゴリ取得可）
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
+  // カテゴリを更新する
+  rpc UpdateCategory(UpdateCategoryRequest) returns (Category);
+  // カテゴリを削除する
+  rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse);
+
+  // 税率を作成する（インボイス対応: 標準税率・軽減税率）
+  rpc CreateTaxRate(CreateTaxRateRequest) returns (TaxRate);
+  // 税率一覧を取得する
+  rpc ListTaxRates(ListTaxRatesRequest) returns (ListTaxRatesResponse);
+  // 税率を更新する
+  rpc UpdateTaxRate(UpdateTaxRateRequest) returns (TaxRate);
+
+  // 割引を作成する（パーセント割引・定額割引）
+  rpc CreateDiscount(CreateDiscountRequest) returns (Discount);
+  // 割引一覧を取得する
+  rpc ListDiscounts(ListDiscountsRequest) returns (ListDiscountsResponse);
+  // 割引を更新する
+  rpc UpdateDiscount(UpdateDiscountRequest) returns (Discount);
+
+  // クーポンを作成する
+  rpc CreateCoupon(CreateCouponRequest) returns (Coupon);
+  // クーポンコードを検証する（取引適用前に呼び出す）
+  rpc ValidateCoupon(ValidateCouponRequest) returns (ValidateCouponResponse);
+}
+
+// 商品
+// 販売可能な商品マスタ情報です
+// price は銭単位（10000 = 100円）で保持し、表示時に変換します
+message Product {
+  // 商品ID（UUID）
+  string id = 1;
+  // 組織ID（テナント識別子）
+  string organization_id = 2;
+  // 商品名
+  string name = 3;
+  // 商品説明
+  string description = 4;
+  // バーコード（JAN/EAN/QR）
+  string barcode = 5;
+  // SKU（在庫管理コード）
+  string sku = 6;
+  // 販売価格（銭単位: 10000 = 100円）
+  int64 price = 7;
+  // カテゴリID
+  string category_id = 8;
+  // 税率ID（適用税率）
+  string tax_rate_id = 9;
+  // 商品画像 URL
+  string image_url = 10;
+  // 表示順序（昇順）
+  int32 display_order = 11;
+  // 有効フラグ（false の場合 POS 画面に表示しない）
+  bool is_active = 12;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 13;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 14;
+}
+
+// カテゴリ
+// 商品を階層構造で分類します（最大2階層を推奨）
+message Category {
+  // カテゴリID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // カテゴリ名
+  string name = 3;
+  // 親カテゴリID（ルートカテゴリの場合は空）
+  string parent_id = 4;
+  // 表示色（HEX カラーコード: 例 "#FF5733"）
+  string color = 5;
+  // アイコン識別子（フロントエンドのアイコンライブラリキー）
+  string icon = 6;
+  // 表示順序（昇順）
+  int32 display_order = 7;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 8;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 9;
+}
+
+// 税率
+// インボイス制度対応: 標準税率（10%）と軽減税率（8%）を管理します
+message TaxRate {
+  // 税率ID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 税率名（例: "標準税率10%"、"軽減税率8%"）
+  string name = 3;
+  // 税率値（decimal 文字列: 例 "0.10", "0.08"）
+  string rate = 4;
+  // 軽減税率フラグ（食品・新聞等に適用）
+  bool is_reduced = 5;
+  // デフォルト税率フラグ（商品作成時の初期値）
+  bool is_default = 6;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 7;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 8;
+}
+
+// 割引種別
+enum DiscountType {
+  // 未指定（デフォルト値）
+  DISCOUNT_TYPE_UNSPECIFIED = 0;
+  // パーセント割引（例: 10% OFF）
+  DISCOUNT_TYPE_PERCENTAGE = 1;
+  // 定額割引（例: 100円 OFF、銭単位）
+  DISCOUNT_TYPE_FIXED_AMOUNT = 2;
+}
+
+// 割引
+// 商品・取引に適用できる割引マスタです
+message Discount {
+  // 割引ID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 割引名（例: "夏季セール10%OFF"）
+  string name = 3;
+  // 割引種別
+  DiscountType discount_type = 4;
+  // 割引値（パーセントの場合は "10.0"、定額の場合は銭単位の数値文字列）
+  string value = 5;
+  // 適用開始日（ISO 8601 形式）
+  string start_date = 6;
+  // 適用終了日（ISO 8601 形式）
+  string end_date = 7;
+  // 有効フラグ
+  bool is_active = 8;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 9;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 10;
+}
+
+// クーポン
+// 割引と紐付けたコードベースのクーポンです
+// max_uses で利用回数の上限を管理します（0 は無制限）
+message Coupon {
+  // クーポンID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // クーポンコード（大文字英数字推奨）
+  string code = 3;
+  // 紐付け割引ID
+  string discount_id = 4;
+  // 最大利用可能回数（0 は無制限）
+  int32 max_uses = 5;
+  // 現在の利用回数
+  int32 current_uses = 6;
+  // 有効開始日（ISO 8601 形式）
+  string start_date = 7;
+  // 有効終了日（ISO 8601 形式）
+  string end_date = 8;
+  // 有効フラグ
+  bool is_active = 9;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 10;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 11;
+}
+
+// === リクエスト/レスポンス ===
+
+// 商品作成リクエスト
+message CreateProductRequest {
+  // 商品名（必須）
+  string name = 1;
+  // 商品説明
+  string description = 2;
+  // バーコード（重複不可）
+  string barcode = 3;
+  // SKU（重複不可）
+  string sku = 4;
+  // 販売価格（銭単位、必須）
+  int64 price = 5;
+  // カテゴリID
+  string category_id = 6;
+  // 税率ID（省略時はデフォルト税率を適用）
+  string tax_rate_id = 7;
+  // 商品画像 URL
+  string image_url = 8;
+  // 表示順序
+  int32 display_order = 9;
+}
+
+// 商品取得リクエスト
+message GetProductRequest {
+  // 商品ID（UUID）
+  string id = 1;
+}
+
+// バーコード商品検索リクエスト
+message GetProductByBarcodeRequest {
+  // バーコード値
+  string barcode = 1;
+}
+
+// 商品一覧取得リクエスト
+message ListProductsRequest {
+  // ページネーション条件
+  openpos.common.v1.PaginationRequest pagination = 1;
+  // カテゴリID（指定時はそのカテゴリの商品のみ返す）
+  string category_id = 2;
+  // フリーワード検索（商品名・バーコード・SKU に対して部分一致）
+  string search = 3;
+  // true の場合は有効商品（is_active=true）のみ返す
+  bool active_only = 4;
+}
+
+// 商品一覧取得レスポンス
+message ListProductsResponse {
+  // 商品リスト
+  repeated Product products = 1;
+  // ページネーション情報
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+// 商品更新リクエスト
+message UpdateProductRequest {
+  // 商品ID（必須）
+  string id = 1;
+  // 商品名
+  string name = 2;
+  // 商品説明
+  string description = 3;
+  // バーコード
+  string barcode = 4;
+  // SKU
+  string sku = 5;
+  // 販売価格（銭単位）
+  int64 price = 6;
+  // カテゴリID
+  string category_id = 7;
+  // 税率ID
+  string tax_rate_id = 8;
+  // 商品画像 URL
+  string image_url = 9;
+  // 表示順序
+  int32 display_order = 10;
+  // 有効フラグ
+  bool is_active = 11;
+}
+
+// 商品削除リクエスト
+message DeleteProductRequest {
+  // 商品ID（UUID）
+  string id = 1;
+}
+
+// 商品削除レスポンス（空レスポンス）
+message DeleteProductResponse {}
+
+// カテゴリ作成リクエスト
+message CreateCategoryRequest {
+  // カテゴリ名（必須）
+  string name = 1;
+  // 親カテゴリID（ルートの場合は空）
+  string parent_id = 2;
+  // 表示色（HEX カラーコード）
+  string color = 3;
+  // アイコン識別子
+  string icon = 4;
+  // 表示順序
+  int32 display_order = 5;
+}
+
+// カテゴリ一覧取得リクエスト
+message ListCategoriesRequest {
+  // 親カテゴリID（空の場合はルートカテゴリ一覧を返す）
+  string parent_id = 1;
+}
+
+// カテゴリ一覧取得レスポンス
+message ListCategoriesResponse {
+  // カテゴリリスト
+  repeated Category categories = 1;
+}
+
+// カテゴリ更新リクエスト
+message UpdateCategoryRequest {
+  // カテゴリID（必須）
+  string id = 1;
+  // カテゴリ名
+  string name = 2;
+  // 親カテゴリID
+  string parent_id = 3;
+  // 表示色
+  string color = 4;
+  // アイコン識別子
+  string icon = 5;
+  // 表示順序
+  int32 display_order = 6;
+}
+
+// カテゴリ削除リクエスト
+message DeleteCategoryRequest {
+  // カテゴリID（UUID）
+  string id = 1;
+}
+
+// カテゴリ削除レスポンス（空レスポンス）
+message DeleteCategoryResponse {}
+
+// 税率作成リクエスト
+message CreateTaxRateRequest {
+  // 税率名（必須）
+  string name = 1;
+  // 税率値（decimal 文字列: 例 "0.10"）
+  string rate = 2;
+  // 軽減税率フラグ
+  bool is_reduced = 3;
+  // デフォルト税率フラグ（true にすると既存のデフォルトを解除）
+  bool is_default = 4;
+}
+
+// 税率一覧取得リクエスト（フィルタなし）
+message ListTaxRatesRequest {}
+
+// 税率一覧取得レスポンス
+message ListTaxRatesResponse {
+  // 税率リスト
+  repeated TaxRate tax_rates = 1;
+}
+
+// 税率更新リクエスト
+message UpdateTaxRateRequest {
+  // 税率ID（必須）
+  string id = 1;
+  // 税率名
+  string name = 2;
+  // 税率値（decimal 文字列）
+  string rate = 3;
+  // 軽減税率フラグ
+  bool is_reduced = 4;
+  // デフォルト税率フラグ
+  bool is_default = 5;
+}
+
+// 割引作成リクエスト
+message CreateDiscountRequest {
+  // 割引名（必須）
+  string name = 1;
+  // 割引種別（必須）
+  DiscountType discount_type = 2;
+  // 割引値（必須）
+  string value = 3;
+  // 適用開始日（ISO 8601 形式）
+  string start_date = 4;
+  // 適用終了日（ISO 8601 形式）
+  string end_date = 5;
+}
+
+// 割引一覧取得リクエスト
+message ListDiscountsRequest {
+  // true の場合は有効かつ期間内の割引のみ返す
+  bool active_only = 1;
+}
+
+// 割引一覧取得レスポンス
+message ListDiscountsResponse {
+  // 割引リスト
+  repeated Discount discounts = 1;
+}
+
+// 割引更新リクエスト
+message UpdateDiscountRequest {
+  // 割引ID（必須）
+  string id = 1;
+  // 割引名
+  string name = 2;
+  // 割引種別
+  DiscountType discount_type = 3;
+  // 割引値
+  string value = 4;
+  // 適用開始日
+  string start_date = 5;
+  // 適用終了日
+  string end_date = 6;
+  // 有効フラグ
+  bool is_active = 7;
+}
+
+// クーポン作成リクエスト
+message CreateCouponRequest {
+  // クーポンコード（大文字英数字、重複不可）
+  string code = 1;
+  // 紐付け割引ID（必須）
+  string discount_id = 2;
+  // 最大利用可能回数（0 は無制限）
+  int32 max_uses = 3;
+  // 有効開始日（ISO 8601 形式）
+  string start_date = 4;
+  // 有効終了日（ISO 8601 形式）
+  string end_date = 5;
+}
+
+// クーポン検証リクエスト
+message ValidateCouponRequest {
+  // 検証するクーポンコード
+  string code = 1;
+}
+
+// クーポン検証レスポンス
+message ValidateCouponResponse {
+  // 有効であれば true
+  bool is_valid = 1;
+  // クーポン情報（is_valid=true の場合のみ設定）
+  Coupon coupon = 2;
+  // 紐付き割引情報（is_valid=true の場合のみ設定）
+  Discount discount = 3;
+  // 無効理由（is_valid=false の場合に設定: 例 "EXPIRED", "MAX_USES_REACHED"）
+  string reason = 4;
+}

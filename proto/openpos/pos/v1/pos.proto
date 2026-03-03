@@ -1,0 +1,401 @@
+syntax = "proto3";
+
+// openpos.pos.v1 パッケージは POS 取引処理の型とサービスを提供します
+package openpos.pos.v1;
+
+import "openpos/common/v1/common.proto";
+
+// POS 取引サービス
+// 販売取引のライフサイクル（作成→明細追加→確定→レシート）を管理します
+// オフライン対応: client_id による冪等性キーを使って重複排除します
+service PosService {
+  // 取引を作成する（ドラフト状態で開始）
+  rpc CreateTransaction(CreateTransactionRequest) returns (Transaction);
+  // 取引を取得する
+  rpc GetTransaction(GetTransactionRequest) returns (Transaction);
+  // 取引一覧を取得する（日付範囲・店舗・ステータスで絞り込み）
+  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+  // 取引に明細を追加する（バーコードスキャン時に呼び出す）
+  rpc AddTransactionItem(AddTransactionItemRequest) returns (Transaction);
+  // 取引の明細を更新する（数量変更等）
+  rpc UpdateTransactionItem(UpdateTransactionItemRequest) returns (Transaction);
+  // 取引の明細を削除する
+  rpc RemoveTransactionItem(RemoveTransactionItemRequest) returns (Transaction);
+  // 取引に割引を適用する（クーポンコードまたは割引IDを指定）
+  rpc ApplyDiscount(ApplyDiscountRequest) returns (Transaction);
+  // 取引を確定する（支払処理・レシート発行）
+  rpc FinalizeTransaction(FinalizeTransactionRequest) returns (FinalizeTransactionResponse);
+  // 取引を無効化する（返品・誤操作キャンセル）
+  rpc VoidTransaction(VoidTransactionRequest) returns (Transaction);
+  // レシートを取得する
+  rpc GetReceipt(GetReceiptRequest) returns (Receipt);
+  // オフライン取引を同期する（端末オンライン復帰時に一括送信）
+  rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
+}
+
+// 取引種別
+enum TransactionType {
+  // 未指定（デフォルト値）
+  TRANSACTION_TYPE_UNSPECIFIED = 0;
+  // 通常販売
+  TRANSACTION_TYPE_SALE = 1;
+  // 返品
+  TRANSACTION_TYPE_RETURN = 2;
+  // 取消（無効化）
+  TRANSACTION_TYPE_VOID = 3;
+}
+
+// 取引ステータス
+enum TransactionStatus {
+  // 未指定（デフォルト値）
+  TRANSACTION_STATUS_UNSPECIFIED = 0;
+  // ドラフト（明細追加中）
+  TRANSACTION_STATUS_DRAFT = 1;
+  // 確定済み（支払完了）
+  TRANSACTION_STATUS_COMPLETED = 2;
+  // 無効化済み
+  TRANSACTION_STATUS_VOIDED = 3;
+}
+
+// 支払方法
+enum PaymentMethod {
+  // 未指定（デフォルト値）
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+  // 現金
+  PAYMENT_METHOD_CASH = 1;
+  // クレジットカード
+  PAYMENT_METHOD_CREDIT_CARD = 2;
+  // QRコード決済（PayPay、LINE Pay 等）
+  PAYMENT_METHOD_QR_CODE = 3;
+}
+
+// 取引
+// POS 取引の全情報を保持します
+// 金額フィールドはすべて銭単位（10000 = 100円）です
+message Transaction {
+  // 取引ID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 店舗ID
+  string store_id = 3;
+  // 端末ID
+  string terminal_id = 4;
+  // 担当スタッフID
+  string staff_id = 5;
+  // 取引番号（人間向けの連番: 例 "T-2024-000123"）
+  string transaction_number = 6;
+  // 取引種別
+  TransactionType type = 7;
+  // 取引ステータス
+  TransactionStatus status = 8;
+  // オフライン冪等性キー（クライアント側で生成する UUID）
+  string client_id = 9;
+  // 取引明細リスト
+  repeated TransactionItem items = 10;
+  // 適用割引リスト
+  repeated TransactionDiscount discounts = 11;
+  // 支払リスト（複数支払方法対応）
+  repeated Payment payments = 12;
+  // 税率別集計（インボイス対応）
+  repeated TaxSummary tax_summaries = 13;
+  // 税抜小計（銭単位）
+  int64 subtotal = 14;
+  // 税額合計（銭単位）
+  int64 tax_total = 15;
+  // 割引合計（銭単位）
+  int64 discount_total = 16;
+  // 税込合計（銭単位）
+  int64 total = 17;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 18;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 19;
+  // 確定日時（ISO 8601 形式、COMPLETED 時に設定）
+  string completed_at = 20;
+}
+
+// 取引明細
+// 取引確定時に商品マスタのスナップショットを保持します
+// 後から商品価格・税率が変更されても取引記録に影響しません
+message TransactionItem {
+  // 明細ID（UUID）
+  string id = 1;
+  // 商品ID（参照用）
+  string product_id = 2;
+  // 商品名（取引時スナップショット）
+  string product_name = 3;
+  // 単価（取引時スナップショット、銭単位）
+  int64 unit_price = 4;
+  // 数量
+  int32 quantity = 5;
+  // 税率名（取引時スナップショット: 例 "標準税率10%"）
+  string tax_rate_name = 6;
+  // 税率値（取引時スナップショット: 例 "0.10"）
+  string tax_rate = 7;
+  // 軽減税率フラグ（インボイス対応）
+  bool is_reduced_tax = 8;
+  // 税抜小計（銭単位）
+  int64 subtotal = 9;
+  // 税額（銭単位）
+  int64 tax_amount = 10;
+  // 税込合計（銭単位）
+  int64 total = 11;
+}
+
+// 取引割引
+// 取引または明細レベルで適用された割引を記録します
+message TransactionDiscount {
+  // 割引適用ID（UUID）
+  string id = 1;
+  // 割引マスタID
+  string discount_id = 2;
+  // 割引名（スナップショット）
+  string name = 3;
+  // 割引種別（"PERCENTAGE" または "FIXED_AMOUNT"）
+  string discount_type = 4;
+  // 割引値（スナップショット）
+  string value = 5;
+  // 割引額（銭単位）
+  int64 amount = 6;
+  // 明細レベルの割引の場合に設定（空の場合は取引全体への割引）
+  string transaction_item_id = 7;
+}
+
+// 支払
+// 一取引に複数の支払方法を組み合わせ可能です（例: 現金 + クレジット）
+message Payment {
+  // 支払ID（UUID）
+  string id = 1;
+  // 支払方法
+  PaymentMethod method = 2;
+  // 支払額（銭単位）
+  int64 amount = 3;
+  // 受取額（現金支払の場合のみ設定、銭単位）
+  int64 received = 4;
+  // お釣り額（現金支払の場合のみ設定、銭単位）
+  int64 change = 5;
+  // 参照情報（カード番号末尾4桁、QR 承認番号等）
+  string reference = 6;
+}
+
+// 税率別集計（インボイス制度対応）
+// レシートに税率ごとの課税対象額・税額を印字するために使用します
+message TaxSummary {
+  // 税率名（例: "標準税率10%"）
+  string tax_rate_name = 1;
+  // 税率値（例: "0.10"）
+  string tax_rate = 2;
+  // 軽減税率フラグ
+  bool is_reduced = 3;
+  // 課税対象額（税抜、銭単位）
+  int64 taxable_amount = 4;
+  // 税額（銭単位）
+  int64 tax_amount = 5;
+}
+
+// レシート
+// 取引確定後に生成される電子レシートデータです
+message Receipt {
+  // レシートID（UUID）
+  string id = 1;
+  // 取引ID
+  string transaction_id = 2;
+  // レシートデータ（JSON 形式、印字内容を構造化）
+  string receipt_data = 3;
+  // PDF レシートの URL（Cloud Storage）
+  string pdf_url = 4;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 5;
+}
+
+// === リクエスト/レスポンス ===
+
+// 取引作成リクエスト
+message CreateTransactionRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 端末ID（必須）
+  string terminal_id = 2;
+  // 担当スタッフID（必須）
+  string staff_id = 3;
+  // 取引種別（省略時は SALE）
+  TransactionType type = 4;
+  // オフライン冪等性キー（クライアント側で生成する UUID）
+  string client_id = 5;
+}
+
+// 取引取得リクエスト
+message GetTransactionRequest {
+  // 取引ID（UUID）
+  string id = 1;
+}
+
+// 取引一覧取得リクエスト
+message ListTransactionsRequest {
+  // ページネーション条件
+  openpos.common.v1.PaginationRequest pagination = 1;
+  // 店舗ID（必須）
+  string store_id = 2;
+  // 端末ID（省略時は全端末）
+  string terminal_id = 3;
+  // ステータスフィルタ（省略時は全ステータス）
+  TransactionStatus status = 4;
+  // 日付範囲フィルタ
+  openpos.common.v1.DateRange date_range = 5;
+}
+
+// 取引一覧取得レスポンス
+message ListTransactionsResponse {
+  // 取引リスト
+  repeated Transaction transactions = 1;
+  // ページネーション情報
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+// 明細追加リクエスト
+message AddTransactionItemRequest {
+  // 取引ID（必須）
+  string transaction_id = 1;
+  // 商品ID（必須）
+  string product_id = 2;
+  // 数量（1以上）
+  int32 quantity = 3;
+}
+
+// 明細更新リクエスト
+message UpdateTransactionItemRequest {
+  // 取引ID（必須）
+  string transaction_id = 1;
+  // 明細ID（必須）
+  string item_id = 2;
+  // 更新後数量（1以上、0にする場合は RemoveTransactionItem を使用）
+  int32 quantity = 3;
+}
+
+// 明細削除リクエスト
+message RemoveTransactionItemRequest {
+  // 取引ID（必須）
+  string transaction_id = 1;
+  // 明細ID（必須）
+  string item_id = 2;
+}
+
+// 割引適用リクエスト
+// discount_id または coupon_code のいずれか一方を指定します
+message ApplyDiscountRequest {
+  // 取引ID（必須）
+  string transaction_id = 1;
+  // 割引ID（直接割引を適用する場合）
+  string discount_id = 2;
+  // クーポンコード（クーポン経由で割引を適用する場合）
+  string coupon_code = 3;
+  // 明細ID（明細レベルの割引を適用する場合、省略時は取引全体）
+  string transaction_item_id = 4;
+}
+
+// 取引確定リクエスト
+message FinalizeTransactionRequest {
+  // 取引ID（必須）
+  string transaction_id = 1;
+  // 支払情報リスト（合計が取引合計以上である必要があります）
+  repeated PaymentInput payments = 2;
+}
+
+// 支払入力（FinalizeTransaction および SyncOfflineTransactions で使用）
+message PaymentInput {
+  // 支払方法（必須）
+  PaymentMethod method = 1;
+  // 支払額（銭単位、必須）
+  int64 amount = 2;
+  // 受取額（現金の場合のみ、銭単位）
+  int64 received = 3;
+  // 参照情報（カード番号末尾4桁等）
+  string reference = 4;
+}
+
+// 取引確定レスポンス
+message FinalizeTransactionResponse {
+  // 確定済み取引
+  Transaction transaction = 1;
+  // 発行されたレシート
+  Receipt receipt = 2;
+}
+
+// 取引無効化リクエスト
+message VoidTransactionRequest {
+  // 取引ID（必須）
+  string transaction_id = 1;
+  // 無効化理由（監査ログ用）
+  string reason = 2;
+}
+
+// レシート取得リクエスト
+message GetReceiptRequest {
+  // 取引ID（UUID）
+  string transaction_id = 1;
+}
+
+// オフライン取引同期リクエスト
+// 端末がオフライン中に記録した取引を一括で送信します
+message SyncOfflineTransactionsRequest {
+  // 同期対象の取引リスト
+  repeated OfflineTransaction transactions = 1;
+}
+
+// オフライン取引データ
+// オフライン時に端末ローカルに保存する取引の最小限の情報です
+message OfflineTransaction {
+  // 冪等性キー（クライアント側で生成した UUID）
+  string client_id = 1;
+  // 店舗ID
+  string store_id = 2;
+  // 端末ID
+  string terminal_id = 3;
+  // 担当スタッフID
+  string staff_id = 4;
+  // 取引明細リスト
+  repeated OfflineTransactionItem items = 5;
+  // 支払リスト
+  repeated PaymentInput payments = 6;
+  // 取引作成日時（ISO 8601 形式、端末ローカル時刻）
+  string created_at = 7;
+}
+
+// オフライン取引明細
+// オフライン時は商品マスタにアクセスできないため、端末キャッシュからスナップショットを取得します
+message OfflineTransactionItem {
+  // 商品ID
+  string product_id = 1;
+  // 商品名（端末キャッシュからのスナップショット）
+  string product_name = 2;
+  // 単価（端末キャッシュからのスナップショット、銭単位）
+  int64 unit_price = 3;
+  // 数量
+  int32 quantity = 4;
+  // 税率名（端末キャッシュからのスナップショット）
+  string tax_rate_name = 5;
+  // 税率値（端末キャッシュからのスナップショット: 例 "0.10"）
+  string tax_rate = 6;
+  // 軽減税率フラグ
+  bool is_reduced_tax = 7;
+}
+
+// オフライン取引同期レスポンス
+message SyncOfflineTransactionsResponse {
+  // 各取引の同期結果リスト
+  repeated SyncResult results = 1;
+}
+
+// 同期結果
+// client_id で元のオフライン取引と対応させます
+message SyncResult {
+  // 元のオフライン取引の client_id
+  string client_id = 1;
+  // 同期成功フラグ
+  bool success = 2;
+  // 成功時: 生成された取引ID
+  string transaction_id = 3;
+  // 失敗時: エラー内容（例: "DUPLICATE_CLIENT_ID", "PRODUCT_NOT_FOUND"）
+  string error = 4;
+}

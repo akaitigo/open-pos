@@ -1,0 +1,90 @@
+name: openpos
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: openpos-postgres
+    ports:
+      - "15432:5432"
+    environment:
+      POSTGRES_USER: openpos
+      POSTGRES_PASSWORD: openpos_dev
+      POSTGRES_DB: openpos
+    volumes:
+      - openpos-pgdata:/var/lib/postgresql/data
+      - ./init-scripts/postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openpos"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - openpos-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: openpos-redis
+    ports:
+      - "16379:6379"
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - openpos-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - openpos-net
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: openpos-rabbitmq
+    ports:
+      - "15672:5672"
+      - "15673:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: openpos
+      RABBITMQ_DEFAULT_PASS: openpos_dev
+    volumes:
+      - openpos-rabbitmq:/var/lib/rabbitmq
+      - ./init-scripts/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+      - ./init-scripts/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openpos-net
+
+  hydra:
+    image: oryd/hydra:v2.2
+    container_name: openpos-hydra
+    ports:
+      - "14444:4444"
+      - "14445:4445"
+    environment:
+      DSN: postgres://openpos:openpos_dev@postgres:5432/openpos?sslmode=disable&search_path=hydra
+      SECRETS_SYSTEM: openpos-hydra-secret-for-dev-only
+      URLS_SELF_ISSUER: http://localhost:14444/
+      URLS_CONSENT: http://localhost:3000/consent
+      URLS_LOGIN: http://localhost:3000/login
+      URLS_LOGOUT: http://localhost:3000/logout
+      LOG_LEVEL: info
+    command: serve all --dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - openpos-net
+    restart: unless-stopped
+
+volumes:
+  openpos-pgdata:
+  openpos-redis:
+  openpos-rabbitmq:
+
+networks:
+  openpos-net:
+    driver: bridge
