@@ -5,12 +5,19 @@
     "dev:pos": "pnpm --filter pos-terminal dev",
     "dev:admin": "pnpm --filter admin-dashboard dev",
     "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
+    "lint": "pnpm -r run lint",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,js,jsx,json,css,md}\" \"packages/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"apps/**/*.{ts,tsx,js,jsx,json,css,md}\" \"packages/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
   },
+  "devDependencies": {
+    "eslint-config-prettier": "^10.1.0",
+    "prettier": "^3.8.0"
+  },
+  "packageManager": "pnpm@10.30.3",
   "engines": {
     "node": ">=22",
-    "pnpm": ">=9"
+    "pnpm": ">=10"
   }
 }
