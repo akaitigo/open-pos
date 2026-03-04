@@ -1,29 +1,55 @@
 version: 2
 updates:
-  - package-ecosystem: "gradle"
-    directory: "/"
+  - package-ecosystem: 'gradle'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     labels:
-      - "type:chore"
+      - 'type:chore'
+    groups:
+      gradle-minor:
+        update-types: ['minor', 'patch']
 
-  - package-ecosystem: "npm"
-    directory: "/apps/pos-terminal"
+  - package-ecosystem: 'npm'
+    directory: '/apps/pos-terminal'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     labels:
-      - "type:chore"
+      - 'type:chore'
+    groups:
+      npm-pos-minor:
+        update-types: ['minor', 'patch']
 
-  - package-ecosystem: "npm"
-    directory: "/apps/admin-dashboard"
+  - package-ecosystem: 'npm'
+    directory: '/apps/admin-dashboard'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     labels:
-      - "type:chore"
+      - 'type:chore'
+    groups:
+      npm-admin-minor:
+        update-types: ['minor', 'patch']
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/packages/shared-types'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     labels:
-      - "type:chore"
+      - 'type:chore'
+
+  - package-ecosystem: 'npm'
+    directory: '/e2e'
+    schedule:
+      interval: 'weekly'
+    labels:
+      - 'type:chore'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    labels:
+      - 'type:chore'
+    groups:
+      actions-minor:
+        update-types: ['minor', 'patch']
