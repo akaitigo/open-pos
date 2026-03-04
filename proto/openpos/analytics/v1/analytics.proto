@@ -16,7 +16,7 @@ service AnalyticsService {
   // 時間帯別売上を取得する（特定日のピーク時間帯分析に使用）
   rpc GetHourlySales(GetHourlySalesRequest) returns (GetHourlySalesResponse);
   // 売上サマリーを取得する（期間合計・客単価・支払方法別集計）
-  rpc GetSalesSummary(GetSalesSummaryRequest) returns (SalesSummary);
+  rpc GetSalesSummary(GetSalesSummaryRequest) returns (GetSalesSummaryResponse);
 }
 
 // 日次売上
@@ -147,4 +147,10 @@ message GetSalesSummaryRequest {
   string store_id = 1;
   // 集計期間（必須）
   openpos.common.v1.DateRange date_range = 2;
+}
+
+// 売上サマリー取得レスポンス
+message GetSalesSummaryResponse {
+  // 売上サマリー
+  SalesSummary summary = 1;
 }

@@ -10,21 +10,21 @@ import "openpos/common/v1/common.proto";
 // 在庫調整は POS 取引確定（SaleCompleted イベント）を受けて自動実行されます
 service InventoryService {
   // 在庫を取得する（店舗×商品）
-  rpc GetStock(GetStockRequest) returns (Stock);
+  rpc GetStock(GetStockRequest) returns (GetStockResponse);
   // 店舗の在庫一覧を取得する（在庫低下アラートフィルタ対応）
   rpc ListStocks(ListStocksRequest) returns (ListStocksResponse);
   // 在庫を調整する（手動調整・取引連動・発注入荷）
-  rpc AdjustStock(AdjustStockRequest) returns (Stock);
+  rpc AdjustStock(AdjustStockRequest) returns (AdjustStockResponse);
   // 在庫移動履歴を取得する
   rpc ListStockMovements(ListStockMovementsRequest) returns (ListStockMovementsResponse);
   // 発注を作成する
-  rpc CreatePurchaseOrder(CreatePurchaseOrderRequest) returns (PurchaseOrder);
+  rpc CreatePurchaseOrder(CreatePurchaseOrderRequest) returns (CreatePurchaseOrderResponse);
   // 発注を取得する
-  rpc GetPurchaseOrder(GetPurchaseOrderRequest) returns (PurchaseOrder);
+  rpc GetPurchaseOrder(GetPurchaseOrderRequest) returns (GetPurchaseOrderResponse);
   // 発注一覧を取得する
   rpc ListPurchaseOrders(ListPurchaseOrdersRequest) returns (ListPurchaseOrdersResponse);
   // 発注ステータスを更新する（入荷確認時に RECEIVED にする）
-  rpc UpdatePurchaseOrderStatus(UpdatePurchaseOrderStatusRequest) returns (PurchaseOrder);
+  rpc UpdatePurchaseOrderStatus(UpdatePurchaseOrderStatusRequest) returns (UpdatePurchaseOrderStatusResponse);
 }
 
 // 在庫移動種別
@@ -140,6 +140,38 @@ message PurchaseOrderItem {
   int32 received_quantity = 4;
   // 仕入単価（銭単位）
   int64 unit_cost = 5;
+}
+
+// === レスポンスラッパー ===
+
+// 在庫取得レスポンス
+message GetStockResponse {
+  // 在庫情報
+  Stock stock = 1;
+}
+
+// 在庫調整レスポンス
+message AdjustStockResponse {
+  // 調整後の在庫情報
+  Stock stock = 1;
+}
+
+// 発注作成レスポンス
+message CreatePurchaseOrderResponse {
+  // 作成された発注
+  PurchaseOrder purchase_order = 1;
+}
+
+// 発注取得レスポンス
+message GetPurchaseOrderResponse {
+  // 発注情報
+  PurchaseOrder purchase_order = 1;
+}
+
+// 発注ステータス更新レスポンス
+message UpdatePurchaseOrderStatusResponse {
+  // 更新された発注
+  PurchaseOrder purchase_order = 1;
 }
 
 // === リクエスト/レスポンス ===
