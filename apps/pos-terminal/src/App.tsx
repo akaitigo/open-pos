@@ -6,5 +6,5 @@ export function App() {
         <p className="text-slate-400">POS端末アプリケーション</p>
       </div>
     </div>
-  );
+  )
 }

@@ -50,3 +50,4 @@ test-results/
 /hooks
 /objects
 /refs
+*.tsbuildinfo

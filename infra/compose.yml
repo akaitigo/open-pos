@@ -5,7 +5,7 @@ services:
     image: postgres:17-alpine
     container_name: openpos-postgres
     ports:
-      - "15432:5432"
+      - '15432:5432'
     environment:
       POSTGRES_USER: openpos
       POSTGRES_PASSWORD: openpos_dev
@@ -14,7 +14,7 @@ services:
       - openpos-pgdata:/var/lib/postgresql/data
       - ./init-scripts/postgres:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U openpos"]
+      test: ['CMD-SHELL', 'pg_isready -U openpos']
       interval: 5s
       timeout: 3s
       retries: 5
@@ -25,12 +25,12 @@ services:
     image: redis:7-alpine
     container_name: openpos-redis
     ports:
-      - "16379:6379"
+      - '16379:6379'
     command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
       - openpos-redis:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 5
@@ -41,8 +41,8 @@ services:
     image: rabbitmq:4-management-alpine
     container_name: openpos-rabbitmq
     ports:
-      - "15672:5672"
-      - "15673:15672"
+      - '15672:5672'
+      - '15673:15672'
     environment:
       RABBITMQ_DEFAULT_USER: openpos
       RABBITMQ_DEFAULT_PASS: openpos_dev
@@ -51,19 +51,32 @@ services:
       - ./init-scripts/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
       - ./init-scripts/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - openpos-net
 
+  hydra-migrate:
+    image: oryd/hydra:v2.2
+    container_name: openpos-hydra-migrate
+    environment:
+      DSN: postgres://openpos:openpos_dev@postgres:5432/openpos?sslmode=disable&search_path=hydra
+    command: migrate sql -e --yes
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - openpos-net
+    restart: on-failure
+
   hydra:
     image: oryd/hydra:v2.2
     container_name: openpos-hydra
     ports:
-      - "14444:4444"
-      - "14445:4445"
+      - '14444:4444'
+      - '14445:4445'
     environment:
       DSN: postgres://openpos:openpos_dev@postgres:5432/openpos?sslmode=disable&search_path=hydra
       SECRETS_SYSTEM: openpos-hydra-secret-for-dev-only
@@ -76,6 +89,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      hydra-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --quiet --tries=1 --spider http://localhost:4445/health/alive || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - openpos-net
     restart: unless-stopped
