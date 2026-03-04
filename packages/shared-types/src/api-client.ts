@@ -87,7 +87,7 @@ async function handleErrorResponse(response: Response): Promise<never> {
     const body: unknown = await response.json()
     const parsed = ApiErrorResponseSchema.safeParse(body)
     if (parsed.success) {
-      code = parsed.data.code
+      code = parsed.data.error
       message = parsed.data.message
       details = parsed.data.details
     }
