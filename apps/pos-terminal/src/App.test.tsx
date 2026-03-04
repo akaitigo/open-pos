@@ -9,9 +9,15 @@ describe('App', () => {
     expect(screen.getByText('OpenPOS Terminal')).toBeInTheDocument()
   })
 
-  it('サブタイトルが表示される', () => {
+  it('商品選択ページが表示される', () => {
     render(<App />)
 
-    expect(screen.getByText('POS端末アプリケーション')).toBeInTheDocument()
+    expect(screen.getByText('商品選択')).toBeInTheDocument()
+  })
+
+  it('オンラインステータスが表示される', () => {
+    render(<App />)
+
+    expect(screen.getByText('オンライン')).toBeInTheDocument()
   })
 })
