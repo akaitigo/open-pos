@@ -9,43 +9,43 @@ import "openpos/common/v1/common.proto";
 // 商品・カテゴリ・税率・割引・クーポンの CRUD を提供します
 service ProductService {
   // 商品を作成する
-  rpc CreateProduct(CreateProductRequest) returns (Product);
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
   // 商品を取得する
-  rpc GetProduct(GetProductRequest) returns (Product);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
   // 商品一覧を取得する（カテゴリ・フリーワード絞り込み対応）
   rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
   // 商品を更新する
-  rpc UpdateProduct(UpdateProductRequest) returns (Product);
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
   // 商品を削除する（論理削除）
   rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
   // バーコードで商品を検索する（POS スキャン時に使用）
-  rpc GetProductByBarcode(GetProductByBarcodeRequest) returns (Product);
+  rpc GetProductByBarcode(GetProductByBarcodeRequest) returns (GetProductByBarcodeResponse);
 
   // カテゴリを作成する
-  rpc CreateCategory(CreateCategoryRequest) returns (Category);
+  rpc CreateCategory(CreateCategoryRequest) returns (CreateCategoryResponse);
   // カテゴリ一覧を取得する（親カテゴリ指定でサブカテゴリ取得可）
   rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
   // カテゴリを更新する
-  rpc UpdateCategory(UpdateCategoryRequest) returns (Category);
+  rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse);
   // カテゴリを削除する
   rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse);
 
   // 税率を作成する（インボイス対応: 標準税率・軽減税率）
-  rpc CreateTaxRate(CreateTaxRateRequest) returns (TaxRate);
+  rpc CreateTaxRate(CreateTaxRateRequest) returns (CreateTaxRateResponse);
   // 税率一覧を取得する
   rpc ListTaxRates(ListTaxRatesRequest) returns (ListTaxRatesResponse);
   // 税率を更新する
-  rpc UpdateTaxRate(UpdateTaxRateRequest) returns (TaxRate);
+  rpc UpdateTaxRate(UpdateTaxRateRequest) returns (UpdateTaxRateResponse);
 
   // 割引を作成する（パーセント割引・定額割引）
-  rpc CreateDiscount(CreateDiscountRequest) returns (Discount);
+  rpc CreateDiscount(CreateDiscountRequest) returns (CreateDiscountResponse);
   // 割引一覧を取得する
   rpc ListDiscounts(ListDiscountsRequest) returns (ListDiscountsResponse);
   // 割引を更新する
-  rpc UpdateDiscount(UpdateDiscountRequest) returns (Discount);
+  rpc UpdateDiscount(UpdateDiscountRequest) returns (UpdateDiscountResponse);
 
   // クーポンを作成する
-  rpc CreateCoupon(CreateCouponRequest) returns (Coupon);
+  rpc CreateCoupon(CreateCouponRequest) returns (CreateCouponResponse);
   // クーポンコードを検証する（取引適用前に呼び出す）
   rpc ValidateCoupon(ValidateCouponRequest) returns (ValidateCouponResponse);
 }
@@ -189,6 +189,74 @@ message Coupon {
   string created_at = 10;
   // 更新日時（ISO 8601 形式）
   string updated_at = 11;
+}
+
+// === レスポンスラッパー ===
+
+// 商品作成レスポンス
+message CreateProductResponse {
+  // 作成された商品
+  Product product = 1;
+}
+
+// 商品取得レスポンス
+message GetProductResponse {
+  // 商品情報
+  Product product = 1;
+}
+
+// 商品更新レスポンス
+message UpdateProductResponse {
+  // 更新された商品
+  Product product = 1;
+}
+
+// バーコード商品検索レスポンス
+message GetProductByBarcodeResponse {
+  // 検索結果の商品
+  Product product = 1;
+}
+
+// カテゴリ作成レスポンス
+message CreateCategoryResponse {
+  // 作成されたカテゴリ
+  Category category = 1;
+}
+
+// カテゴリ更新レスポンス
+message UpdateCategoryResponse {
+  // 更新されたカテゴリ
+  Category category = 1;
+}
+
+// 税率作成レスポンス
+message CreateTaxRateResponse {
+  // 作成された税率
+  TaxRate tax_rate = 1;
+}
+
+// 税率更新レスポンス
+message UpdateTaxRateResponse {
+  // 更新された税率
+  TaxRate tax_rate = 1;
+}
+
+// 割引作成レスポンス
+message CreateDiscountResponse {
+  // 作成された割引
+  Discount discount = 1;
+}
+
+// 割引更新レスポンス
+message UpdateDiscountResponse {
+  // 更新された割引
+  Discount discount = 1;
+}
+
+// クーポン作成レスポンス
+message CreateCouponResponse {
+  // 作成されたクーポン
+  Coupon coupon = 1;
 }
 
 // === リクエスト/レスポンス ===
