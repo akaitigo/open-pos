@@ -4,7 +4,7 @@
 汎用POSシステム（マルチテナント、オフライン対応）のモノリポ。
 
 ## 技術スタック
-- Backend: Kotlin 2.1 / Quarkus 3.17 / GraalVM CE 21 / Gradle
+- Backend: Kotlin 2.3 / Quarkus 3.32 / GraalVM CE 21 / Gradle 9
 - Frontend: React 19 / TypeScript / Vite 6 / Tailwind + shadcn/ui
 - DB: PostgreSQL 17（スキーマ分離、Flyway migration）
 - Cache: Redis 7（Lettuce、cache-aside パターン）
