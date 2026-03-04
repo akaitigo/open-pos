@@ -4,6 +4,8 @@ syntax = "proto3";
 // RabbitMQ 経由でサービス間に配信されるイベントのスキーマ定義です
 package openpos.event.v1;
 
+option java_multiple_files = true;
+
 // イベントエンベロープ（全イベント共通のラッパー）
 // RabbitMQ メッセージのボディとして使用します
 // event_id は冪等性キーとして重複排除に利用します

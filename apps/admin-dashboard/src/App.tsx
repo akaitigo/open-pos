@@ -1,10 +1,26 @@
+import { BrowserRouter, Routes, Route } from 'react-router'
+
+import { Layout } from '@/routes/layout'
+import { DashboardPage } from '@/routes/dashboard'
+import { ProductsPage } from '@/routes/products'
+import { CategoriesPage } from '@/routes/categories'
+import { StoresPage } from '@/routes/stores'
+import { StaffPage } from '@/routes/staff'
+import { SettingsPage } from '@/routes/settings'
+
 export function App() {
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">OpenPOS Admin</h1>
-        <p className="text-gray-500">管理ダッシュボード</p>
-      </div>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="products" element={<ProductsPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
+          <Route path="stores" element={<StoresPage />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   )
 }

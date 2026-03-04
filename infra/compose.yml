@@ -105,6 +105,234 @@ services:
       - openpos-net
     restart: unless-stopped
 
+  # === Backend Services ===
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: api-gateway
+    container_name: openpos-api-gateway
+    ports:
+      - '8080:8080'
+    environment:
+      QUARKUS_HTTP_PORT: 8080
+      REDIS_URL: redis://redis:6379
+      HYDRA_JWKS_URL: http://hydra:4444/.well-known/jwks.json
+      HYDRA_ISSUER: http://hydra:4444/
+      PRODUCT_SERVICE_HOST: product-service
+      PRODUCT_SERVICE_PORT: 9000
+      STORE_SERVICE_HOST: store-service
+      STORE_SERVICE_PORT: 9000
+      POS_SERVICE_HOST: pos-service
+      POS_SERVICE_PORT: 9000
+      INVENTORY_SERVICE_HOST: inventory-service
+      INVENTORY_SERVICE_PORT: 9000
+      ANALYTICS_SERVICE_HOST: analytics-service
+      ANALYTICS_SERVICE_PORT: 9000
+    depends_on:
+      redis:
+        condition: service_healthy
+      hydra:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --quiet --tries=1 --spider http://localhost:8080/api/health/live || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - openpos-net
+
+  product-service:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: product-service
+    container_name: openpos-product-service
+    ports:
+      - '8081:8080'
+      - '9001:9000'
+    environment:
+      QUARKUS_HTTP_PORT: 8080
+      QUARKUS_GRPC_SERVER_PORT: 9000
+      DB_URL: jdbc:postgresql://postgres:5432/openpos
+      DB_USER: openpos
+      DB_PASSWORD: openpos_dev
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: openpos
+      RABBITMQ_PASS: openpos_dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - openpos-net
+
+  store-service:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: store-service
+    container_name: openpos-store-service
+    ports:
+      - '8082:8080'
+      - '9002:9000'
+    environment:
+      QUARKUS_HTTP_PORT: 8080
+      QUARKUS_GRPC_SERVER_PORT: 9000
+      DB_URL: jdbc:postgresql://postgres:5432/openpos
+      DB_USER: openpos
+      DB_PASSWORD: openpos_dev
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: openpos
+      RABBITMQ_PASS: openpos_dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - openpos-net
+
+  pos-service:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: pos-service
+    container_name: openpos-pos-service
+    ports:
+      - '8083:8080'
+      - '9003:9000'
+    environment:
+      QUARKUS_HTTP_PORT: 8080
+      QUARKUS_GRPC_SERVER_PORT: 9000
+      DB_URL: jdbc:postgresql://postgres:5432/openpos
+      DB_USER: openpos
+      DB_PASSWORD: openpos_dev
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: openpos
+      RABBITMQ_PASS: openpos_dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - openpos-net
+
+  inventory-service:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: inventory-service
+    container_name: openpos-inventory-service
+    ports:
+      - '8084:8080'
+      - '9004:9000'
+    environment:
+      QUARKUS_HTTP_PORT: 8080
+      QUARKUS_GRPC_SERVER_PORT: 9000
+      DB_URL: jdbc:postgresql://postgres:5432/openpos
+      DB_USER: openpos
+      DB_PASSWORD: openpos_dev
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: openpos
+      RABBITMQ_PASS: openpos_dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - openpos-net
+
+  analytics-service:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: analytics-service
+    container_name: openpos-analytics-service
+    ports:
+      - '8085:8080'
+      - '9005:9000'
+    environment:
+      QUARKUS_HTTP_PORT: 8080
+      QUARKUS_GRPC_SERVER_PORT: 9000
+      DB_URL: jdbc:postgresql://postgres:5432/openpos
+      DB_USER: openpos
+      DB_PASSWORD: openpos_dev
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: openpos
+      RABBITMQ_PASS: openpos_dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - openpos-net
+
 volumes:
   openpos-pgdata:
   openpos-redis:
