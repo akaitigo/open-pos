@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,11 +21,14 @@ export function ProductsPage() {
   const [totalPages, setTotalPages] = useState(0)
   const [scannerOpen, setScannerOpen] = useState(false)
 
-  const fetchProducts = useCallback(async () => {
-    const result = await api.get<PaginatedResponse<Product>>(
-      '/api/products',
-      PaginatedProductsSchema,
-      {
+  useEffect(() => {
+    api.get('/api/categories', z.array(CategorySchema)).then(setCategories)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .get<PaginatedResponse<Product>>('/api/products', PaginatedProductsSchema, {
         params: {
           page,
           pageSize: 24,
@@ -33,19 +36,17 @@ export function ProductsPage() {
           search: search || undefined,
           activeOnly: true,
         },
-      },
-    )
-    setProducts(result.data)
-    setTotalPages(result.pagination.totalPages)
+      })
+      .then((result) => {
+        if (!cancelled) {
+          setProducts(result.data)
+          setTotalPages(result.pagination.totalPages)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
   }, [page, selectedCategory, search])
-
-  useEffect(() => {
-    api.get('/api/categories', z.array(CategorySchema)).then(setCategories)
-  }, [])
-
-  useEffect(() => {
-    fetchProducts()
-  }, [fetchProducts])
 
   function handleCategoryChange(value: string) {
     setSelectedCategory(value)

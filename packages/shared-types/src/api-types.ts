@@ -7,7 +7,7 @@ import { StoreSchema, StaffSchema } from './store'
 export const ApiErrorResponseSchema = z.object({
   error: z.string(),
   message: z.string(),
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
 })
 
 export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>
