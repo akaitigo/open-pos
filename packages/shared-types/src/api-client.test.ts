@@ -136,11 +136,14 @@ describe('createApiClient', () => {
   })
 
   it('HTTP エラー時に ApiError をスローする', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ code: 'NOT_FOUND', message: 'Item not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+    const errorBody = { error: 'NOT_FOUND', message: 'Item not found' }
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify(errorBody), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
     )
 
     const client = createApiClient('http://localhost:8080')

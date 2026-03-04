@@ -47,8 +47,8 @@ export function StaffPage() {
       .then((result) => {
         setStores(result.data)
         const firstStore = result.data[0]
-        if (firstStore && !selectedStoreId) {
-          setSelectedStoreId(firstStore.id)
+        if (firstStore) {
+          setSelectedStoreId((prev) => prev || firstStore.id)
         }
       })
   }, [])

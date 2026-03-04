@@ -33,6 +33,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Resolve proto symlinks
+        run: |
+          find services -type l -name openpos | while read -r link; do
+            real=$(readlink -f "$link")
+            rm "$link"
+            cp -r "$real" "$link"
+          done
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

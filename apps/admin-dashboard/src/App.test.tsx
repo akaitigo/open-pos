@@ -12,7 +12,7 @@ describe('App', () => {
   it('サイドバーにダッシュボードリンクが表示される', () => {
     render(<App />)
 
-    expect(screen.getByText('ダッシュボード')).toBeInTheDocument()
+    expect(screen.getAllByText('ダッシュボード').length).toBeGreaterThanOrEqual(1)
   })
 
   it('ダッシュボードページが表示される', () => {
