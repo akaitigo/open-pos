@@ -2,11 +2,10 @@ package com.openpos.product.integration
 
 import io.quarkus.test.junit.QuarkusTestProfile
 import org.testcontainers.containers.PostgreSQLContainer
-import java.sql.DriverManager
 
 /**
  * Testcontainers で PostgreSQL を起動する結合テストプロファイル。
- * Flyway マイグレーションを有効化し、実際の DB スキーマでテストする。
+ * Flyway の create-schemas=true でスキーマを自動作成し、マイグレーションで実テーブルを構築する。
  */
 class IntegrationTestProfile : QuarkusTestProfile {
     companion object {
@@ -15,18 +14,7 @@ class IntegrationTestProfile : QuarkusTestProfile {
                 .withDatabaseName("openpos_test")
                 .withUsername("test")
                 .withPassword("test")
-                .apply {
-                    start()
-                    createSchemas()
-                }
-
-        private fun PostgreSQLContainer<*>.createSchemas() {
-            DriverManager.getConnection(jdbcUrl, username, password).use { conn ->
-                conn.createStatement().use { stmt ->
-                    stmt.execute("CREATE SCHEMA IF NOT EXISTS product_schema")
-                }
-            }
-        }
+                .apply { start() }
     }
 
     override fun getConfigOverrides(): Map<String, String> =
@@ -39,6 +27,7 @@ class IntegrationTestProfile : QuarkusTestProfile {
             "quarkus.hibernate-orm.database.default-schema" to "product_schema",
             "quarkus.flyway.migrate-at-start" to "true",
             "quarkus.flyway.schemas" to "product_schema",
+            "quarkus.flyway.create-schemas" to "true",
             "quarkus.datasource.health.enabled" to "false",
             "quarkus.redis.devservices.enabled" to "false",
             "quarkus.rabbitmq.devservices.enabled" to "false",
