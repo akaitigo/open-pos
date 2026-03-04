@@ -10,25 +10,25 @@ import "openpos/common/v1/common.proto";
 // オフライン対応: client_id による冪等性キーを使って重複排除します
 service PosService {
   // 取引を作成する（ドラフト状態で開始）
-  rpc CreateTransaction(CreateTransactionRequest) returns (Transaction);
+  rpc CreateTransaction(CreateTransactionRequest) returns (CreateTransactionResponse);
   // 取引を取得する
-  rpc GetTransaction(GetTransactionRequest) returns (Transaction);
+  rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
   // 取引一覧を取得する（日付範囲・店舗・ステータスで絞り込み）
   rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
   // 取引に明細を追加する（バーコードスキャン時に呼び出す）
-  rpc AddTransactionItem(AddTransactionItemRequest) returns (Transaction);
+  rpc AddTransactionItem(AddTransactionItemRequest) returns (AddTransactionItemResponse);
   // 取引の明細を更新する（数量変更等）
-  rpc UpdateTransactionItem(UpdateTransactionItemRequest) returns (Transaction);
+  rpc UpdateTransactionItem(UpdateTransactionItemRequest) returns (UpdateTransactionItemResponse);
   // 取引の明細を削除する
-  rpc RemoveTransactionItem(RemoveTransactionItemRequest) returns (Transaction);
+  rpc RemoveTransactionItem(RemoveTransactionItemRequest) returns (RemoveTransactionItemResponse);
   // 取引に割引を適用する（クーポンコードまたは割引IDを指定）
-  rpc ApplyDiscount(ApplyDiscountRequest) returns (Transaction);
+  rpc ApplyDiscount(ApplyDiscountRequest) returns (ApplyDiscountResponse);
   // 取引を確定する（支払処理・レシート発行）
   rpc FinalizeTransaction(FinalizeTransactionRequest) returns (FinalizeTransactionResponse);
   // 取引を無効化する（返品・誤操作キャンセル）
-  rpc VoidTransaction(VoidTransactionRequest) returns (Transaction);
+  rpc VoidTransaction(VoidTransactionRequest) returns (VoidTransactionResponse);
   // レシートを取得する
-  rpc GetReceipt(GetReceiptRequest) returns (Receipt);
+  rpc GetReceipt(GetReceiptRequest) returns (GetReceiptResponse);
   // オフライン取引を同期する（端末オンライン復帰時に一括送信）
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
 }
@@ -207,6 +207,56 @@ message Receipt {
   string pdf_url = 4;
   // 作成日時（ISO 8601 形式）
   string created_at = 5;
+}
+
+// === レスポンスラッパー ===
+
+// 取引作成レスポンス
+message CreateTransactionResponse {
+  // 作成された取引
+  Transaction transaction = 1;
+}
+
+// 取引取得レスポンス
+message GetTransactionResponse {
+  // 取引情報
+  Transaction transaction = 1;
+}
+
+// 明細追加レスポンス
+message AddTransactionItemResponse {
+  // 更新された取引
+  Transaction transaction = 1;
+}
+
+// 明細更新レスポンス
+message UpdateTransactionItemResponse {
+  // 更新された取引
+  Transaction transaction = 1;
+}
+
+// 明細削除レスポンス
+message RemoveTransactionItemResponse {
+  // 更新された取引
+  Transaction transaction = 1;
+}
+
+// 割引適用レスポンス
+message ApplyDiscountResponse {
+  // 更新された取引
+  Transaction transaction = 1;
+}
+
+// 取引無効化レスポンス
+message VoidTransactionResponse {
+  // 無効化された取引
+  Transaction transaction = 1;
+}
+
+// レシート取得レスポンス
+message GetReceiptResponse {
+  // レシート情報
+  Receipt receipt = 1;
 }
 
 // === リクエスト/レスポンス ===

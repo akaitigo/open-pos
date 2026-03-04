@@ -9,36 +9,36 @@ import "openpos/common/v1/common.proto";
 // マルチテナント構成の組織・店舗・端末・スタッフの CRUD と PIN 認証を提供します
 service StoreService {
   // 組織を作成する（テナント登録）
-  rpc CreateOrganization(CreateOrganizationRequest) returns (Organization);
+  rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse);
   // 組織を取得する
-  rpc GetOrganization(GetOrganizationRequest) returns (Organization);
+  rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse);
   // 組織を更新する（適格請求書発行事業者番号等）
-  rpc UpdateOrganization(UpdateOrganizationRequest) returns (Organization);
+  rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse);
 
   // 店舗を作成する
-  rpc CreateStore(CreateStoreRequest) returns (Store);
+  rpc CreateStore(CreateStoreRequest) returns (CreateStoreResponse);
   // 店舗を取得する
-  rpc GetStore(GetStoreRequest) returns (Store);
+  rpc GetStore(GetStoreRequest) returns (GetStoreResponse);
   // 店舗一覧を取得する
   rpc ListStores(ListStoresRequest) returns (ListStoresResponse);
   // 店舗を更新する
-  rpc UpdateStore(UpdateStoreRequest) returns (Store);
+  rpc UpdateStore(UpdateStoreRequest) returns (UpdateStoreResponse);
 
   // 端末を登録する（POS 端末の初回セットアップ）
-  rpc RegisterTerminal(RegisterTerminalRequest) returns (Terminal);
+  rpc RegisterTerminal(RegisterTerminalRequest) returns (RegisterTerminalResponse);
   // 端末一覧を取得する
   rpc ListTerminals(ListTerminalsRequest) returns (ListTerminalsResponse);
   // 端末の最終同期日時を更新する（ハートビート）
-  rpc UpdateTerminalSync(UpdateTerminalSyncRequest) returns (Terminal);
+  rpc UpdateTerminalSync(UpdateTerminalSyncRequest) returns (UpdateTerminalSyncResponse);
 
   // スタッフを作成する
-  rpc CreateStaff(CreateStaffRequest) returns (Staff);
+  rpc CreateStaff(CreateStaffRequest) returns (CreateStaffResponse);
   // スタッフを取得する
-  rpc GetStaff(GetStaffRequest) returns (Staff);
+  rpc GetStaff(GetStaffRequest) returns (GetStaffResponse);
   // スタッフ一覧を取得する
   rpc ListStaff(ListStaffRequest) returns (ListStaffResponse);
   // スタッフを更新する
-  rpc UpdateStaff(UpdateStaffRequest) returns (Staff);
+  rpc UpdateStaff(UpdateStaffRequest) returns (UpdateStaffResponse);
   // PIN で認証する（POS 画面のスタッフログイン）
   rpc AuthenticateByPin(AuthenticateByPinRequest) returns (AuthenticateByPinResponse);
 }
@@ -153,6 +153,74 @@ message Staff {
   string created_at = 11;
   // 更新日時（ISO 8601 形式）
   string updated_at = 12;
+}
+
+// === レスポンスラッパー ===
+
+// 組織作成レスポンス
+message CreateOrganizationResponse {
+  // 作成された組織
+  Organization organization = 1;
+}
+
+// 組織取得レスポンス
+message GetOrganizationResponse {
+  // 組織情報
+  Organization organization = 1;
+}
+
+// 組織更新レスポンス
+message UpdateOrganizationResponse {
+  // 更新された組織
+  Organization organization = 1;
+}
+
+// 店舗作成レスポンス
+message CreateStoreResponse {
+  // 作成された店舗
+  Store store = 1;
+}
+
+// 店舗取得レスポンス
+message GetStoreResponse {
+  // 店舗情報
+  Store store = 1;
+}
+
+// 店舗更新レスポンス
+message UpdateStoreResponse {
+  // 更新された店舗
+  Store store = 1;
+}
+
+// 端末登録レスポンス
+message RegisterTerminalResponse {
+  // 登録された端末
+  Terminal terminal = 1;
+}
+
+// 端末同期更新レスポンス
+message UpdateTerminalSyncResponse {
+  // 更新された端末
+  Terminal terminal = 1;
+}
+
+// スタッフ作成レスポンス
+message CreateStaffResponse {
+  // 作成されたスタッフ
+  Staff staff = 1;
+}
+
+// スタッフ取得レスポンス
+message GetStaffResponse {
+  // スタッフ情報
+  Staff staff = 1;
+}
+
+// スタッフ更新レスポンス
+message UpdateStaffResponse {
+  // 更新されたスタッフ
+  Staff staff = 1;
 }
 
 // === リクエスト/レスポンス ===
