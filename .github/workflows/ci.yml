@@ -33,12 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Resolve proto symlinks
+      - name: Copy proto files to services
         run: |
-          find services -type l -name openpos | while read -r link; do
-            real=$(readlink -f "$link")
-            rm "$link"
-            cp -r "$real" "$link"
+          for svc in services/*/src/main/proto; do
+            rm -rf "$svc/openpos"
+            cp -r proto/openpos "$svc/openpos"
           done
       - uses: actions/setup-java@v4
         with:
