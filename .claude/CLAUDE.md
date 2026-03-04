@@ -41,9 +41,34 @@
 - proto 編集後は `buf lint` + `buf format -w`
 - フィールド番号の再利用禁止（reserved で予約）
 
-### テスト
-- Backend: `@QuarkusTest` + `@InjectMock`
-- Frontend: Vitest + React Testing Library
+### テスト（必須 — 全機能実装に適用）
+
+**全ての機能実装には、単体テスト・機能テスト・結合テスト・E2Eテストを必ずコードとして含める。**
+詳細戦略: [`docs/guides/testing.md`](docs/guides/testing.md) / リサーチ: `docs/research/testing-*.md`
+
+| レベル | Backend | Frontend | 場所 |
+|-------|---------|----------|------|
+| 単体テスト | JUnit 5 + `@InjectMock` | Vitest + RTL | `src/test/kotlin/` / `src/**/*.test.ts(x)` |
+| 機能テスト | JUnit 5 + `@QuarkusTest` | Vitest + RTL | `**/functional/` / `*.functional.test.ts(x)` |
+| 結合テスト | `@QuarkusTest` + Testcontainers | — | `**/integration/` |
+| E2Eテスト | Playwright | Playwright | `e2e/` |
+
+**ルール**:
+- AAA パターン（Arrange-Act-Assert）で記述
+- 1テスト = 1検証意図
+- 外部依存は `@InjectMock` / `vi.mock` / Testcontainers で隔離
+- 金額計算は境界値テスト必須（0円、1円、端数、最大値、税率切替）
+- E2E は `data-testid` + Page Object Model。手動 sleep 禁止
+- 新規コードの行カバレッジ 80%+ 必須
+- Red → Green: 実装前にテストが失敗することを確認
+
+**実行コマンド**:
+```bash
+./gradlew :services:{name}:test          # Backend 単体+機能
+./gradlew :services:{name}:test -Dquarkus.test.profile=integration  # 結合
+pnpm --filter {app} test                 # Frontend 単体+機能
+pnpm --filter e2e test                   # E2E
+```
 
 ## ローカル開発
 ```bash

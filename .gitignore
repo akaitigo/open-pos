@@ -46,6 +46,9 @@ coverage/
 *.lcov
 test-results/
 
+# === Claude Code ===
+.claude/worktrees/
+
 # === Claude Code sandbox artifacts ===
 /HEAD
 /config
