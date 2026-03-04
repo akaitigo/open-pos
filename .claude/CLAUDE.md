@@ -70,6 +70,64 @@ pnpm --filter {app} test                 # Frontend 単体+機能
 pnpm --filter e2e test                   # E2E
 ```
 
+## アーキテクチャ制約
+
+### Backend レイヤー（依存方向: 上→下のみ）
+```
+Proto 定義 → Config/Filter → Entity → Repository → Service → gRPC Handler
+```
+
+**禁止**:
+- Entity が Service を参照
+- gRPC Handler が Repository を直接呼び出し
+- Service 間の直接依存（RabbitMQ イベント経由のみ）
+
+### マルチテナント実装パターン
+
+gRPC Interceptor で metadata → Context → Hibernate Filter の順に伝播:
+```kotlin
+// 1. OrganizationIdInterceptor: metadata から UUID を抽出
+val orgIdStr = headers.get(Metadata.Key.of("x-organization-id", ASCII_STRING_MARSHALLER))
+val ctx = Context.current().withValue(ORGANIZATION_ID_CTX_KEY, UUID.fromString(orgIdStr))
+
+// 2. GrpcTenantHelper: Context から取得して OrganizationIdHolder に設定
+OrganizationIdHolder.set(ORGANIZATION_ID_CTX_KEY.get())
+
+// 3. TenantFilterService: Hibernate Filter を有効化
+session.enableFilter("organizationFilter").setParameter("organizationId", orgId)
+```
+
+テスト時は `OrganizationIdHolder.set(testOrgId)` で直接設定。
+
+## コーディング規約詳細
+
+→ 詳細は `.claude/rules/` を参照:
+- **Kotlin/Quarkus**: `rules/kotlin.md`（Null安全性、DB、CDI、RabbitMQ、Redis）
+- **TypeScript/React**: `rules/typescript.md`（型安全性、React、認証、セキュリティ）
+- **Proto/gRPC**: `rules/proto.md`（proto3 構文、buf ツールチェーン、gRPC 設計）
+- **フロントエンド**: `rules/frontend.md`（コンポーネント構造、金額表示、オフライン）
+- **マイクロサービス**: `rules/service.md`（パッケージ構造、テナント分離、RabbitMQ、キャッシュ）
+
+## トラブルシューティング
+
+### CI
+- `setup-java`: `distribution: temurin` を使用（`graalce` は非対応）
+- `buf breaking`: ローカル git 参照 + `git fetch origin main:main` が必須
+- `pnpm`: `package.json` に `"packageManager": "pnpm@10.30.3"` が必須
+
+### テスト
+- **ヘルスチェック**: HTTP GET `/q/health` は gRPC サービスで 404 → CDI inject `SmallRyeHealthReporter` を使用
+- **SmallRyeHealth**: `.status` は存在しない → `.isDown.not()` で判定
+- **H2 テスト DB**: `testImplementation("io.quarkus:quarkus-jdbc-h2")`
+
+### Docker
+- **サービス間通信**: `localhost:8080` ではなく Docker ネットワーク内のサービス名を使用
+- **Hydra マイグレーション**: `hydra-migrate` init サービスで自動実行
+
+### GitHub CLI
+- `GITHUB_TOKEN` に Fine-grained PAT がセットされると `gh` CLI の OAuth トークンを上書きする
+- 対策: `unset GITHUB_TOKEN` してから `gh` コマンド実行
+
 ## ローカル開発
 ```bash
 make up          # インフラ起動
