@@ -1,0 +1,7 @@
+dist/
+build/
+node_modules/
+*.generated.ts
+gradle/
+services/
+proto/

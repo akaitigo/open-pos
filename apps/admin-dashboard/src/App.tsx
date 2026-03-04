@@ -6,5 +6,5 @@ export function App() {
         <p className="text-gray-500">管理ダッシュボード</p>
       </div>
     </div>
-  );
+  )
 }

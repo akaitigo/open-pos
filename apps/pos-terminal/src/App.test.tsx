@@ -1,17 +1,17 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
-import { App } from "./App";
+import { render, screen } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import { App } from './App'
 
-describe("App", () => {
-  it("クラッシュせずにレンダリングできる", () => {
-    render(<App />);
+describe('App', () => {
+  it('クラッシュせずにレンダリングできる', () => {
+    render(<App />)
 
-    expect(screen.getByText("OpenPOS Terminal")).toBeInTheDocument();
-  });
+    expect(screen.getByText('OpenPOS Terminal')).toBeInTheDocument()
+  })
 
-  it("サブタイトルが表示される", () => {
-    render(<App />);
+  it('サブタイトルが表示される', () => {
+    render(<App />)
 
-    expect(screen.getByText("POS端末アプリケーション")).toBeInTheDocument();
-  });
-});
+    expect(screen.getByText('POS端末アプリケーション')).toBeInTheDocument()
+  })
+})
