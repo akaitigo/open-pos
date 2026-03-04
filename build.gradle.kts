@@ -1,8 +1,8 @@
 plugins {
-    kotlin("jvm") version "2.1.10" apply false
-    kotlin("plugin.allopen") version "2.1.10" apply false
-    kotlin("plugin.noarg") version "2.1.10" apply false
-    id("io.quarkus") version "3.17.8" apply false
+    kotlin("jvm") apply false
+    kotlin("plugin.allopen") apply false
+    kotlin("plugin.noarg") apply false
+    id("io.quarkus") apply false
 }
 
 allprojects {
