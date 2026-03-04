@@ -21,6 +21,7 @@ dependencies {
     implementation("io.quarkus:quarkus-smallrye-health")
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("io.quarkus:quarkus-arc")
+    implementation("at.favre.lib:bcrypt:0.10.2")
 
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("io.quarkus:quarkus-jdbc-h2")

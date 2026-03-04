@@ -14,5 +14,5 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 ARG SERVICE_NAME
 COPY --from=build /app/services/${SERVICE_NAME}/build/*-runner.jar app.jar
-EXPOSE 8080
+EXPOSE 8080 9000
 ENTRYPOINT ["java", "-jar", "app.jar"]

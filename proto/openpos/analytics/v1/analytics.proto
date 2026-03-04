@@ -5,6 +5,8 @@ package openpos.analytics.v1;
 
 import "openpos/common/v1/common.proto";
 
+option java_multiple_files = true;
+
 // 売上分析サービス
 // 日次・商品別・時間帯別の売上集計を提供します
 // データは SaleCompleted イベントを非同期に集計して保持します

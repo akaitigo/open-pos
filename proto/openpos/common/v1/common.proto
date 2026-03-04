@@ -3,6 +3,8 @@ syntax = "proto3";
 // openpos.common.v1 パッケージは全サービス共通の型を提供します
 package openpos.common.v1;
 
+option java_multiple_files = true;
+
 // 金額を表す型（銭単位: 10000 = 100円）
 // 浮動小数点を避けるため int64 を使用し、端数誤差を排除します
 message Money {

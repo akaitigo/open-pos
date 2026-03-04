@@ -6,12 +6,18 @@ describe('App', () => {
   it('クラッシュせずにレンダリングできる', () => {
     render(<App />)
 
-    expect(screen.getByText('OpenPOS Admin')).toBeInTheDocument()
+    expect(screen.getByText('OpenPOS')).toBeInTheDocument()
   })
 
-  it('サブタイトルが表示される', () => {
+  it('サイドバーにダッシュボードリンクが表示される', () => {
     render(<App />)
 
-    expect(screen.getByText('管理ダッシュボード')).toBeInTheDocument()
+    expect(screen.getAllByText('ダッシュボード').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('ダッシュボードページが表示される', () => {
+    render(<App />)
+
+    expect(screen.getByText('Dashboard - Coming Soon')).toBeInTheDocument()
   })
 })
