@@ -35,6 +35,7 @@ Thumbs.db
 
 # === Proto generated ===
 proto/gen/
+services/*/src/main/proto/openpos/
 
 # === Docker ===
 docker-compose.override.yml

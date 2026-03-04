@@ -4,6 +4,7 @@ import openpos.common.v1.PaginationResponse
 import openpos.product.v1.Category
 import openpos.product.v1.Coupon
 import openpos.product.v1.Discount
+import openpos.product.v1.DiscountType
 import openpos.product.v1.Product
 import openpos.product.v1.TaxRate
 import openpos.store.v1.Organization
@@ -62,8 +63,8 @@ fun Discount.toMap(): Map<String, Any?> =
         "name" to name,
         "discountType" to
             when (discountType) {
-                openpos.product.v1.DiscountType.DISCOUNT_TYPE_PERCENTAGE -> "PERCENTAGE"
-                openpos.product.v1.DiscountType.DISCOUNT_TYPE_FIXED_AMOUNT -> "FIXED_AMOUNT"
+                DiscountType.DISCOUNT_TYPE_PERCENTAGE -> "PERCENTAGE"
+                DiscountType.DISCOUNT_TYPE_FIXED_AMOUNT -> "FIXED_AMOUNT"
                 else -> "UNSPECIFIED"
             },
         "value" to value,

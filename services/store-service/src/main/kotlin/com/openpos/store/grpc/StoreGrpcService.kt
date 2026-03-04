@@ -13,6 +13,7 @@ import io.grpc.Status
 import io.quarkus.grpc.GrpcService
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
+import openpos.common.v1.PaginationResponse
 import openpos.store.v1.AuthenticateByPinRequest
 import openpos.store.v1.AuthenticateByPinResponse
 import openpos.store.v1.CreateOrganizationRequest
@@ -33,10 +34,14 @@ import openpos.store.v1.ListStoresRequest
 import openpos.store.v1.ListStoresResponse
 import openpos.store.v1.ListTerminalsRequest
 import openpos.store.v1.ListTerminalsResponse
+import openpos.store.v1.Organization
 import openpos.store.v1.RegisterTerminalRequest
 import openpos.store.v1.RegisterTerminalResponse
+import openpos.store.v1.Staff
 import openpos.store.v1.StaffRole
+import openpos.store.v1.Store
 import openpos.store.v1.StoreServiceGrpc
+import openpos.store.v1.Terminal
 import openpos.store.v1.UpdateOrganizationRequest
 import openpos.store.v1.UpdateOrganizationResponse
 import openpos.store.v1.UpdateStaffRequest
@@ -163,7 +168,7 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
                 .newBuilder()
                 .addAllStores(stores.map { it.toProto() })
                 .setPagination(
-                    openpos.common.v1.PaginationResponse
+                    PaginationResponse
                         .newBuilder()
                         .setPage(page + 1)
                         .setPageSize(pageSize)
@@ -291,7 +296,7 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
                 .newBuilder()
                 .addAllStaff(staff.map { it.toProto() })
                 .setPagination(
-                    openpos.common.v1.PaginationResponse
+                    PaginationResponse
                         .newBuilder()
                         .setPage(page + 1)
                         .setPageSize(pageSize)
@@ -346,8 +351,8 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
 
     // === Mapper Extensions ===
 
-    private fun OrganizationEntity.toProto(): openpos.store.v1.Organization =
-        openpos.store.v1.Organization
+    private fun OrganizationEntity.toProto(): Organization =
+        Organization
             .newBuilder()
             .setId(id.toString())
             .setName(name)
@@ -357,8 +362,8 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
             .setUpdatedAt(updatedAt.toString())
             .build()
 
-    private fun StoreEntity.toProto(): openpos.store.v1.Store =
-        openpos.store.v1.Store
+    private fun StoreEntity.toProto(): Store =
+        Store
             .newBuilder()
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())
@@ -372,8 +377,8 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
             .setUpdatedAt(updatedAt.toString())
             .build()
 
-    private fun TerminalEntity.toProto(): openpos.store.v1.Terminal =
-        openpos.store.v1.Terminal
+    private fun TerminalEntity.toProto(): Terminal =
+        Terminal
             .newBuilder()
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())
@@ -386,8 +391,8 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
             .setUpdatedAt(updatedAt.toString())
             .build()
 
-    private fun StaffEntity.toProto(): openpos.store.v1.Staff =
-        openpos.store.v1.Staff
+    private fun StaffEntity.toProto(): Staff =
+        Staff
             .newBuilder()
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())

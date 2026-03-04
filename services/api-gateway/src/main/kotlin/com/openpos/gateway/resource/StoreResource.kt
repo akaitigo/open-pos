@@ -14,6 +14,7 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Response
+import openpos.common.v1.PaginationRequest
 import openpos.store.v1.CreateStoreRequest
 import openpos.store.v1.GetStoreRequest
 import openpos.store.v1.ListStoresRequest
@@ -69,7 +70,7 @@ class StoreResource {
             ListStoresRequest
                 .newBuilder()
                 .setPagination(
-                    openpos.common.v1.PaginationRequest
+                    PaginationRequest
                         .newBuilder()
                         .setPage(page)
                         .setPageSize(pageSize)

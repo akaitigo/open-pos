@@ -33,21 +33,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Copy proto files to services
-        run: |
-          for svc in services/*/src/main/proto; do
-            rm -rf "$svc/openpos"
-            cp -r proto/openpos "$svc/openpos"
-          done
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - name: Build
-        run: ./gradlew build -x test
+        run: >-
+          ./gradlew
+          :services:api-gateway:build
+          :services:product-service:build
+          :services:store-service:build
+          -x test --no-build-cache
       - name: Test
-        run: ./gradlew test
+        run: >-
+          ./gradlew
+          :services:api-gateway:test
+          :services:product-service:test
+          :services:store-service:test
+          --no-build-cache
 
   frontend:
     name: Frontend Build, Lint & Test

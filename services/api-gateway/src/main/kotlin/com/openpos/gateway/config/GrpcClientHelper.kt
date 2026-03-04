@@ -1,8 +1,13 @@
 package com.openpos.gateway.config
 
+import io.grpc.CallOptions
+import io.grpc.Channel
+import io.grpc.ClientCall
+import io.grpc.ClientInterceptor
+import io.grpc.ForwardingClientCall.SimpleForwardingClientCall
 import io.grpc.Metadata
+import io.grpc.MethodDescriptor
 import io.grpc.stub.AbstractBlockingStub
-import io.grpc.stub.MetadataUtils
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 
@@ -17,10 +22,27 @@ class GrpcClientHelper {
     }
 
     fun <T : AbstractBlockingStub<T>> withTenant(stub: T): T {
-        val metadata = Metadata()
+        val extraHeaders = Metadata()
         tenantContext.organizationId?.let { orgId ->
-            metadata.put(ORG_ID_KEY, orgId.toString())
+            extraHeaders.put(ORG_ID_KEY, orgId.toString())
         }
-        return MetadataUtils.attachHeaders(stub, metadata)
+        val interceptor =
+            object : ClientInterceptor {
+                override fun <ReqT, RespT> interceptCall(
+                    method: MethodDescriptor<ReqT, RespT>,
+                    callOptions: CallOptions,
+                    next: Channel,
+                ): ClientCall<ReqT, RespT> =
+                    object : SimpleForwardingClientCall<ReqT, RespT>(next.newCall(method, callOptions)) {
+                        override fun start(
+                            responseListener: Listener<RespT>,
+                            headers: Metadata,
+                        ) {
+                            headers.merge(extraHeaders)
+                            super.start(responseListener, headers)
+                        }
+                    }
+            }
+        return stub.withInterceptors(interceptor)
     }
 }

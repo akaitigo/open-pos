@@ -5,6 +5,8 @@ package openpos.product.v1;
 
 import "openpos/common/v1/common.proto";
 
+option java_multiple_files = true;
+
 // 商品管理サービス
 // 商品・カテゴリ・税率・割引・クーポンの CRUD を提供します
 service ProductService {

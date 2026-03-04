@@ -14,6 +14,9 @@ import io.grpc.Status
 import io.quarkus.grpc.GrpcService
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
+import openpos.common.v1.PaginationResponse
+import openpos.product.v1.Category
+import openpos.product.v1.Coupon
 import openpos.product.v1.CreateCategoryRequest
 import openpos.product.v1.CreateCategoryResponse
 import openpos.product.v1.CreateCouponRequest
@@ -28,6 +31,8 @@ import openpos.product.v1.DeleteCategoryRequest
 import openpos.product.v1.DeleteCategoryResponse
 import openpos.product.v1.DeleteProductRequest
 import openpos.product.v1.DeleteProductResponse
+import openpos.product.v1.Discount
+import openpos.product.v1.DiscountType
 import openpos.product.v1.GetProductByBarcodeRequest
 import openpos.product.v1.GetProductByBarcodeResponse
 import openpos.product.v1.GetProductRequest
@@ -40,7 +45,9 @@ import openpos.product.v1.ListProductsRequest
 import openpos.product.v1.ListProductsResponse
 import openpos.product.v1.ListTaxRatesRequest
 import openpos.product.v1.ListTaxRatesResponse
+import openpos.product.v1.Product
 import openpos.product.v1.ProductServiceGrpc
+import openpos.product.v1.TaxRate
 import openpos.product.v1.UpdateCategoryRequest
 import openpos.product.v1.UpdateCategoryResponse
 import openpos.product.v1.UpdateDiscountRequest
@@ -135,7 +142,7 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
                 .newBuilder()
                 .addAllProducts(products.map { it.toProto() })
                 .setPagination(
-                    openpos.common.v1.PaginationResponse
+                    PaginationResponse
                         .newBuilder()
                         .setPage(page + 1)
                         .setPageSize(pageSize)
@@ -306,6 +313,7 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
                 name = request.name.ifBlank { null },
                 rate = if (request.rate.isNotBlank()) BigDecimal(request.rate) else null,
                 taxType = if (request.isReduced) "REDUCED" else null,
+                isActive = null,
             ) ?: throw Status.NOT_FOUND.withDescription("TaxRate not found: ${request.id}").asRuntimeException()
         responseObserver.onNext(
             UpdateTaxRateResponse.newBuilder().setTaxRate(entity.toProto()).build(),
@@ -325,8 +333,8 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
                 name = request.name,
                 discountType =
                     when (request.discountType) {
-                        openpos.product.v1.DiscountType.DISCOUNT_TYPE_PERCENTAGE -> "PERCENTAGE"
-                        openpos.product.v1.DiscountType.DISCOUNT_TYPE_FIXED_AMOUNT -> "FIXED_AMOUNT"
+                        DiscountType.DISCOUNT_TYPE_PERCENTAGE -> "PERCENTAGE"
+                        DiscountType.DISCOUNT_TYPE_FIXED_AMOUNT -> "FIXED_AMOUNT"
                         else -> throw Status.INVALID_ARGUMENT.withDescription("discount_type is required").asRuntimeException()
                     },
                 value = request.value.toLong(),
@@ -362,8 +370,8 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
                 name = request.name.ifBlank { null },
                 discountType =
                     when (request.discountType) {
-                        openpos.product.v1.DiscountType.DISCOUNT_TYPE_PERCENTAGE -> "PERCENTAGE"
-                        openpos.product.v1.DiscountType.DISCOUNT_TYPE_FIXED_AMOUNT -> "FIXED_AMOUNT"
+                        DiscountType.DISCOUNT_TYPE_PERCENTAGE -> "PERCENTAGE"
+                        DiscountType.DISCOUNT_TYPE_FIXED_AMOUNT -> "FIXED_AMOUNT"
                         else -> null
                     },
                 value = if (request.value.isNotBlank()) request.value.toLong() else null,
@@ -414,8 +422,8 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
 
     // === Mapper Extensions ===
 
-    private fun ProductEntity.toProto(): openpos.product.v1.Product =
-        openpos.product.v1.Product
+    private fun ProductEntity.toProto(): Product =
+        Product
             .newBuilder()
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())
@@ -432,8 +440,8 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
             .setUpdatedAt(updatedAt.toString())
             .build()
 
-    private fun CategoryEntity.toProto(): openpos.product.v1.Category =
-        openpos.product.v1.Category
+    private fun CategoryEntity.toProto(): Category =
+        Category
             .newBuilder()
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())
@@ -446,8 +454,8 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
             .setUpdatedAt(updatedAt.toString())
             .build()
 
-    private fun TaxRateEntity.toProto(): openpos.product.v1.TaxRate =
-        openpos.product.v1.TaxRate
+    private fun TaxRateEntity.toProto(): TaxRate =
+        TaxRate
             .newBuilder()
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())
@@ -458,17 +466,17 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
             .setUpdatedAt(updatedAt.toString())
             .build()
 
-    private fun DiscountEntity.toProto(): openpos.product.v1.Discount =
-        openpos.product.v1.Discount
+    private fun DiscountEntity.toProto(): Discount =
+        Discount
             .newBuilder()
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())
             .setName(name)
             .setDiscountType(
                 when (discountType) {
-                    "PERCENTAGE" -> openpos.product.v1.DiscountType.DISCOUNT_TYPE_PERCENTAGE
-                    "FIXED_AMOUNT" -> openpos.product.v1.DiscountType.DISCOUNT_TYPE_FIXED_AMOUNT
-                    else -> openpos.product.v1.DiscountType.DISCOUNT_TYPE_UNSPECIFIED
+                    "PERCENTAGE" -> DiscountType.DISCOUNT_TYPE_PERCENTAGE
+                    "FIXED_AMOUNT" -> DiscountType.DISCOUNT_TYPE_FIXED_AMOUNT
+                    else -> DiscountType.DISCOUNT_TYPE_UNSPECIFIED
                 },
             ).setValue(value.toString())
             .setStartDate(validFrom?.toString().orEmpty())
@@ -478,8 +486,8 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
             .setUpdatedAt(updatedAt.toString())
             .build()
 
-    private fun CouponEntity.toProto(): openpos.product.v1.Coupon =
-        openpos.product.v1.Coupon
+    private fun CouponEntity.toProto(): Coupon =
+        Coupon
             .newBuilder()
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())
