@@ -8,6 +8,7 @@ import io.quarkus.panache.common.Page
 import io.quarkus.test.junit.QuarkusTest
 import io.quarkus.test.junit.TestProfile
 import jakarta.inject.Inject
+import jakarta.persistence.EntityManager
 import jakarta.transaction.Transactional
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -33,14 +34,18 @@ class ProductRepositoryIntegrationTest {
     @Inject
     lateinit var tenantFilterService: TenantFilterService
 
+    @Inject
+    lateinit var entityManager: EntityManager
+
     private val testOrgId: UUID = UUID.randomUUID()
 
     @BeforeEach
     @Transactional
     fun setUp() {
+        // フィルターなしで全データ削除（テスト間のデータ干渉を防止）
+        entityManager.createNativeQuery("DELETE FROM product_schema.products").executeUpdate()
         organizationIdHolder.organizationId = testOrgId
         tenantFilterService.enableFilter()
-        productRepository.deleteAll()
     }
 
     @Test
