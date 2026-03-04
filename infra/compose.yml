@@ -8,7 +8,7 @@ services:
       - '15432:5432'
     environment:
       POSTGRES_USER: openpos
-      POSTGRES_PASSWORD: openpos_dev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       POSTGRES_DB: openpos
     volumes:
       - openpos-pgdata:/var/lib/postgresql/data
@@ -45,7 +45,7 @@ services:
       - '15673:15672'
     environment:
       RABBITMQ_DEFAULT_USER: openpos
-      RABBITMQ_DEFAULT_PASS: openpos_dev
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
     volumes:
       - openpos-rabbitmq:/var/lib/rabbitmq
       - ./init-scripts/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
@@ -62,7 +62,7 @@ services:
     image: oryd/hydra:v2.2
     container_name: openpos-hydra-migrate
     environment:
-      DSN: postgres://openpos:openpos_dev@postgres:5432/openpos?sslmode=disable&search_path=hydra
+      DSN: postgres://openpos:${POSTGRES_PASSWORD:-openpos_dev}@postgres:5432/openpos?sslmode=disable&search_path=hydra
     command: migrate sql -e --yes
     depends_on:
       postgres:
@@ -78,8 +78,8 @@ services:
       - '14444:4444'
       - '14445:4445'
     environment:
-      DSN: postgres://openpos:openpos_dev@postgres:5432/openpos?sslmode=disable&search_path=hydra
-      SECRETS_SYSTEM: openpos-hydra-secret-for-dev-only
+      DSN: postgres://openpos:${POSTGRES_PASSWORD:-openpos_dev}@postgres:5432/openpos?sslmode=disable&search_path=hydra
+      SECRETS_SYSTEM: ${HYDRA_SECRETS_SYSTEM:-openpos-hydra-secret-for-dev-only}
       URLS_SELF_ISSUER: http://localhost:14444/
       URLS_CONSENT: http://localhost:3000/consent
       URLS_LOGIN: http://localhost:3000/login
@@ -163,12 +163,12 @@ services:
       QUARKUS_GRPC_SERVER_PORT: 9000
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
-      DB_PASSWORD: openpos_dev
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USER: openpos
-      RABBITMQ_PASS: openpos_dev
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
+      RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
     depends_on:
       postgres:
         condition: service_healthy
@@ -200,12 +200,12 @@ services:
       QUARKUS_GRPC_SERVER_PORT: 9000
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
-      DB_PASSWORD: openpos_dev
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USER: openpos
-      RABBITMQ_PASS: openpos_dev
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
+      RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
     depends_on:
       postgres:
         condition: service_healthy
@@ -237,12 +237,12 @@ services:
       QUARKUS_GRPC_SERVER_PORT: 9000
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
-      DB_PASSWORD: openpos_dev
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USER: openpos
-      RABBITMQ_PASS: openpos_dev
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
+      RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
     depends_on:
       postgres:
         condition: service_healthy
@@ -274,12 +274,12 @@ services:
       QUARKUS_GRPC_SERVER_PORT: 9000
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
-      DB_PASSWORD: openpos_dev
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USER: openpos
-      RABBITMQ_PASS: openpos_dev
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
+      RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
     depends_on:
       postgres:
         condition: service_healthy
@@ -311,12 +311,12 @@ services:
       QUARKUS_GRPC_SERVER_PORT: 9000
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
-      DB_PASSWORD: openpos_dev
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USER: openpos
-      RABBITMQ_PASS: openpos_dev
+      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
+      RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
     depends_on:
       postgres:
         condition: service_healthy
