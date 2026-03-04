@@ -25,5 +25,75 @@ subprojects {
         tasks.matching { it.name == "quarkusGenerateCode" || it.name == "quarkusGenerateCodeDev" }.configureEach {
             dependsOn(copyProto)
         }
+
+        afterEvaluate {
+            dependencies {
+                "testImplementation"("org.testcontainers:testcontainers:1.20.4")
+                "testImplementation"("org.testcontainers:postgresql:1.20.4")
+                "testImplementation"("org.testcontainers:junit-jupiter:1.20.4")
+            }
+
+            apply(plugin = "jacoco")
+
+            configure<JacocoPluginExtension> {
+                toolVersion = "0.8.12"
+            }
+
+            tasks.withType<Test> {
+                finalizedBy(tasks.named("jacocoTestReport"))
+            }
+
+            tasks.withType<JacocoReport> {
+                dependsOn(tasks.withType<Test>())
+                reports {
+                    xml.required.set(true)
+                    html.required.set(true)
+                    csv.required.set(false)
+                }
+                classDirectories.setFrom(
+                    files(
+                        classDirectories.files.map {
+                            fileTree(it) {
+                                exclude(
+                                    "**/grpc/**Grpc*",
+                                    "**/grpc/**Proto*",
+                                    "**/proto/**",
+                                    "**/entity/*_",
+                                )
+                            }
+                        },
+                    ),
+                )
+            }
+
+            tasks.withType<JacocoCoverageVerification> {
+                violationRules {
+                    rule {
+                        limit {
+                            counter = "LINE"
+                            minimum = "0.80".toBigDecimal()
+                        }
+                    }
+                }
+                classDirectories.setFrom(
+                    files(
+                        classDirectories.files.map {
+                            fileTree(it) {
+                                exclude(
+                                    "**/grpc/**Grpc*",
+                                    "**/grpc/**Proto*",
+                                    "**/proto/**",
+                                    "**/entity/*_",
+                                )
+                            }
+                        },
+                    ),
+                )
+            }
+
+            tasks.matching { it.name == "check" }.configureEach {
+                dependsOn(tasks.withType<JacocoCoverageVerification>())
+            }
+        }
     }
 }
