@@ -1,0 +1,177 @@
+package com.openpos.gateway.resource
+
+import com.openpos.gateway.cache.RedisCacheService
+import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.paginatedResponse
+import com.openpos.gateway.config.toMap
+import io.quarkus.grpc.GrpcClient
+import io.smallrye.common.annotation.Blocking
+import jakarta.inject.Inject
+import jakarta.ws.rs.DELETE
+import jakarta.ws.rs.DefaultValue
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.POST
+import jakarta.ws.rs.PUT
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.QueryParam
+import jakarta.ws.rs.core.Response
+import openpos.product.v1.CreateProductRequest
+import openpos.product.v1.DeleteProductRequest
+import openpos.product.v1.GetProductByBarcodeRequest
+import openpos.product.v1.GetProductRequest
+import openpos.product.v1.ListProductsRequest
+import openpos.product.v1.ProductServiceGrpc
+import openpos.product.v1.UpdateProductRequest
+
+@Path("/api/products")
+@Blocking
+class ProductResource {
+    @Inject
+    @GrpcClient("product-service")
+    lateinit var stub: ProductServiceGrpc.ProductServiceBlockingStub
+
+    @Inject
+    lateinit var grpc: GrpcClientHelper
+
+    @Inject
+    lateinit var cache: RedisCacheService
+
+    @POST
+    fun create(body: CreateProductBody): Response {
+        val request =
+            CreateProductRequest
+                .newBuilder()
+                .setName(body.name)
+                .setPrice(body.price)
+                .apply {
+                    body.description?.let { setDescription(it) }
+                    body.barcode?.let { setBarcode(it) }
+                    body.sku?.let { setSku(it) }
+                    body.categoryId?.let { setCategoryId(it) }
+                    body.taxRateId?.let { setTaxRateId(it) }
+                    body.imageUrl?.let { setImageUrl(it) }
+                    body.displayOrder?.let { setDisplayOrder(it) }
+                }.build()
+        val response = grpc.withTenant(stub).createProduct(request)
+        cache.invalidatePattern("openpos:gateway:product:list:*")
+        return Response.status(Response.Status.CREATED).entity(response.product.toMap()).build()
+    }
+
+    @GET
+    @Path("/{id}")
+    fun get(
+        @PathParam("id") id: String,
+    ): Map<String, Any?> {
+        val request = GetProductRequest.newBuilder().setId(id).build()
+        return grpc
+            .withTenant(stub)
+            .getProduct(request)
+            .product
+            .toMap()
+    }
+
+    @GET
+    fun list(
+        @QueryParam("page") @DefaultValue("1") page: Int,
+        @QueryParam("pageSize") @DefaultValue("20") pageSize: Int,
+        @QueryParam("categoryId") categoryId: String?,
+        @QueryParam("search") search: String?,
+        @QueryParam("activeOnly") @DefaultValue("false") activeOnly: Boolean,
+    ): Map<String, Any> {
+        val request =
+            ListProductsRequest
+                .newBuilder()
+                .setPagination(
+                    openpos.common.v1.PaginationRequest
+                        .newBuilder()
+                        .setPage(page)
+                        .setPageSize(pageSize)
+                        .build(),
+                ).apply {
+                    categoryId?.let { setCategoryId(it) }
+                    search?.let { setSearch(it) }
+                    setActiveOnly(activeOnly)
+                }.build()
+        val response = grpc.withTenant(stub).listProducts(request)
+        return paginatedResponse(
+            data = response.productsList.map { it.toMap() },
+            pagination = response.pagination,
+        )
+    }
+
+    @PUT
+    @Path("/{id}")
+    fun update(
+        @PathParam("id") id: String,
+        body: UpdateProductBody,
+    ): Map<String, Any?> {
+        val request =
+            UpdateProductRequest
+                .newBuilder()
+                .setId(id)
+                .apply {
+                    body.name?.let { setName(it) }
+                    body.description?.let { setDescription(it) }
+                    body.barcode?.let { setBarcode(it) }
+                    body.sku?.let { setSku(it) }
+                    body.price?.let { setPrice(it) }
+                    body.categoryId?.let { setCategoryId(it) }
+                    body.taxRateId?.let { setTaxRateId(it) }
+                    body.imageUrl?.let { setImageUrl(it) }
+                    body.displayOrder?.let { setDisplayOrder(it) }
+                    body.isActive?.let { setIsActive(it) }
+                }.build()
+        val response = grpc.withTenant(stub).updateProduct(request)
+        cache.invalidatePattern("openpos:gateway:product:list:*")
+        return response.product.toMap()
+    }
+
+    @DELETE
+    @Path("/{id}")
+    fun delete(
+        @PathParam("id") id: String,
+    ): Response {
+        grpc.withTenant(stub).deleteProduct(DeleteProductRequest.newBuilder().setId(id).build())
+        cache.invalidatePattern("openpos:gateway:product:list:*")
+        return Response.noContent().build()
+    }
+
+    @GET
+    @Path("/barcode/{barcode}")
+    fun getByBarcode(
+        @PathParam("barcode") barcode: String,
+    ): Map<String, Any?> {
+        val request = GetProductByBarcodeRequest.newBuilder().setBarcode(barcode).build()
+        return grpc
+            .withTenant(stub)
+            .getProductByBarcode(request)
+            .product
+            .toMap()
+    }
+}
+
+data class CreateProductBody(
+    val name: String,
+    val price: Long,
+    val description: String? = null,
+    val barcode: String? = null,
+    val sku: String? = null,
+    val categoryId: String? = null,
+    val taxRateId: String? = null,
+    val imageUrl: String? = null,
+    val displayOrder: Int? = null,
+)
+
+data class UpdateProductBody(
+    val name: String? = null,
+    val price: Long? = null,
+    val description: String? = null,
+    val barcode: String? = null,
+    val sku: String? = null,
+    val categoryId: String? = null,
+    val taxRateId: String? = null,
+    val imageUrl: String? = null,
+    val displayOrder: Int? = null,
+    val isActive: Boolean? = null,
+)
