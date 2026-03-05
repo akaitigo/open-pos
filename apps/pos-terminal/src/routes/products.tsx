@@ -59,9 +59,8 @@ export function ProductsPage() {
     setPage(1)
   }
 
-  function handleAddToCart(product: Product) {
+  function handleAddToCart(_product: Product) {
     // TODO: Zustand store でカートに追加
-    console.log('Add to cart:', product.id, product.name)
   }
 
   return (

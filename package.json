@@ -1,6 +1,7 @@
 {
   "name": "open-pos",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "dev:pos": "pnpm --filter pos-terminal dev",
     "dev:admin": "pnpm --filter admin-dashboard dev",

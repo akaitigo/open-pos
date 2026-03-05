@@ -21,6 +21,20 @@ updates:
     labels:
       - "type:chore"
 
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "type:chore"
+
+  - package-ecosystem: "npm"
+    directory: "/packages/shared-types"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "type:chore"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

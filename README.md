@@ -49,6 +49,10 @@ make lint
 
 詳細は [docs/guides/setup.md](docs/guides/setup.md) を参照。
 
-## ライセンス
+## Contributing
 
-Private
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow, coding standards, and how to submit pull requests.
+
+## License
+
+[MIT License](LICENSE)
