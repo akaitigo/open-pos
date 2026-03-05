@@ -39,6 +39,7 @@ services/*/src/main/proto/openpos/
 
 # === Docker ===
 docker-compose.override.yml
+compose.override.yml
 
 # === Test & Coverage ===
 coverage/
