@@ -5,8 +5,7 @@ import io.quarkus.hibernate.orm.panache.kotlin.PanacheRepositoryBase
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.UUID
 
-/**
- * 取引割引リポジトリ。
- */
 @ApplicationScoped
-class TransactionDiscountRepository : PanacheRepositoryBase<TransactionDiscountEntity, UUID>
+class TransactionDiscountRepository : PanacheRepositoryBase<TransactionDiscountEntity, UUID> {
+    fun findByTransactionId(transactionId: UUID): List<TransactionDiscountEntity> = list("transactionId = ?1", transactionId)
+}

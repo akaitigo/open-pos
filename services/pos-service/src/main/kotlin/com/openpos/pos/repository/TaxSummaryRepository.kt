@@ -5,8 +5,9 @@ import io.quarkus.hibernate.orm.panache.kotlin.PanacheRepositoryBase
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.UUID
 
-/**
- * 税額集計リポジトリ。
- */
 @ApplicationScoped
-class TaxSummaryRepository : PanacheRepositoryBase<TaxSummaryEntity, UUID>
+class TaxSummaryRepository : PanacheRepositoryBase<TaxSummaryEntity, UUID> {
+    fun findByTransactionId(transactionId: UUID): List<TaxSummaryEntity> = list("transactionId = ?1", transactionId)
+
+    fun deleteByTransactionId(transactionId: UUID): Long = delete("transactionId = ?1", transactionId)
+}
