@@ -2,6 +2,12 @@
   "name": "pos-terminal",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akaitigo/open-pos.git",
+    "directory": "apps/pos-terminal"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
