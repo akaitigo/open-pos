@@ -5,8 +5,7 @@ import io.quarkus.hibernate.orm.panache.kotlin.PanacheRepositoryBase
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.UUID
 
-/**
- * 決済リポジトリ。
- */
 @ApplicationScoped
-class PaymentRepository : PanacheRepositoryBase<PaymentEntity, UUID>
+class PaymentRepository : PanacheRepositoryBase<PaymentEntity, UUID> {
+    fun findByTransactionId(transactionId: UUID): List<PaymentEntity> = list("transactionId = ?1", transactionId)
+}
