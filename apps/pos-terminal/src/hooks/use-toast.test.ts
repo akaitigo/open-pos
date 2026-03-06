@@ -19,7 +19,7 @@ describe('reducer', () => {
     const result = reducer(state, { type: 'ADD_TOAST', toast: newToast })
 
     expect(result.toasts).toHaveLength(1)
-    expect(result.toasts[0].id).toBe('2')
+    expect(result.toasts[0]!.id).toBe('2')
   })
 
   it('UPDATE_TOAST: 一致するトーストを更新する', () => {
@@ -29,7 +29,7 @@ describe('reducer', () => {
       toast: { id: '1', title: 'Updated' },
     })
 
-    expect(result.toasts[0].title).toBe('Updated')
+    expect(result.toasts[0]!.title).toBe('Updated')
   })
 
   it('UPDATE_TOAST: 一致しないトーストは変更しない', () => {
@@ -39,7 +39,7 @@ describe('reducer', () => {
       toast: { id: '99', title: 'Updated' },
     })
 
-    expect(result.toasts[0].title).toBe('Original')
+    expect(result.toasts[0]!.title).toBe('Original')
   })
 
   it('DISMISS_TOAST: 特定のトーストをdismissする', () => {
@@ -75,7 +75,7 @@ describe('reducer', () => {
     const result = reducer(state, { type: 'REMOVE_TOAST', toastId: '1' })
 
     expect(result.toasts).toHaveLength(1)
-    expect(result.toasts[0].id).toBe('2')
+    expect(result.toasts[0]!.id).toBe('2')
   })
 
   it('REMOVE_TOAST: toastId が undefined で全トーストを削除する', () => {
@@ -134,7 +134,7 @@ describe('useToast', () => {
     })
 
     expect(result.current.toasts).toHaveLength(1)
-    expect(result.current.toasts[0].title).toBe('New toast')
+    expect(result.current.toasts[0]!.title).toBe('New toast')
   })
 
   it('dismiss 関数でトーストをdismissできる', () => {
