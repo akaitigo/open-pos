@@ -299,9 +299,11 @@ describe('ProductsPage', () => {
     expect(foodTab).toHaveAttribute('aria-selected', 'false')
   })
 
-  it('商品クリックでconsole.logが呼ばれる（カートに追加のTODO）', async () => {
+  it('商品クリックでカートに追加される', async () => {
     mockFetchWith([], mockProducts)
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    const { useCartStore } = await import('@/stores/cart-store')
+    useCartStore.setState({ items: [] })
 
     render(<ProductsPage />)
 
@@ -311,13 +313,10 @@ describe('ProductsPage', () => {
 
     fireEvent.click(screen.getByText('コーヒー'))
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Add to cart:',
-      'c3d4e5f6-3333-4333-a333-333333333333',
-      'コーヒー',
-    )
-
-    consoleSpy.mockRestore()
+    const items = useCartStore.getState().items
+    expect(items).toHaveLength(1)
+    expect(items[0]!.product.id).toBe('c3d4e5f6-3333-4333-a333-333333333333')
+    expect(items[0]!.quantity).toBe(1)
   })
 
   it('ページネーションが1ページの場合はボタンが表示されない', async () => {

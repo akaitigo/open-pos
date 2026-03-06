@@ -30,6 +30,12 @@ class OrganizationIdInterceptor : ServerInterceptor {
         headers: Metadata,
         next: ServerCallHandler<ReqT, RespT>,
     ): ServerCall.Listener<ReqT> {
+        // CreateOrganization はテナント未作成時に呼ばれるため、organization-id チェックをスキップ
+        val methodName = call.methodDescriptor.bareMethodName
+        if (methodName == "CreateOrganization") {
+            return next.startCall(call, headers)
+        }
+
         val orgIdStr = headers.get(ORGANIZATION_ID_KEY)
 
         if (orgIdStr.isNullOrBlank()) {

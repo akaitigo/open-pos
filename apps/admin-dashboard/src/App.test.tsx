@@ -1,6 +1,16 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { App } from './App'
+
+vi.mock('@/lib/api', () => ({
+  api: {
+    get: vi.fn().mockResolvedValue({
+      data: [],
+      pagination: { page: 1, pageSize: 1, totalCount: 0, totalPages: 0 },
+    }),
+    setOrganizationId: vi.fn(),
+  },
+}))
 
 describe('App', () => {
   it('クラッシュせずにレンダリングできる', () => {
@@ -15,9 +25,9 @@ describe('App', () => {
     expect(screen.getAllByText('ダッシュボード').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('ダッシュボードページが表示される', () => {
+  it('ダッシュボードページにサマリーカードが表示される', () => {
     render(<App />)
 
-    expect(screen.getByText('Dashboard - Coming Soon')).toBeInTheDocument()
+    expect(screen.getByText('商品数')).toBeInTheDocument()
   })
 })
