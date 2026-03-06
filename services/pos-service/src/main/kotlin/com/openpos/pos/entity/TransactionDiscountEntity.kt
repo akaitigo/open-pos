@@ -27,7 +27,7 @@ class TransactionDiscountEntity : BaseEntity() {
     @Column(name = "discount_type", nullable = false, length = 20)
     lateinit var discountType: String
 
-    @Column(name = "value", nullable = false, length = 50)
+    @Column(name = "\"value\"", nullable = false, length = 50)
     lateinit var value: String
 
     @Column(name = "amount", nullable = false)

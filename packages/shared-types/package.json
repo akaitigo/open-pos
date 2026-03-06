@@ -2,6 +2,12 @@
   "name": "@shared-types/openpos",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akaitigo/open-pos.git",
+    "directory": "packages/shared-types"
+  },
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

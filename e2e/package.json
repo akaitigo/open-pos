@@ -2,6 +2,12 @@
   "name": "e2e",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akaitigo/open-pos.git",
+    "directory": "e2e"
+  },
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",

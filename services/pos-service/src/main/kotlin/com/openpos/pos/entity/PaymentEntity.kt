@@ -26,7 +26,7 @@ class PaymentEntity : BaseEntity() {
     @Column(name = "received")
     var received: Long? = null
 
-    @Column(name = "change")
+    @Column(name = "\"change\"")
     var change: Long? = null
 
     @Column(name = "reference", length = 255)
