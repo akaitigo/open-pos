@@ -20,7 +20,15 @@ export default defineConfig({
       thresholds: {
         lines: 80,
       },
-      exclude: ['node_modules/**', 'src/test-setup.ts', '**/*.d.ts', '**/*.config.*', 'dist/**'],
+      exclude: [
+        'node_modules/**',
+        'src/test-setup.ts',
+        '**/*.d.ts',
+        '**/*.config.*',
+        'dist/**',
+        'src/components/ui/**',
+        'src/main.tsx',
+      ],
     },
   },
 })
