@@ -24,7 +24,7 @@ class TenantFilterService {
      */
     fun enableFilter() {
         val orgId =
-            requireNotNull(organizationIdHolder.organizationId) {
+            checkNotNull(organizationIdHolder.organizationId) {
                 "organizationId is not set in OrganizationIdHolder"
             }
         entityManager

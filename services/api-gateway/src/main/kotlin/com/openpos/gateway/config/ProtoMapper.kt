@@ -1,6 +1,20 @@
 package com.openpos.gateway.config
 
 import openpos.common.v1.PaginationResponse
+import openpos.inventory.v1.MovementType
+import openpos.inventory.v1.PurchaseOrder
+import openpos.inventory.v1.PurchaseOrderItem
+import openpos.inventory.v1.PurchaseOrderStatus
+import openpos.inventory.v1.Stock
+import openpos.inventory.v1.StockMovement
+import openpos.pos.v1.PaymentMethod
+import openpos.pos.v1.Receipt
+import openpos.pos.v1.TaxSummary
+import openpos.pos.v1.Transaction
+import openpos.pos.v1.TransactionDiscount
+import openpos.pos.v1.TransactionItem
+import openpos.pos.v1.TransactionStatus
+import openpos.pos.v1.TransactionType
 import openpos.product.v1.Category
 import openpos.product.v1.Coupon
 import openpos.product.v1.Discount
@@ -147,6 +161,171 @@ fun Staff.toMap(): Map<String, Any?> =
         "createdAt" to createdAt,
         "updatedAt" to updatedAt,
     )
+
+// === POS 取引 ===
+
+fun Transaction.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "storeId" to storeId,
+        "terminalId" to terminalId,
+        "staffId" to staffId,
+        "transactionNumber" to transactionNumber,
+        "type" to
+            when (type) {
+                TransactionType.TRANSACTION_TYPE_SALE -> "SALE"
+                TransactionType.TRANSACTION_TYPE_RETURN -> "RETURN"
+                TransactionType.TRANSACTION_TYPE_VOID -> "VOID"
+                else -> "UNSPECIFIED"
+            },
+        "status" to
+            when (status) {
+                TransactionStatus.TRANSACTION_STATUS_DRAFT -> "DRAFT"
+                TransactionStatus.TRANSACTION_STATUS_COMPLETED -> "COMPLETED"
+                TransactionStatus.TRANSACTION_STATUS_VOIDED -> "VOIDED"
+                else -> "UNSPECIFIED"
+            },
+        "clientId" to clientId.ifEmpty { null },
+        "items" to itemsList.map { it.toMap() },
+        "discounts" to discountsList.map { it.toMap() },
+        "payments" to paymentsList.map { it.toMap() },
+        "taxSummaries" to taxSummariesList.map { it.toMap() },
+        "subtotal" to subtotal,
+        "taxTotal" to taxTotal,
+        "discountTotal" to discountTotal,
+        "total" to total,
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+        "completedAt" to completedAt.ifEmpty { null },
+    )
+
+fun TransactionItem.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "productId" to productId,
+        "productName" to productName,
+        "unitPrice" to unitPrice,
+        "quantity" to quantity,
+        "taxRateName" to taxRateName,
+        "taxRate" to taxRate,
+        "isReducedTax" to isReducedTax,
+        "subtotal" to subtotal,
+        "taxAmount" to taxAmount,
+        "total" to total,
+    )
+
+fun TransactionDiscount.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "discountId" to discountId,
+        "name" to name,
+        "discountType" to discountType,
+        "value" to value,
+        "amount" to amount,
+        "transactionItemId" to transactionItemId.ifEmpty { null },
+    )
+
+fun openpos.pos.v1.Payment.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "method" to
+            when (method) {
+                PaymentMethod.PAYMENT_METHOD_CASH -> "CASH"
+                PaymentMethod.PAYMENT_METHOD_CREDIT_CARD -> "CREDIT_CARD"
+                PaymentMethod.PAYMENT_METHOD_QR_CODE -> "QR_CODE"
+                else -> "UNSPECIFIED"
+            },
+        "amount" to amount,
+        "received" to received,
+        "change" to change,
+        "reference" to reference.ifEmpty { null },
+    )
+
+fun TaxSummary.toMap(): Map<String, Any?> =
+    mapOf(
+        "taxRateName" to taxRateName,
+        "taxRate" to taxRate,
+        "isReduced" to isReduced,
+        "taxableAmount" to taxableAmount,
+        "taxAmount" to taxAmount,
+    )
+
+fun Receipt.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "transactionId" to transactionId,
+        "receiptData" to receiptData,
+        "pdfUrl" to pdfUrl.ifEmpty { null },
+        "createdAt" to createdAt,
+    )
+
+// === 在庫管理 ===
+
+fun Stock.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "storeId" to storeId,
+        "productId" to productId,
+        "quantity" to quantity,
+        "lowStockThreshold" to lowStockThreshold,
+        "updatedAt" to updatedAt,
+    )
+
+fun StockMovement.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "storeId" to storeId,
+        "productId" to productId,
+        "movementType" to
+            when (movementType) {
+                MovementType.MOVEMENT_TYPE_SALE -> "SALE"
+                MovementType.MOVEMENT_TYPE_RETURN -> "RETURN"
+                MovementType.MOVEMENT_TYPE_RECEIPT -> "RECEIPT"
+                MovementType.MOVEMENT_TYPE_ADJUSTMENT -> "ADJUSTMENT"
+                MovementType.MOVEMENT_TYPE_TRANSFER -> "TRANSFER"
+                else -> "UNSPECIFIED"
+            },
+        "quantity" to quantity,
+        "referenceId" to referenceId.ifEmpty { null },
+        "note" to note.ifEmpty { null },
+        "createdAt" to createdAt,
+    )
+
+fun PurchaseOrder.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "storeId" to storeId,
+        "status" to
+            when (status) {
+                PurchaseOrderStatus.PURCHASE_ORDER_STATUS_DRAFT -> "DRAFT"
+                PurchaseOrderStatus.PURCHASE_ORDER_STATUS_ORDERED -> "ORDERED"
+                PurchaseOrderStatus.PURCHASE_ORDER_STATUS_RECEIVED -> "RECEIVED"
+                PurchaseOrderStatus.PURCHASE_ORDER_STATUS_CANCELLED -> "CANCELLED"
+                else -> "UNSPECIFIED"
+            },
+        "items" to itemsList.map { it.toMap() },
+        "supplierName" to supplierName,
+        "note" to note.ifEmpty { null },
+        "orderedAt" to orderedAt.ifEmpty { null },
+        "receivedAt" to receivedAt.ifEmpty { null },
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
+fun PurchaseOrderItem.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "productId" to productId,
+        "orderedQuantity" to orderedQuantity,
+        "receivedQuantity" to receivedQuantity,
+        "unitCost" to unitCost,
+    )
+
+// === ページネーション ===
 
 fun PaginationResponse.toMap(): Map<String, Any> =
     mapOf(
