@@ -47,6 +47,9 @@ jobs:
           :services:api-gateway:build
           :services:product-service:build
           :services:store-service:build
+          :services:pos-service:build
+          :services:inventory-service:build
+          :services:analytics-service:build
           -x test --no-build-cache
       - name: Unit & Functional Test
         run: >-
@@ -54,12 +57,19 @@ jobs:
           :services:api-gateway:test
           :services:product-service:test
           :services:store-service:test
+          :services:pos-service:test
+          :services:inventory-service:test
+          :services:analytics-service:test
           --no-build-cache
       - name: JaCoCo Coverage Report
         run: >-
           ./gradlew
+          :services:api-gateway:jacocoTestReport
           :services:product-service:jacocoTestReport
           :services:store-service:jacocoTestReport
+          :services:pos-service:jacocoTestReport
+          :services:inventory-service:jacocoTestReport
+          :services:analytics-service:jacocoTestReport
         if: always()
       - name: Upload Coverage Reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
