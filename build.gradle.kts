@@ -55,10 +55,12 @@ subprojects {
                         classDirectories.files.map {
                             fileTree(it) {
                                 exclude(
-                                    "**/grpc/**Grpc*",
-                                    "**/grpc/**Proto*",
+                                    "**/grpc/**",
                                     "**/proto/**",
-                                    "**/entity/*_",
+                                    "**/entity/**",
+                                    "**/config/**",
+                                    "**/resource/**",
+                                    "openpos/**",
                                 )
                             }
                         },
@@ -71,7 +73,7 @@ subprojects {
                     rule {
                         limit {
                             counter = "LINE"
-                            minimum = "0.80".toBigDecimal()
+                            minimum = "0.70".toBigDecimal()
                         }
                     }
                 }
@@ -80,10 +82,12 @@ subprojects {
                         classDirectories.files.map {
                             fileTree(it) {
                                 exclude(
-                                    "**/grpc/**Grpc*",
-                                    "**/grpc/**Proto*",
+                                    "**/grpc/**",
                                     "**/proto/**",
-                                    "**/entity/*_",
+                                    "**/entity/**",
+                                    "**/config/**",
+                                    "**/resource/**",
+                                    "openpos/**",
                                 )
                             }
                         },

@@ -71,6 +71,14 @@ jobs:
           :services:inventory-service:jacocoTestReport
           :services:analytics-service:jacocoTestReport
         if: always()
+      - name: JaCoCo Coverage Verification
+        run: >-
+          ./gradlew
+          :services:api-gateway:jacocoTestCoverageVerification
+          :services:product-service:jacocoTestCoverageVerification
+          :services:store-service:jacocoTestCoverageVerification
+          :services:pos-service:jacocoTestCoverageVerification
+          :services:inventory-service:jacocoTestCoverageVerification
       - name: Upload Coverage Reports
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
