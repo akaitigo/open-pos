@@ -2,7 +2,7 @@
        dev-gateway dev-product dev-store dev-pos dev-inventory dev-analytics dev-backend \
        build build-apps build-services \
        test test-apps test-backend test-frontend test-all \
-       lint proto proto-lint proto-breaking clean
+       lint proto proto-lint proto-breaking seed clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -90,6 +90,10 @@ proto-lint: ## Lint proto files
 
 proto-breaking: ## Check proto breaking changes
 	cd proto && buf breaking --against '.git#branch=main'
+
+# === Seed Data ===
+seed: ## Seed demo data (requires running backend)
+	bash scripts/seed.sh
 
 # === Clean ===
 clean: ## Clean all build artifacts

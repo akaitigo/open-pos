@@ -23,6 +23,8 @@ class GrpcClientHelper {
 
     fun <T : AbstractBlockingStub<T>> withTenant(stub: T): T {
         val extraHeaders = Metadata()
+        // organizationId が null の場合はメタデータを追加しない
+        // （CreateOrganization など、テナント未作成時の呼び出しに対応）
         tenantContext.organizationId?.let { orgId ->
             extraHeaders.put(ORG_ID_KEY, orgId.toString())
         }

@@ -15,6 +15,8 @@ class TenantRequestFilter : ContainerRequestFilter {
     lateinit var tenantContext: TenantContext
 
     override fun filter(requestContext: ContainerRequestContext) {
+        // POST /api/organizations は X-Organization-Id 不要（テナント未作成時に呼ばれるため）
+        // ヘッダーがなければ tenantContext.organizationId は null のまま
         val orgIdHeader = requestContext.getHeaderString("X-Organization-Id")
         if (orgIdHeader != null) {
             try {
