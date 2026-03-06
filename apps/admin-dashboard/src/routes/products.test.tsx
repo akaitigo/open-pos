@@ -47,7 +47,7 @@ const mockProduct = {
   organizationId: 'org-1',
   name: 'コーヒー',
   price: 30000,
-  barcode: '4901234567890',
+  barcode: '4901234567890' as string | null,
   sku: 'SKU-001',
   categoryId: 'cat-1',
   taxRateId: 'tax-1',

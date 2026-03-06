@@ -179,7 +179,7 @@ describe('StaffPage', () => {
       expect(screen.getByText('田中太郎')).toBeInTheDocument()
     })
     const editButtons = screen.getAllByText('編集')
-    fireEvent.click(editButtons[0])
+    fireEvent.click(editButtons[0]!)
     await waitFor(() => {
       expect(screen.getByText('スタッフを編集')).toBeInTheDocument()
     })

@@ -9,7 +9,7 @@ describe('reducer', () => {
     const newToast: ToasterToast = { id: '1', title: 'テスト' }
     const state = reducer(initialState, { type: 'ADD_TOAST', toast: newToast })
     expect(state.toasts).toHaveLength(1)
-    expect(state.toasts[0].title).toBe('テスト')
+    expect(state.toasts[0]!.title).toBe('テスト')
   })
 
   it('ADD_TOAST で制限数を超えない', () => {
@@ -23,7 +23,7 @@ describe('reducer', () => {
     })
     // TOAST_LIMIT = 1 なので最新の1つだけ残る
     expect(state2.toasts).toHaveLength(1)
-    expect(state2.toasts[0].title).toBe('second')
+    expect(state2.toasts[0]!.title).toBe('second')
   })
 
   it('UPDATE_TOAST でトーストを更新する', () => {
@@ -31,7 +31,7 @@ describe('reducer', () => {
       { toasts: [{ id: '1', title: 'before' }] },
       { type: 'UPDATE_TOAST', toast: { id: '1', title: 'after' } },
     )
-    expect(state.toasts[0].title).toBe('after')
+    expect(state.toasts[0]!.title).toBe('after')
   })
 
   it('UPDATE_TOAST で該当IDがない場合は変更なし', () => {
@@ -39,7 +39,7 @@ describe('reducer', () => {
       { toasts: [{ id: '1', title: 'original' }] },
       { type: 'UPDATE_TOAST', toast: { id: '999', title: 'nope' } },
     )
-    expect(state.toasts[0].title).toBe('original')
+    expect(state.toasts[0]!.title).toBe('original')
   })
 
   it('DISMISS_TOAST で特定のトーストをdismissする', () => {
@@ -66,7 +66,7 @@ describe('reducer', () => {
       { type: 'REMOVE_TOAST', toastId: '1' },
     )
     expect(state.toasts).toHaveLength(1)
-    expect(state.toasts[0].id).toBe('2')
+    expect(state.toasts[0]!.id).toBe('2')
   })
 
   it('REMOVE_TOAST でtoastId未指定の場合は全て削除する', () => {

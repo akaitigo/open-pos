@@ -100,7 +100,7 @@ describe('CategoriesPage', () => {
       expect(screen.getAllByText('飲み物').length).toBeGreaterThanOrEqual(1)
     })
     const editButtons = screen.getAllByText('編集')
-    fireEvent.click(editButtons[0])
+    fireEvent.click(editButtons[0]!)
     await waitFor(() => {
       expect(screen.getByText('カテゴリを編集')).toBeInTheDocument()
     })
@@ -114,7 +114,7 @@ describe('CategoriesPage', () => {
       expect(screen.getAllByText('飲み物').length).toBeGreaterThanOrEqual(1)
     })
     const editButtons = screen.getAllByText('編集')
-    fireEvent.click(editButtons[0]) // 飲み物を編集
+    fireEvent.click(editButtons[0]!) // 飲み物を編集
     await waitFor(() => {
       expect(screen.getByText('カテゴリを編集')).toBeInTheDocument()
     })
@@ -135,7 +135,7 @@ describe('CategoriesPage', () => {
       expect(screen.getAllByText('飲み物').length).toBeGreaterThanOrEqual(1)
     })
     const deleteButtons = screen.getAllByText('削除')
-    fireEvent.click(deleteButtons[0])
+    fireEvent.click(deleteButtons[0]!)
     await waitFor(() => {
       expect(mockApi.delete).toHaveBeenCalledWith('/api/categories/cat-1')
     })
