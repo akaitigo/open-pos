@@ -150,7 +150,7 @@ class BaseEntityFilterTest {
     fun `TenantFilterService throws when organizationId is null`() {
         organizationIdHolder.organizationId = null
 
-        assertThrows(IllegalStateException::class.java) {
+        assertThrows(IllegalArgumentException::class.java) {
             tenantFilterService.enableFilter()
         }
     }
