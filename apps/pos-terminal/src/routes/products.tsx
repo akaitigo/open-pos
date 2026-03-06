@@ -10,6 +10,8 @@ import { api } from '@/lib/api'
 import { formatMoney } from '@shared-types/openpos'
 import type { Product, Category, PaginatedResponse } from '@shared-types/openpos'
 import { CategorySchema, PaginatedProductsSchema } from '@shared-types/openpos'
+import { useCartStore } from '@/stores/cart-store'
+import { toast } from '@/hooks/use-toast'
 import { z } from 'zod'
 
 export function ProductsPage() {
@@ -60,8 +62,8 @@ export function ProductsPage() {
   }
 
   function handleAddToCart(product: Product) {
-    // TODO: Zustand store でカートに追加
-    console.log('Add to cart:', product.id, product.name)
+    useCartStore.getState().addItem(product)
+    toast({ title: `${product.name} をカートに追加しました` })
   }
 
   return (
