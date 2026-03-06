@@ -118,9 +118,9 @@ describe('CartSidebar', () => {
     // h-7 w-7 のアイコンボタン: [minus, plus, delete]
     const iconButtons = screen.getAllByRole('button').filter((btn) => btn.className.includes('h-7'))
     // plus is the second icon button
-    await userEvent.click(iconButtons[1])
+    await userEvent.click(iconButtons[1]!)
     const state = useCartStore.getState()
-    expect(state.items[0].quantity).toBe(2)
+    expect(state.items[0]!.quantity).toBe(2)
   })
 
   it('-ボタンで数量が減る（0で削除）', async () => {
@@ -130,7 +130,7 @@ describe('CartSidebar', () => {
     render(<CartSidebar />)
     const iconButtons = screen.getAllByRole('button').filter((btn) => btn.className.includes('h-7'))
     // minus is the first icon button
-    await userEvent.click(iconButtons[0])
+    await userEvent.click(iconButtons[0]!)
     expect(screen.getByText('カートは空です')).toBeInTheDocument()
   })
 

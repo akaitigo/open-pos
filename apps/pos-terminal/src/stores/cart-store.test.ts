@@ -33,8 +33,8 @@ describe('cart-store', () => {
     useCartStore.getState().addItem(mockProduct)
     const items = useCartStore.getState().items
     expect(items).toHaveLength(1)
-    expect(items[0].product.id).toBe(mockProduct.id)
-    expect(items[0].quantity).toBe(1)
+    expect(items[0]!.product.id).toBe(mockProduct.id)
+    expect(items[0]!.quantity).toBe(1)
   })
 
   it('addItem で同一商品を追加すると数量が増える', () => {
@@ -42,7 +42,7 @@ describe('cart-store', () => {
     useCartStore.getState().addItem(mockProduct)
     const items = useCartStore.getState().items
     expect(items).toHaveLength(1)
-    expect(items[0].quantity).toBe(2)
+    expect(items[0]!.quantity).toBe(2)
   })
 
   it('removeItem で商品を削除できる', () => {
@@ -51,13 +51,13 @@ describe('cart-store', () => {
     useCartStore.getState().removeItem(mockProduct.id)
     const items = useCartStore.getState().items
     expect(items).toHaveLength(1)
-    expect(items[0].product.id).toBe(mockProduct2.id)
+    expect(items[0]!.product.id).toBe(mockProduct2.id)
   })
 
   it('updateQuantity で数量を更新できる', () => {
     useCartStore.getState().addItem(mockProduct)
     useCartStore.getState().updateQuantity(mockProduct.id, 5)
-    expect(useCartStore.getState().items[0].quantity).toBe(5)
+    expect(useCartStore.getState().items[0]!.quantity).toBe(5)
   })
 
   it('updateQuantity で 0 以下にすると商品が削除される', () => {
