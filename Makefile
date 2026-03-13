@@ -11,7 +11,7 @@ help: ## Show this help
 
 # === Infrastructure ===
 up: ## Start infrastructure only (PostgreSQL, Redis, RabbitMQ, Hydra)
-	docker compose -f infra/compose.yml up -d postgres redis rabbitmq hydra-migrate hydra
+	docker compose -f infra/compose.yml up -d --wait postgres redis rabbitmq hydra-migrate hydra
 
 up-all: ## Start infrastructure + all backend services
 	docker compose -f infra/compose.yml up -d
@@ -85,7 +85,7 @@ docker-build-core: ## Build the core backend container images sequentially
 	docker compose -f infra/compose.yml build api-gateway
 
 docker-up-core: up local-down ## Start the core backend services in containers
-	docker compose -f infra/compose.yml up -d product-service store-service pos-service api-gateway
+	docker compose -f infra/compose.yml up -d --wait product-service store-service pos-service api-gateway
 
 docker-down-core: ## Stop only the containerized core backend services
 	docker compose -f infra/compose.yml stop api-gateway product-service store-service pos-service
