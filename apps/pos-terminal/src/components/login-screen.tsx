@@ -67,7 +67,7 @@ export function LoginScreen() {
     try {
       const result = await api.post(
         `/api/staff/${selectedStaff.id}/authenticate`,
-        { pin },
+        { storeId, pin },
         AuthenticateByPinResponseSchema,
       )
       if (result.success && result.staff) {
