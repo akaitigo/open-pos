@@ -11,7 +11,7 @@ if (defaultOrganizationId) {
 
 export interface PosApiConfig {
   apiUrl: string
-  organizationId?: string | null
+  organizationId: string | null
 }
 
 export function configureApi(config: PosApiConfig) {

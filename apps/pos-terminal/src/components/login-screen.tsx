@@ -55,6 +55,14 @@ export function LoginScreen() {
 
   async function handleLogin() {
     if (!selectedStaff || pin.length < 4) return
+    if (!storeId || !terminalId) {
+      toast({
+        title: '設定不足',
+        description: '店舗または端末の設定が見つかりません',
+        variant: 'destructive',
+      })
+      return
+    }
     setLoading(true)
     try {
       const result = await api.post(
