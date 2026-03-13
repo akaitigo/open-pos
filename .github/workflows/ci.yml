@@ -131,8 +131,7 @@ jobs:
     name: E2E Test (Playwright)
     runs-on: ubuntu-latest
     needs: [backend, frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    continue-on-error: true # E2E tests are skeleton-only until full-stack integration
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
@@ -141,6 +140,8 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Start full demo stack
+        run: make docker-demo
       - name: Install Playwright Browsers
         run: pnpm --filter e2e exec playwright install --with-deps chromium
       - name: Run E2E Tests
@@ -150,4 +151,7 @@ jobs:
         with:
           name: e2e-results
           path: e2e/test-results/
+        if: always()
+      - name: Stop demo stack
+        run: docker compose -f infra/compose.yml down -v
         if: always()

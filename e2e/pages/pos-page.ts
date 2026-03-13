@@ -1,54 +1,54 @@
-import { type Locator, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 
 /**
  * POS 端末画面の Page Object Model
  *
- * 商品選択、カート操作、支払、レシート表示を抽象化する。
- * セレクタは全て data-testid ベース。
+ * 現行 UI に対する POS smoke 操作を抽象化する。
  */
 export class PosPage {
   readonly page: Page
 
-  // 商品一覧
   readonly productList: Locator
   readonly productSearchInput: Locator
-
-  // カート
-  readonly cartItems: Locator
-  readonly cartTotalAmount: Locator
+  readonly cart: Locator
   readonly cartClearButton: Locator
-
-  // 支払
   readonly payButton: Locator
-  readonly paymentMethodCash: Locator
   readonly paymentAmountInput: Locator
   readonly paymentConfirmButton: Locator
-
-  // レシート
+  readonly notificationCloseButton: Locator
   readonly receiptDialog: Locator
   readonly receiptCloseButton: Locator
 
   constructor(page: Page) {
     this.page = page
 
-    this.productList = page.getByTestId('product-list')
-    this.productSearchInput = page.getByTestId('product-search-input')
+    this.productList = page.locator('.grid .cursor-pointer')
+    this.productSearchInput = page.getByPlaceholder('商品名・バーコードで検索...')
 
-    this.cartItems = page.getByTestId('cart-items')
-    this.cartTotalAmount = page.getByTestId('cart-total-amount')
-    this.cartClearButton = page.getByTestId('cart-clear-button')
+    this.cart = page.locator('aside')
+    this.cartClearButton = page.getByRole('button', { name: 'クリア' })
 
-    this.payButton = page.getByTestId('pay-button')
-    this.paymentMethodCash = page.getByTestId('payment-method-cash')
-    this.paymentAmountInput = page.getByTestId('payment-amount-input')
-    this.paymentConfirmButton = page.getByTestId('payment-confirm-button')
+    this.payButton = page.getByRole('button', { name: /お会計/ })
+    this.paymentAmountInput = page.getByLabel('お預かり金額（円）')
+    this.paymentConfirmButton = page.getByRole('button', { name: 'お会計を確定' })
+    this.notificationCloseButton = page.getByRole('button', { name: 'Close notification' }).last()
 
-    this.receiptDialog = page.getByTestId('receipt-dialog')
-    this.receiptCloseButton = page.getByTestId('receipt-close-button')
+    this.receiptDialog = page.getByRole('dialog').filter({ hasText: 'レシート' })
+    this.receiptCloseButton = page.getByRole('button', { name: '次のお客様へ' })
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/')
+    await this.page.goto('http://localhost:5173/')
+    await expect(this.page.getByText('OpenPOS Terminal')).toBeVisible()
+  }
+
+  async login(staffName = '田中太郎', pin = '1234'): Promise<void> {
+    await this.page.getByRole('button', { name: new RegExp(staffName) }).click()
+    for (const digit of pin.split('')) {
+      await this.page.getByRole('button', { name: digit, exact: true }).click()
+    }
+    await this.page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(this.page.getByRole('link', { name: 'OpenPOS' })).toBeVisible()
   }
 
   async searchProduct(query: string): Promise<void> {
@@ -56,11 +56,17 @@ export class PosPage {
   }
 
   async addProductToCart(productName: string): Promise<void> {
-    await this.productList.getByTestId(`product-item-${productName}`).click()
+    await this.page.locator('.cursor-pointer').filter({ hasText: productName }).first().click()
+  }
+
+  async dismissToastIfVisible(): Promise<void> {
+    if (await this.notificationCloseButton.isVisible().catch(() => false)) {
+      await this.notificationCloseButton.click()
+    }
   }
 
   async getCartItemCount(): Promise<number> {
-    return this.cartItems.getByTestId('cart-item').count()
+    return this.cart.locator('div[class*="rounded-lg"][class*="border"]').count()
   }
 
   async clearCart(): Promise<void> {
@@ -71,8 +77,8 @@ export class PosPage {
     await this.payButton.click()
   }
 
-  async selectCashPayment(): Promise<void> {
-    await this.paymentMethodCash.click()
+  async selectExactCashPayment(): Promise<void> {
+    await this.page.getByRole('button', { name: 'ぴったり' }).click()
   }
 
   async enterPaymentAmount(amount: string): Promise<void> {

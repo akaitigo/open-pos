@@ -1,16 +1,29 @@
-# Multi-stage build for Quarkus services
-FROM eclipse-temurin:21-jdk-alpine AS build
+# syntax=docker/dockerfile:1.7
+
+# Multi-stage build for Quarkus services.
+# The Quarkus gRPC/protobuf codegen path is more reliable on a glibc-based JDK image than Alpine.
+FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 COPY gradle gradle
 COPY gradlew .
 COPY settings.gradle.kts .
 COPY build.gradle.kts .
 COPY gradle.properties .
+COPY proto proto
 ARG SERVICE_NAME
 COPY services/${SERVICE_NAME} services/${SERVICE_NAME}
-RUN chmod +x gradlew && ./gradlew :services:${SERVICE_NAME}:quarkusBuild -Dquarkus.package.jar.type=uber-jar
+# Create stub build.gradle.kts for other services so Gradle multi-project config succeeds
+RUN for dir in api-gateway pos-service product-service inventory-service analytics-service store-service; do \
+      if [ "$dir" != "${SERVICE_NAME}" ] && [ ! -d "services/$dir" ]; then \
+        mkdir -p "services/$dir" && \
+        echo 'plugins { kotlin("jvm") }' > "services/$dir/build.gradle.kts"; \
+      fi; \
+    done
+RUN --mount=type=cache,target=/root/.gradle \
+    chmod +x gradlew && \
+    ./gradlew --no-daemon :services:${SERVICE_NAME}:quarkusBuild -Dquarkus.package.jar.type=uber-jar
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 ARG SERVICE_NAME
 COPY --from=build /app/services/${SERVICE_NAME}/build/*-runner.jar app.jar

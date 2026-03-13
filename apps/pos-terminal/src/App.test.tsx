@@ -1,9 +1,17 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { App } from './App'
+import { resetRuntimeConfigForTests } from '@/lib/runtime-config'
 import { useAuthStore } from './stores/auth-store'
 
 beforeEach(() => {
+  resetRuntimeConfigForTests({
+    apiUrl: 'http://localhost:8080',
+    organizationId: '00000000-0000-0000-0000-000000000000',
+    storeId: '00000000-0000-0000-0000-000000000001',
+    terminalId: '00000000-0000-0000-0000-000000000001',
+  })
+
   // Reset auth store to unauthenticated state
   useAuthStore.setState({
     isAuthenticated: false,
@@ -79,11 +87,11 @@ beforeEach(() => {
 })
 
 describe('App', () => {
-  it('未認証時はログイン画面が表示される', () => {
+  it('未認証時はログイン画面が表示される', async () => {
     render(<App />)
 
-    expect(screen.getByText('OpenPOS Terminal')).toBeInTheDocument()
-    expect(screen.getByText('スタッフを選択してください')).toBeInTheDocument()
+    expect(await screen.findByText('OpenPOS Terminal')).toBeInTheDocument()
+    expect(await screen.findByText('スタッフを選択してください')).toBeInTheDocument()
   })
 
   it('認証済み時は商品検索UIが表示される', async () => {

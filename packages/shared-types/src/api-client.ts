@@ -55,7 +55,10 @@ export interface ApiClient {
   delete(path: string, options?: RequestOptions): Promise<void>
 
   /** 組織 ID を設定 */
-  setOrganizationId(organizationId: string): void
+  setOrganizationId(organizationId?: string | null): void
+
+  /** ベース URL を設定 */
+  setBaseUrl(baseUrl: string): void
 }
 
 /** URL にクエリパラメータを付与する */
@@ -103,6 +106,7 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
   const config: ApiClientOptions =
     typeof options === 'string' ? { baseUrl: options } : { ...options }
 
+  let baseUrl = config.baseUrl
   let organizationId = config.organizationId
 
   /** 共通リクエスト処理 */
@@ -113,7 +117,7 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
     body?: unknown,
     requestOptions?: RequestOptions,
   ): Promise<T> {
-    const url = buildUrl(config.baseUrl, path, requestOptions?.params)
+    const url = buildUrl(baseUrl, path, requestOptions?.params)
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -192,8 +196,12 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
       await request('DELETE', path, null, undefined, options)
     },
 
-    setOrganizationId(id: string): void {
-      organizationId = id
+    setOrganizationId(id?: string | null): void {
+      organizationId = id ?? undefined
+    },
+
+    setBaseUrl(nextBaseUrl: string): void {
+      baseUrl = nextBaseUrl
     },
   }
 }

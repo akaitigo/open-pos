@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { ProductSchema, CategorySchema, TaxRateSchema } from './product'
-import { StoreSchema, StaffSchema } from './store'
+import {
+  AuthenticateByPinRequestSchema,
+  AuthenticateByPinResponseSchema,
+  StoreSchema,
+  StaffSchema,
+} from './store'
 import { createPaginatedResponseSchema } from './api-types'
+import { ReceiptSchema } from './transaction'
+import { TransactionSchema } from './transaction'
 import { z } from 'zod'
 
 const now = new Date().toISOString()
@@ -28,6 +35,29 @@ describe('ProductSchema', () => {
 
   it('必須フィールドが欠けている場合はバリデーションエラー', () => {
     expect(() => ProductSchema.parse({ name: 'test' })).toThrow()
+  })
+
+  it('nullable な商品フィールドをパースできる', () => {
+    const product = {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      organizationId: '550e8400-e29b-41d4-a716-446655440001',
+      name: 'テスト商品',
+      description: null,
+      barcode: null,
+      sku: null,
+      price: 10000,
+      categoryId: null,
+      taxRateId: null,
+      imageUrl: null,
+      displayOrder: 0,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    const result = ProductSchema.parse(product)
+    expect(result.description).toBeNull()
+    expect(result.categoryId).toBeNull()
   })
 })
 
@@ -154,5 +184,99 @@ describe('createPaginatedResponseSchema', () => {
     const result = PaginatedSchema.parse(data)
     expect(result.data).toHaveLength(2)
     expect(result.pagination.totalCount).toBe(2)
+  })
+})
+
+describe('AuthenticateByPin schemas', () => {
+  it('現在の gateway リクエスト形式をパースできる', () => {
+    const result = AuthenticateByPinRequestSchema.parse({ pin: '1234' })
+    expect(result.pin).toBe('1234')
+  })
+
+  it('success 時に reason がなくてもパースできる', () => {
+    const result = AuthenticateByPinResponseSchema.parse({
+      success: true,
+      staff: {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        organizationId: '550e8400-e29b-41d4-a716-446655440001',
+        storeId: '550e8400-e29b-41d4-a716-446655440002',
+        name: '田中太郎',
+        email: 'tanaka@example.com',
+        role: 'CASHIER',
+        isActive: true,
+        failedPinAttempts: 0,
+        isLocked: false,
+        createdAt: now,
+        updatedAt: now,
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.reason).toBeUndefined()
+  })
+
+  it('failure 時に staff がなくてもパースできる', () => {
+    const result = AuthenticateByPinResponseSchema.parse({
+      success: false,
+      reason: 'INVALID_PIN',
+    })
+
+    expect(result.staff).toBeUndefined()
+    expect(result.reason).toBe('INVALID_PIN')
+  })
+})
+
+describe('ReceiptSchema', () => {
+  it('現在の gateway レスポンス形式をパースできる', () => {
+    const result = ReceiptSchema.parse({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      transactionId: '550e8400-e29b-41d4-a716-446655440001',
+      receiptData: 'receipt body',
+      pdfUrl: null,
+      createdAt: now,
+    })
+
+    expect(result.receiptData).toBe('receipt body')
+    expect(result.pdfUrl).toBeNull()
+  })
+})
+
+describe('TransactionSchema', () => {
+  it('nullable な clientId と payment.reference をパースできる', () => {
+    const result = TransactionSchema.parse({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      organizationId: '550e8400-e29b-41d4-a716-446655440001',
+      storeId: '550e8400-e29b-41d4-a716-446655440002',
+      terminalId: '550e8400-e29b-41d4-a716-446655440003',
+      staffId: '550e8400-e29b-41d4-a716-446655440004',
+      transactionNumber: 'TX-001',
+      type: 'SALE',
+      status: 'COMPLETED',
+      items: [],
+      payments: [
+        {
+          id: '550e8400-e29b-41d4-a716-446655440005',
+          method: 'CASH',
+          amount: 10000,
+          received: 10000,
+          change: 0,
+          reference: null,
+        },
+      ],
+      discounts: [],
+      taxSummaries: [],
+      subtotal: 10000,
+      discountTotal: 0,
+      taxTotal: 1000,
+      total: 11000,
+      clientId: null,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: now,
+    })
+
+    expect(result.clientId).toBeNull()
+    expect(result.payments[0]?.reference).toBeNull()
+    expect(result.appliedDiscounts).toEqual([])
   })
 })

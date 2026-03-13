@@ -2,7 +2,8 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { DashboardPage } from './dashboard'
-import { vi } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { resetRuntimeConfigForTests } from '@/lib/runtime-config'
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -11,7 +12,13 @@ vi.mock('@/lib/api', () => ({
       pagination: { page: 1, pageSize: 1, totalCount: 0, totalPages: 0 },
     }),
     setOrganizationId: vi.fn(),
+    setBaseUrl: vi.fn(),
   },
+  configureApi: vi.fn(),
+  getDefaultApiConfig: () => ({
+    apiUrl: 'http://localhost:8080',
+    organizationId: '00000000-0000-0000-0000-000000000000',
+  }),
 }))
 
 function renderWithProviders() {
@@ -25,6 +32,13 @@ function renderWithProviders() {
 }
 
 describe('DashboardPage', () => {
+  beforeEach(() => {
+    resetRuntimeConfigForTests({
+      apiUrl: 'http://localhost:8080',
+      organizationId: '00000000-0000-0000-0000-000000000000',
+    })
+  })
+
   it('ダッシュボードヘッダーを表示する', () => {
     renderWithProviders()
     expect(screen.getByText('ダッシュボード')).toBeInTheDocument()

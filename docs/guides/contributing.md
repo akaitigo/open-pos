@@ -16,7 +16,7 @@ feature/#25-offline-sync
 1. **Issue 確認**: GitHub Issue の要件・受け入れ条件を確認
 2. **ブランチ作成**: `git checkout -b feature/#12-product-crud`
 3. **開発**: コード実装 + テスト
-4. **Lint**: `make lint`
+4. **Lint**: `make lint`（proto / frontend）
 5. **テスト**: `make test`
 6. **PR 作成**: `gh pr create`（本文に `Closes #12` を記載）
 7. **CI 通過**: GitHub Actions の全チェック通過を確認

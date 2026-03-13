@@ -211,10 +211,12 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                     transactionId = request.transactionId.toUUID(),
                     payments = payments,
                 )
+            val receipt = buildReceipt(entity)
             responseObserver.onNext(
                 FinalizeTransactionResponse
                     .newBuilder()
                     .setTransaction(entity.toFullProto())
+                    .setReceipt(receipt)
                     .build(),
             )
             responseObserver.onCompleted()
@@ -300,7 +302,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
 
         val (transactions, totalCount) =
             transactionService.listTransactions(
-                storeId = request.storeId.toUUID(),
+                storeId = request.storeId.uuidOrNull(),
                 terminalId = request.terminalId.uuidOrNull(),
                 status = statusFilter,
                 startDate = startDate,
@@ -340,29 +342,32 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                 "Receipt is only available for COMPLETED or VOIDED transactions"
             }
 
-            val items = transactionService.getTransactionItems(tx.id)
-            val payments = transactionService.getTransactionPayments(tx.id)
-            val taxSummaries = transactionService.getTransactionTaxSummaries(tx.id)
-
-            val receiptData = buildReceiptData(tx, items, payments, taxSummaries)
-
             responseObserver.onNext(
                 GetReceiptResponse
                     .newBuilder()
-                    .setReceipt(
-                        Receipt
-                            .newBuilder()
-                            .setId(UUID.randomUUID().toString())
-                            .setTransactionId(tx.id.toString())
-                            .setReceiptData(receiptData)
-                            .setCreatedAt(Instant.now().toString())
-                            .build(),
-                    ).build(),
+                    .setReceipt(buildReceipt(tx))
+                    .build(),
             )
             responseObserver.onCompleted()
         } catch (e: IllegalArgumentException) {
             throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
         }
+    }
+
+    private fun buildReceipt(tx: TransactionEntity): Receipt {
+        val items = transactionService.getTransactionItems(tx.id)
+        val payments = transactionService.getTransactionPayments(tx.id)
+        val taxSummaries = transactionService.getTransactionTaxSummaries(tx.id)
+
+        val receiptData = buildReceiptData(tx, items, payments, taxSummaries)
+
+        return Receipt
+            .newBuilder()
+            .setId(UUID.randomUUID().toString())
+            .setTransactionId(tx.id.toString())
+            .setReceiptData(receiptData)
+            .setCreatedAt(Instant.now().toString())
+            .build()
     }
 
     // === Mapper Extensions ===

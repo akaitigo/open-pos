@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuthStore } from '@/stores/auth-store'
 import { api } from '@/lib/api'
+import { getRuntimeConfig } from '@/lib/runtime-config'
 import { toast } from '@/hooks/use-toast'
 import {
   StoreSchema,
@@ -28,8 +29,7 @@ export function LoginScreen() {
   const [initialLoading, setInitialLoading] = useState(true)
   const login = useAuthStore((s) => s.login)
 
-  const storeId = import.meta.env.VITE_DEFAULT_STORE_ID
-  const terminalId = import.meta.env.VITE_DEFAULT_TERMINAL_ID
+  const { storeId, terminalId } = getRuntimeConfig()
 
   useEffect(() => {
     if (!storeId) {

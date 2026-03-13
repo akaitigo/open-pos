@@ -220,9 +220,10 @@ test('商品選択からレシート表示まで完了する', async ({ page }) 
 ## テスト実行コマンド
 
 ```bash
-# 全テスト
+# 日常の検証導線
 make test            # Backend 全サービス
-make test-apps       # Frontend 全アプリ
+make test-apps       # Frontend unit/functional テスト
+pnpm test            # packages + apps の unit/functional テスト
 
 # サービス別
 ./gradlew :services:pos-service:test
@@ -233,12 +234,21 @@ pnpm --filter pos-terminal test
 pnpm --filter admin-dashboard test
 
 # E2E
+pnpm e2e:install
 pnpm --filter e2e test
+make test-e2e
 
 # カバレッジ付き
 ./gradlew :services:pos-service:test jacocoTestReport
 pnpm --filter pos-terminal test -- --coverage
 ```
+
+## E2E の前提
+
+- `pnpm test` と `make test-apps` は E2E を含めない。日常の高速な回帰確認を優先する。
+- E2E は `pnpm test:e2e` または `make test-e2e` で明示実行する。
+- 初回のみ `pnpm e2e:install` で Playwright 用 Chromium をインストールする。
+- `pnpm test:e2e` は `pos-terminal` と `admin-dashboard` の dev server を自動起動する。
 
 ---
 

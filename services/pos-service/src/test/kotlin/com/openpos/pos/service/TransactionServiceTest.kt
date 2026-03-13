@@ -497,6 +497,50 @@ class TransactionServiceTest {
         }
     }
 
+    @Nested
+    inner class ListTransactions {
+        @Test
+        fun `storeId 未指定なら組織配下の全取引を返す`() {
+            transactionService.createTransaction(storeId, terminalId, staffId, "SALE", null)
+            transactionService.createTransaction(UUID.randomUUID(), terminalId, staffId, "SALE", null)
+
+            val (transactions, totalCount) =
+                transactionService.listTransactions(
+                    storeId = null,
+                    terminalId = null,
+                    status = null,
+                    startDate = null,
+                    endDate = null,
+                    page = 0,
+                    pageSize = 20,
+                )
+
+            assertEquals(2, transactions.size)
+            assertEquals(2L, totalCount)
+        }
+
+        @Test
+        fun `storeId 指定時は対象店舗の取引だけを返す`() {
+            transactionService.createTransaction(storeId, terminalId, staffId, "SALE", null)
+            transactionService.createTransaction(UUID.randomUUID(), terminalId, staffId, "SALE", null)
+
+            val (transactions, totalCount) =
+                transactionService.listTransactions(
+                    storeId = storeId,
+                    terminalId = null,
+                    status = null,
+                    startDate = null,
+                    endDate = null,
+                    page = 0,
+                    pageSize = 20,
+                )
+
+            assertEquals(1, transactions.size)
+            assertEquals(1L, totalCount)
+            assertEquals(storeId, transactions[0].storeId)
+        }
+    }
+
     // === ヘルパーメソッド ===
 
     private fun createDraftTransaction(): TransactionEntity =
