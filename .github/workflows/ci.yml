@@ -70,7 +70,7 @@ jobs:
           :services:pos-service:jacocoTestReport
           :services:inventory-service:jacocoTestReport
           :services:analytics-service:jacocoTestReport
-        if: always()
+        if: ${{ !cancelled() }}
       - name: JaCoCo Coverage Verification
         run: >-
           ./gradlew
@@ -84,7 +84,7 @@ jobs:
         with:
           name: backend-coverage
           path: services/*/build/reports/jacoco/
-        if: always()
+        if: ${{ !cancelled() }}
 
   backend-integration:
     name: Backend Integration Test
