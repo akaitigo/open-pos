@@ -27,7 +27,10 @@ jobs:
       - name: Fetch main branch for breaking change detection
         run: git fetch origin main:main
         if: github.event_name == 'pull_request'
-      - uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1.50.0
+      - uses: bufbuild/buf-action@fd21066df7214747548607aaa45548ba2b9bc1ff # v1.4.0
+        with:
+          version: '1.50.0'
+          setup_only: 'true'
       - run: buf lint
         working-directory: proto
       - run: buf breaking --against '../.git#branch=main,subdir=proto'
