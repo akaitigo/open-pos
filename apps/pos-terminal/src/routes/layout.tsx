@@ -2,11 +2,22 @@ import { Outlet } from 'react-router'
 import { Header } from '@/components/header'
 import { CartSidebar } from '@/components/cart-sidebar'
 import { LoginScreen } from '@/components/login-screen'
+import { SetupScreen } from '@/components/setup-screen'
 import { Toaster } from '@/components/ui/toast'
+import { hasPosRuntimeConfig } from '@/lib/runtime-config'
 import { useAuthStore } from '@/stores/auth-store'
 
 export function Layout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
+  if (!hasPosRuntimeConfig()) {
+    return (
+      <>
+        <SetupScreen />
+        <Toaster />
+      </>
+    )
+  }
 
   if (!isAuthenticated) {
     return (

@@ -79,19 +79,20 @@ A multi-tenant, offline-capable POS (Point of Sale) system built with microservi
 ### Quick Start
 
 ```bash
-# Start infrastructure (PostgreSQL, Redis, RabbitMQ, Hydra)
-make up
-
-# Generate gRPC code from proto definitions
-make proto
-
-# Build backend
-make build
-
-# Install frontend dependencies & build
 pnpm install
-make build-apps
+
+# Fastest supported local path: infra in Docker, core backend on the host
+make local-demo
+pnpm dev:admin   # http://localhost:5174
+pnpm dev:pos     # http://localhost:5173
+
+# Containerized alternative: core backend in Docker too
+make docker-demo
+pnpm dev:admin
+pnpm dev:pos
 ```
+
+`make local-demo` / `make docker-demo` writes `apps/*/public/demo-config.json`, so reloading the browser is enough to pick up the latest seeded organization, store, and terminal IDs.
 
 ### Development
 
@@ -109,11 +110,46 @@ pnpm dev:admin     # Admin dashboard → http://localhost:5174
 
 # Run tests
 make test          # Backend tests
-make test-apps     # Frontend tests
+make test-apps     # Frontend unit/functional tests
+pnpm e2e:install   # Install Playwright browser once
+make test-e2e      # E2E tests (starts app dev servers automatically)
 
-# Lint everything
-make lint          # Proto + Backend + Frontend
+# Lint supported local targets
+make lint          # Proto + Frontend
 ```
+
+`pnpm test` runs unit/functional tests for `packages/` and `apps/`. E2E is opt-in via `pnpm test:e2e` so routine local verification does not depend on Playwright browsers.
+
+### Supported Demo Paths
+
+For day-to-day development, run infra in Docker and the core backend services on the host:
+
+```bash
+make local-demo  # starts infra + core backend + seed data + runtime demo-config files
+pnpm dev:admin   # http://localhost:5174
+pnpm dev:pos     # http://localhost:5173
+```
+
+If you want the same core stack containerized:
+
+```bash
+make docker-demo # builds the core images, starts them, seeds data, and verifies the API
+pnpm dev:admin   # http://localhost:5174
+pnpm dev:pos     # http://localhost:5173
+```
+
+If you only need to restart the host backend processes after a code change:
+
+```bash
+make local-up-fast
+make local-down
+make local-smoke
+make docker-up-core
+make docker-down-core
+make docker-build-core
+```
+
+`make docker-up-core` stops the locally managed host backend first, so switching between the two supported modes is predictable.
 
 See [docs/guides/setup.md](docs/guides/setup.md) for detailed setup instructions.
 

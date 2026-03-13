@@ -69,6 +69,7 @@ subprojects {
             }
 
             tasks.withType<JacocoCoverageVerification> {
+                dependsOn(tasks.named("classes"))
                 violationRules {
                     rule {
                         limit {

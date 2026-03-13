@@ -7,10 +7,12 @@ import io.grpc.ClientInterceptor
 import io.grpc.ForwardingClientCall
 import io.grpc.Metadata
 import io.grpc.MethodDescriptor
+import io.quarkus.grpc.GlobalInterceptor
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 
 @ApplicationScoped
+@GlobalInterceptor
 class TenantClientInterceptor : ClientInterceptor {
     @Inject
     lateinit var tenantContext: TenantContext

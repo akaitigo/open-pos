@@ -1,15 +1,40 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCartStore, getCartSubtotal, getCartItemCount } from '@/stores/cart-store'
 import { formatMoney } from '@shared-types/openpos'
+import type { TaxRate } from '@shared-types/openpos'
+import { TaxRateSchema } from '@shared-types/openpos'
 import { Button } from '@/components/ui/button'
 import { CheckoutDialog } from '@/components/checkout-dialog'
+import { api } from '@/lib/api'
+import { getCartEstimatedTotal } from '@/lib/cart-totals'
 import { Minus, Plus, Trash2, ShoppingCart } from 'lucide-react'
+import { z } from 'zod'
 
 export function CartSidebar() {
   const { items, updateQuantity, removeItem, clearCart } = useCartStore()
   const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [taxRates, setTaxRates] = useState<TaxRate[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+
+    api
+      .get('/api/tax-rates', z.array(TaxRateSchema))
+      .then((result) => {
+        if (!cancelled) setTaxRates(result)
+      })
+      .catch(() => {
+        if (!cancelled) setTaxRates([])
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const subtotal = getCartSubtotal(items)
+  const total = getCartEstimatedTotal(items, taxRates)
+  const taxTotal = total - subtotal
   const itemCount = getCartItemCount(items)
 
   return (
@@ -84,6 +109,14 @@ export function CartSidebar() {
             <span>小計</span>
             <span>{formatMoney(subtotal)}</span>
           </div>
+          <div className="flex justify-between text-sm">
+            <span>税額</span>
+            <span>{formatMoney(taxTotal)}</span>
+          </div>
+          <div className="flex justify-between text-sm font-medium">
+            <span>合計</span>
+            <span>{formatMoney(total)}</span>
+          </div>
         </div>
         <Button
           className="w-full"
@@ -91,7 +124,7 @@ export function CartSidebar() {
           disabled={items.length === 0}
           onClick={() => setCheckoutOpen(true)}
         >
-          お会計 {items.length > 0 && formatMoney(subtotal)}
+          お会計 {items.length > 0 && formatMoney(total)}
         </Button>
       </div>
 

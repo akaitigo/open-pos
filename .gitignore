@@ -16,6 +16,8 @@ build/
 node_modules/
 dist/
 .vite/
+services/*/bin/
+.local/
 
 # === IDE ===
 .idea/
@@ -32,6 +34,7 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+apps/*/public/demo-config.json
 
 # === Proto generated ===
 proto/gen/
@@ -45,6 +48,7 @@ compose.override.yml
 coverage/
 *.lcov
 test-results/
+playwright-report/
 
 # === Claude Code ===
 .claude/worktrees/

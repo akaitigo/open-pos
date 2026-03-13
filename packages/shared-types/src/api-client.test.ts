@@ -114,6 +114,53 @@ describe('createApiClient', () => {
     )
   })
 
+  it('setOrganizationId(undefined) で組織 ID を解除できる', async () => {
+    const mockData = { id: '123', name: 'Test' }
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockData), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const client = createApiClient({
+      baseUrl: 'http://localhost:8080',
+      organizationId: 'org-123',
+    })
+    client.setOrganizationId(undefined)
+    await client.get('/api/items/123', TestSchema)
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/api/items/123',
+      expect.objectContaining({
+        headers: expect.not.objectContaining({
+          'X-Organization-Id': expect.any(String),
+        }),
+      }),
+    )
+  })
+
+  it('setBaseUrl でベース URL を変更できる', async () => {
+    const mockData = { id: '123', name: 'Test' }
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockData), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const client = createApiClient('http://localhost:8080')
+    client.setBaseUrl('http://localhost:9090')
+    await client.get('/api/items/123', TestSchema)
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:9090/api/items/123',
+      expect.objectContaining({
+        method: 'GET',
+      }),
+    )
+  })
+
   it('クエリパラメータを URL に付与できる', async () => {
     const mockData = { id: '123', name: 'Test' }
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
@@ -178,5 +225,6 @@ describe('createApiClient', () => {
     expect(client.put).toBeDefined()
     expect(client.patch).toBeDefined()
     expect(client.delete).toBeDefined()
+    expect(client.setBaseUrl).toBeDefined()
   })
 })

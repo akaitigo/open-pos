@@ -2,7 +2,7 @@ package com.openpos.gateway.cache
 
 import io.quarkus.redis.datasource.RedisDataSource
 import io.quarkus.redis.datasource.keys.KeyCommands
-import io.quarkus.redis.datasource.string.StringCommands
+import io.quarkus.redis.datasource.value.ValueCommands
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
@@ -17,7 +17,7 @@ import org.mockito.kotlin.whenever
 
 class RedisCacheServiceTest {
     private val redisDataSource: RedisDataSource = mock()
-    private val stringCommands: StringCommands<String, String> = mock()
+    private val valueCommands: ValueCommands<String, String> = mock()
     private val keyCommands: KeyCommands<String> = mock()
 
     private val redisCacheService =
@@ -29,7 +29,7 @@ class RedisCacheServiceTest {
 
     @BeforeEach
     fun setUp() {
-        whenever(redisDataSource.string(String::class.java)).thenReturn(stringCommands)
+        whenever(redisDataSource.value(String::class.java)).thenReturn(valueCommands)
         whenever(redisDataSource.key()).thenReturn(keyCommands)
     }
 
@@ -38,7 +38,7 @@ class RedisCacheServiceTest {
         @Test
         fun `キャッシュヒット時は値を返す`() {
             // Arrange
-            whenever(stringCommands.get("openpos:product:123")).thenReturn("cached-value")
+            whenever(valueCommands.get("openpos:product:123")).thenReturn("cached-value")
 
             // Act
             val result = redisCacheService.get("openpos:product:123")
@@ -50,7 +50,7 @@ class RedisCacheServiceTest {
         @Test
         fun `キャッシュミス時はnullを返す`() {
             // Arrange
-            whenever(stringCommands.get("openpos:product:999")).thenReturn(null)
+            whenever(valueCommands.get("openpos:product:999")).thenReturn(null)
 
             // Act
             val result = redisCacheService.get("openpos:product:999")
@@ -68,7 +68,7 @@ class RedisCacheServiceTest {
             redisCacheService.set("openpos:product:123", "value")
 
             // Assert
-            verify(stringCommands).setex("openpos:product:123", 3600L, "value")
+            verify(valueCommands).setex("openpos:product:123", 3600L, "value")
         }
 
         @Test
@@ -77,7 +77,7 @@ class RedisCacheServiceTest {
             redisCacheService.set("openpos:product:123", "value", ttlSeconds = 600L)
 
             // Assert
-            verify(stringCommands).setex("openpos:product:123", 600L, "value")
+            verify(valueCommands).setex("openpos:product:123", 600L, "value")
         }
     }
 

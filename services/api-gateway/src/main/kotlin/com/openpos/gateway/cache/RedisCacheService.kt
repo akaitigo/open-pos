@@ -13,14 +13,14 @@ class RedisCacheService {
         private const val DEFAULT_TTL_SECONDS = 3600L
     }
 
-    fun get(key: String): String? = redis.string(String::class.java).get(key)
+    fun get(key: String): String? = redis.value(String::class.java).get(key)
 
     fun set(
         key: String,
         value: String,
         ttlSeconds: Long = DEFAULT_TTL_SECONDS,
     ) {
-        redis.string(String::class.java).setex(key, ttlSeconds, value)
+        redis.value(String::class.java).setex(key, ttlSeconds, value)
     }
 
     fun invalidate(vararg keys: String) {

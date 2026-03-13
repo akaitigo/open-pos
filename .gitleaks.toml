@@ -1,0 +1,7 @@
+title = "open-pos gitleaks config"
+
+[allowlist]
+description = "Ignore the reverted RabbitMQ dev password hash commit in PR #283"
+commits = [
+  "4392b2d650f205c527a095f28f9ca88487966f18",
+]

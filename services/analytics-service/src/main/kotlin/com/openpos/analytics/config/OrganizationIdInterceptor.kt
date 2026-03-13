@@ -7,6 +7,7 @@ import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
 import io.grpc.ServerInterceptor
 import io.grpc.Status
+import io.quarkus.grpc.GlobalInterceptor
 import jakarta.enterprise.context.ApplicationScoped
 import java.util.UUID
 
@@ -16,6 +17,7 @@ import java.util.UUID
  * gRPC Context および OrganizationIdHolder に設定する。
  */
 @ApplicationScoped
+@GlobalInterceptor
 class OrganizationIdInterceptor : ServerInterceptor {
     companion object {
         private val ORGANIZATION_ID_KEY: Metadata.Key<String> =

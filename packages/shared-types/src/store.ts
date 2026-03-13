@@ -134,8 +134,6 @@ export const UpdateStaffRequestSchema = z.object({
 export type UpdateStaffRequest = z.infer<typeof UpdateStaffRequestSchema>
 
 export const AuthenticateByPinRequestSchema = z.object({
-  storeId: z.string().uuid(),
-  staffId: z.string().uuid(),
   pin: z.string().min(4).max(8),
 })
 
@@ -143,8 +141,8 @@ export type AuthenticateByPinRequest = z.infer<typeof AuthenticateByPinRequestSc
 
 export const AuthenticateByPinResponseSchema = z.object({
   success: z.boolean(),
-  staff: StaffSchema.nullable(),
-  reason: z.string().nullable(),
+  staff: StaffSchema.nullish(),
+  reason: z.string().nullish(),
 })
 
 export type AuthenticateByPinResponse = z.infer<typeof AuthenticateByPinResponseSchema>

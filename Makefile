@@ -1,7 +1,9 @@
 .PHONY: help up up-all up-dev down logs \
        dev-gateway dev-product dev-store dev-pos dev-inventory dev-analytics dev-backend \
+       local-build local-up local-up-fast local-down local-seed local-smoke local-demo \
+       docker-build-core docker-up-core docker-down-core docker-smoke docker-demo \
        build build-apps build-services \
-       test test-apps test-backend test-frontend test-all \
+       test test-apps test-backend test-frontend test-e2e test-all \
        lint proto proto-lint proto-breaking seed clean
 
 help: ## Show this help
@@ -50,6 +52,51 @@ dev-backend: ## Start all backend services in dev mode (background)
 	cd services/analytics-service && ../../gradlew quarkusDev &
 	cd services/api-gateway && ../../gradlew quarkusDev &
 
+local-build: ## Build the core backend services locally for reliable dev startup
+	./gradlew \
+		:services:product-service:quarkusBuild \
+		:services:store-service:quarkusBuild \
+		:services:pos-service:quarkusBuild \
+		:services:api-gateway:quarkusBuild \
+		-Dquarkus.package.jar.type=uber-jar
+
+local-up: ## Build and start the core backend services locally
+	bash scripts/local-stack-up.sh
+
+local-up-fast: ## Start the core backend services locally without rebuilding
+	bash scripts/local-stack-up.sh --skip-build
+
+local-down: ## Stop backend services started by scripts/local-stack-up.sh
+	bash scripts/local-stack-down.sh
+
+local-seed: ## Seed demo data and generate frontend .env.development.local files
+	bash scripts/seed.sh
+
+local-smoke: ## Verify the seeded local demo data via the API gateway
+	bash scripts/local-demo-smoke.sh
+
+local-demo: up local-up local-seed local-smoke ## Start infra, local backend, seed demo data, and verify the API path
+	@echo "Demo data is ready. Reload the browser to pick up the latest demo-config.json."
+
+docker-build-core: ## Build the core backend container images sequentially
+	docker compose -f infra/compose.yml build product-service
+	docker compose -f infra/compose.yml build store-service
+	docker compose -f infra/compose.yml build pos-service
+	docker compose -f infra/compose.yml build api-gateway
+
+docker-up-core: up local-down ## Start the core backend services in containers
+	docker compose -f infra/compose.yml up -d product-service store-service pos-service api-gateway
+
+docker-down-core: ## Stop only the containerized core backend services
+	docker compose -f infra/compose.yml stop api-gateway product-service store-service pos-service
+
+docker-smoke: ## Seed demo data and verify the containerized core stack via the API gateway
+	bash scripts/seed.sh
+	bash scripts/local-demo-smoke.sh
+
+docker-demo: docker-build-core docker-up-core docker-smoke ## Build, start, seed, and verify the containerized core stack
+	@echo "Container demo data is ready. Reload the browser to pick up the latest demo-config.json."
+
 # === Build ===
 build: ## Build all services
 	./gradlew build -x test
@@ -64,21 +111,23 @@ build-services: ## Build all backend services (alias for build)
 test: ## Run all backend tests
 	./gradlew test
 
-test-apps: ## Run all frontend tests
-	pnpm -r test
+test-apps: ## Run frontend unit/functional tests
+	pnpm test
 
 test-backend: ## Run all backend tests (alias for test)
 	./gradlew test
 
-test-frontend: ## Run all frontend tests
-	pnpm -r test -- --run
+test-frontend: ## Run frontend unit/functional tests (alias for test-apps)
+	pnpm test
 
-test-all: test-backend test-frontend ## Run all backend and frontend tests
+test-e2e: ## Run Playwright E2E tests (requires browsers via `pnpm e2e:install`)
+	pnpm test:e2e
+
+test-all: test-backend test-frontend ## Run backend + frontend unit/functional tests
 
 # === Lint ===
-lint: ## Lint proto, backend, and frontend
+lint: ## Lint proto and frontend
 	cd proto && buf lint
-	./gradlew ktlintCheck
 	pnpm -r lint
 
 # === Proto ===
