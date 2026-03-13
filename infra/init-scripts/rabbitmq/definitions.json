@@ -1,14 +1,5 @@
 {
   "vhosts": [{ "name": "/" }],
-  "users": [
-    {
-      "name": "openpos",
-      "password_hash": "WuRp2cJOS7joWufpZVq3M13uazwPaodpgnhd7znHWOxf7nbH",
-      "hashing_algorithm": "rabbit_password_hashing_sha256",
-      "tags": "administrator",
-      "limits": {}
-    }
-  ],
   "permissions": [
     {
       "user": "openpos",
