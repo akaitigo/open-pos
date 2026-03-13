@@ -6,7 +6,7 @@ function ToastClose({ onClose }: { onClose: () => void }) {
   return (
     <button
       aria-label="Close notification"
-      className="absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none group-hover:opacity-100"
+      className="absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-hidden group-hover:opacity-100"
       onClick={onClose}
     >
       <X className="h-4 w-4" />
@@ -38,7 +38,7 @@ export function Toaster() {
   const { toasts, dismiss } = useToast()
 
   return (
-    <div className="fixed right-0 top-0 z-[100] flex max-h-screen w-full flex-col p-4 md:max-w-[420px]">
+    <div className="fixed right-0 top-0 z-100 flex max-h-screen w-full flex-col p-4 md:max-w-[420px]">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} />
       ))}
