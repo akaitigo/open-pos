@@ -101,7 +101,7 @@ manager_id="$(jq -r '.data[] | select(.email == "tanaka@example.com") | .id' <<<
 [[ -n "$manager_id" ]] || fail "seeded manager was not found"
 pass "staff ($staff_total)"
 
-auth_json="$(api_post "/api/staff/$manager_id/authenticate" '{"pin":"1234"}')"
+auth_json="$(api_post "/api/staff/$manager_id/authenticate" "{\"storeId\":\"$STORE_ID\",\"pin\":\"1234\"}")"
 [[ "$(jq -r '.success' <<<"$auth_json")" == "true" ]] || fail "manager PIN authentication failed"
 pass "manager PIN authentication"
 
