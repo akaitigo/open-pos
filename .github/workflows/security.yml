@@ -12,6 +12,9 @@ permissions:
   contents: read
   pull-requests: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   gitleaks:
     name: Secret Scanning (gitleaks)
@@ -20,9 +23,46 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
+      - name: Install gitleaks
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: '8.30.0'
+        run: |
+          set -euo pipefail
+          curl -fsSLo gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf gitleaks.tar.gz gitleaks
+          install gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+      - name: Run gitleaks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            commit_shas="$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits" --jq '.[].sha')"
+            first_commit="$(printf '%s\n' "${commit_shas}" | head -n1)"
+            last_commit="$(printf '%s\n' "${commit_shas}" | tail -n1)"
+            log_opts="--no-merges --first-parent ${first_commit}^..${last_commit}"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            before_sha="${{ github.event.before }}"
+            head_sha="${{ github.sha }}"
+            if [[ "${before_sha}" == "${head_sha}" || "${before_sha}" == "0000000000000000000000000000000000000000" ]]; then
+              log_opts="-1"
+            else
+              log_opts="--no-merges --first-parent ${before_sha}^..${head_sha}"
+            fi
+          else
+            log_opts="--all"
+          fi
+
+          gitleaks git \
+            --no-banner \
+            --redact \
+            --exit-code=2 \
+            --report-format=sarif \
+            --report-path=results.sarif \
+            --log-opts="${log_opts}" \
+            .
 
   dependency-audit:
     name: Dependency Vulnerability Scan
