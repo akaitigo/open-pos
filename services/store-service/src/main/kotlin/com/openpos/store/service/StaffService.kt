@@ -99,11 +99,15 @@ class StaffService {
     @Transactional
     fun authenticateByPin(
         staffId: UUID,
+        storeId: UUID,
         pin: String,
         pinVerifier: (String, String) -> Boolean,
     ): PinAuthResult {
         tenantFilterService.enableFilter()
         val staff = staffRepository.findById(staffId) ?: return PinAuthResult(false, reason = "NOT_FOUND")
+        if (staff.storeId != storeId) {
+            return PinAuthResult(false, reason = "NOT_FOUND")
+        }
 
         if (!staff.isActive) {
             return PinAuthResult(false, staff = staff, reason = "ACCOUNT_INACTIVE")
