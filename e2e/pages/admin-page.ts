@@ -1,64 +1,47 @@
-import { type Locator, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 
 /**
  * 管理画面の Page Object Model
  *
- * 商品 CRUD 操作を抽象化する。
- * セレクタは全て data-testid ベース。
+ * 現行 UI に対する商品管理 smoke 操作を抽象化する。
  */
 export class AdminPage {
   readonly page: Page
 
-  // ナビゲーション
   readonly productsNavLink: Locator
-
-  // 商品一覧
   readonly productTable: Locator
   readonly addProductButton: Locator
   readonly productSearchInput: Locator
-
-  // 商品フォーム
   readonly productNameInput: Locator
   readonly productPriceInput: Locator
   readonly productCategorySelect: Locator
-  readonly productSaveButton: Locator
+  readonly productDialog: Locator
   readonly productCancelButton: Locator
-
-  // 削除確認
-  readonly deleteConfirmButton: Locator
-
-  // 通知
-  readonly successNotification: Locator
-  readonly errorNotification: Locator
 
   constructor(page: Page) {
     this.page = page
 
-    this.productsNavLink = page.getByTestId('nav-products')
+    this.productsNavLink = page.getByRole('link', { name: '商品管理' })
 
-    this.productTable = page.getByTestId('product-table')
-    this.addProductButton = page.getByTestId('add-product-button')
-    this.productSearchInput = page.getByTestId('product-search-input')
+    this.productTable = page.locator('table')
+    this.addProductButton = page.getByRole('button', { name: '商品を追加' })
+    this.productSearchInput = page.getByPlaceholder('商品名・バーコード・SKUで検索...')
 
-    this.productNameInput = page.getByTestId('product-name-input')
-    this.productPriceInput = page.getByTestId('product-price-input')
-    this.productCategorySelect = page.getByTestId('product-category-select')
-    this.productSaveButton = page.getByTestId('product-save-button')
-    this.productCancelButton = page.getByTestId('product-cancel-button')
-
-    this.deleteConfirmButton = page.getByTestId('delete-confirm-button')
-
-    this.successNotification = page.getByTestId('notification-success')
-    this.errorNotification = page.getByTestId('notification-error')
+    this.productNameInput = page.getByLabel('商品名 *')
+    this.productPriceInput = page.getByLabel('価格（円） *')
+    this.productCategorySelect = page.locator('#category')
+    this.productDialog = page.getByRole('dialog')
+    this.productCancelButton = page.getByRole('button', { name: 'キャンセル' })
   }
 
   async goto(): Promise<void> {
-    // admin-dashboard は port 5174
     await this.page.goto('http://localhost:5174/')
+    await expect(this.page.getByText('管理ダッシュボード')).toBeVisible()
   }
 
   async navigateToProducts(): Promise<void> {
     await this.productsNavLink.click()
+    await expect(this.page.getByText('商品管理')).toBeVisible()
   }
 
   async clickAddProduct(): Promise<void> {
@@ -73,27 +56,23 @@ export class AdminPage {
     }
   }
 
-  async saveProduct(): Promise<void> {
-    await this.productSaveButton.click()
-  }
-
   async searchProduct(query: string): Promise<void> {
     await this.productSearchInput.fill(query)
   }
 
-  async clickEditProduct(productName: string): Promise<void> {
-    await this.productTable.getByTestId(`edit-product-${productName}`).click()
+  async openFirstProductEditor(): Promise<void> {
+    await this.page.locator('tbody tr').first().getByRole('button', { name: '編集' }).click()
   }
 
-  async clickDeleteProduct(productName: string): Promise<void> {
-    await this.productTable.getByTestId(`delete-product-${productName}`).click()
+  async expectProductVisible(productName: string): Promise<void> {
+    await expect(this.page.locator('tbody tr').filter({ hasText: productName })).toHaveCount(1)
   }
 
-  async confirmDelete(): Promise<void> {
-    await this.deleteConfirmButton.click()
+  async expectProductNotVisible(productName: string): Promise<void> {
+    await expect(this.page.locator('tbody tr').filter({ hasText: productName })).toHaveCount(0)
   }
 
   async getProductRowCount(): Promise<number> {
-    return this.productTable.getByTestId('product-row').count()
+    return this.page.locator('tbody tr').count()
   }
 }

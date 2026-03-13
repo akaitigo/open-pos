@@ -326,7 +326,7 @@ class TransactionService {
     fun getTransactionTaxSummaries(transactionId: UUID): List<TaxSummaryEntity> = taxSummaryRepository.findByTransactionId(transactionId)
 
     fun listTransactions(
-        storeId: UUID,
+        storeId: UUID?,
         terminalId: UUID?,
         status: String?,
         startDate: Instant?,

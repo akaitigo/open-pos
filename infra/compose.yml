@@ -202,6 +202,8 @@ services:
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
+      PRODUCT_SERVICE_HOST: product-service
+      PRODUCT_SERVICE_PORT: 9000
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
@@ -239,6 +241,8 @@ services:
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
+      PRODUCT_SERVICE_HOST: product-service
+      PRODUCT_SERVICE_PORT: 9000
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}

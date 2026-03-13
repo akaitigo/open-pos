@@ -56,6 +56,7 @@ describe('CheckoutDialog', () => {
     })
     mockApiPost.mockReset()
     mockApiGet.mockReset()
+    mockApiGet.mockResolvedValue([])
   })
 
   it('合計金額と支払方法タブを表示する', () => {
@@ -128,7 +129,13 @@ describe('CheckoutDialog', () => {
     }
     const finalizeResponse = {
       transaction: txResponse,
-      receipt: { id: 'r-1', transactionId: 'tx-1', receiptData: 'レシートテスト' },
+      receipt: {
+        id: '550e8400-e29b-41d4-a716-446655440099',
+        transactionId: '550e8400-e29b-41d4-a716-446655440098',
+        receiptData: 'レシートテスト',
+        pdfUrl: null,
+        createdAt: '2026-01-01T00:00:00Z',
+      },
     }
     mockApiPost
       .mockResolvedValueOnce(txResponse) // create

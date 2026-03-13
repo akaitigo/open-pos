@@ -21,7 +21,7 @@ class TransactionRepository : PanacheRepositoryBase<TransactionEntity, UUID> {
             .list()
 
     fun listByFilters(
-        storeId: UUID,
+        storeId: UUID?,
         terminalId: UUID?,
         status: String?,
         startDate: Instant?,
@@ -35,7 +35,7 @@ class TransactionRepository : PanacheRepositoryBase<TransactionEntity, UUID> {
     }
 
     fun countByFilters(
-        storeId: UUID,
+        storeId: UUID?,
         terminalId: UUID?,
         status: String?,
         startDate: Instant?,
@@ -46,14 +46,18 @@ class TransactionRepository : PanacheRepositoryBase<TransactionEntity, UUID> {
     }
 
     private fun buildFilterQuery(
-        storeId: UUID,
+        storeId: UUID?,
         terminalId: UUID?,
         status: String?,
         startDate: Instant?,
         endDate: Instant?,
     ): Pair<String, Map<String, Any>> {
-        val conditions = mutableListOf("storeId = :storeId")
-        val params = mutableMapOf<String, Any>("storeId" to storeId)
+        val conditions = mutableListOf<String>()
+        val params = mutableMapOf<String, Any>()
+        if (storeId != null) {
+            conditions.add("storeId = :storeId")
+            params["storeId"] = storeId
+        }
         if (terminalId != null) {
             conditions.add("terminalId = :terminalId")
             params["terminalId"] = terminalId
@@ -70,6 +74,7 @@ class TransactionRepository : PanacheRepositoryBase<TransactionEntity, UUID> {
             conditions.add("createdAt <= :endDate")
             params["endDate"] = endDate
         }
-        return Pair(conditions.joinToString(" and "), params)
+        val query = if (conditions.isEmpty()) "1 = 1" else conditions.joinToString(" and ")
+        return Pair(query, params)
     }
 }

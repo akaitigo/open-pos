@@ -3,20 +3,22 @@ set -euo pipefail
 
 API_URL="${API_URL:-http://localhost:8080}"
 ORG_ID=""
+INVOICE_NUMBER="T$(date +%s%N | cut -c1-13)"
 
 # --- Helper Functions ---
 
 api_post_no_org() {
   local path="$1"
   local data="$2"
-  local response
-  response=$(curl -s -w "\n%{http_code}" -X POST "$API_URL$path" \
+  local body_file
+  body_file="$(mktemp)"
+  local http_code
+  http_code=$(curl -sS -o "$body_file" -w "%{http_code}" -X POST "$API_URL$path" \
     -H "Content-Type: application/json" \
     -d "$data")
-  local http_code
-  http_code=$(echo "$response" | tail -1)
   local body
-  body=$(echo "$response" | sed '$d')
+  body="$(cat "$body_file")"
+  rm -f "$body_file"
   if [[ "$http_code" -ge 400 ]]; then
     echo "ERROR: POST $path returned $http_code" >&2
     echo "$body" >&2
@@ -28,15 +30,16 @@ api_post_no_org() {
 api_post() {
   local path="$1"
   local data="$2"
-  local response
-  response=$(curl -s -w "\n%{http_code}" -X POST "$API_URL$path" \
+  local body_file
+  body_file="$(mktemp)"
+  local http_code
+  http_code=$(curl -sS -o "$body_file" -w "%{http_code}" -X POST "$API_URL$path" \
     -H "Content-Type: application/json" \
     -H "X-Organization-Id: $ORG_ID" \
     -d "$data")
-  local http_code
-  http_code=$(echo "$response" | tail -1)
   local body
-  body=$(echo "$response" | sed '$d')
+  body="$(cat "$body_file")"
+  rm -f "$body_file"
   if [[ "$http_code" -ge 400 ]]; then
     echo "ERROR: POST $path returned $http_code" >&2
     echo "$body" >&2
@@ -46,7 +49,14 @@ api_post() {
 }
 
 extract_id() {
-  echo "$1" | jq -r '.id'
+  local id
+  id=$(echo "$1" | jq -r '.id')
+  if [[ -z "$id" || "$id" == "null" ]]; then
+    echo "ERROR: Failed to extract id from response" >&2
+    echo "$1" >&2
+    exit 1
+  fi
+  echo "$id"
 }
 
 echo "=== open-pos Seed Data ==="
@@ -56,7 +66,7 @@ echo ""
 # --- 1. Organization ---
 echo "--- Creating Organization ---"
 ORG_RESPONSE=$(api_post_no_org "/api/organizations" \
-  '{"name": "デモ株式会社", "businessType": "RETAIL", "invoiceNumber": "T1234567890123"}')
+  "{\"name\": \"デモ株式会社\", \"businessType\": \"RETAIL\", \"invoiceNumber\": \"$INVOICE_NUMBER\"}")
 ORG_ID=$(extract_id "$ORG_RESPONSE")
 echo "Organization: $ORG_ID"
 
@@ -160,8 +170,8 @@ echo "Store 渋谷本店: $STORE_ID"
 # --- 6. Terminal ---
 echo ""
 echo "--- Creating Terminal ---"
-TERMINAL_RESPONSE=$(api_post "/api/terminals" \
-  "{\"storeId\": \"$STORE_ID\", \"terminalCode\": \"POS-001\", \"name\": \"レジ1番\"}")
+TERMINAL_RESPONSE=$(api_post "/api/stores/$STORE_ID/terminals" \
+  "{\"terminalCode\": \"POS-001\", \"name\": \"レジ1番\"}")
 TERMINAL_ID=$(extract_id "$TERMINAL_RESPONSE")
 echo "Terminal レジ1番: $TERMINAL_ID"
 
@@ -180,10 +190,14 @@ echo "Staff 山田花子 (CASHIER): $STAFF2_ID"
 
 # --- 8. Generate .env.development.local ---
 echo ""
-echo "--- Generating .env.development.local ---"
+echo "--- Generating Frontend Demo Config ---"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+POS_PUBLIC_DIR="$PROJECT_ROOT/apps/pos-terminal/public"
+ADMIN_PUBLIC_DIR="$PROJECT_ROOT/apps/admin-dashboard/public"
+
+mkdir -p "$POS_PUBLIC_DIR" "$ADMIN_PUBLIC_DIR"
 
 cat > "$PROJECT_ROOT/apps/pos-terminal/.env.development.local" << EOF
 VITE_API_URL=http://localhost:8080
@@ -199,6 +213,24 @@ VITE_ORGANIZATION_ID=$ORG_ID
 EOF
 echo "  Created apps/admin-dashboard/.env.development.local"
 
+cat > "$POS_PUBLIC_DIR/demo-config.json" << EOF
+{
+  "apiUrl": "http://localhost:8080",
+  "organizationId": "$ORG_ID",
+  "storeId": "$STORE_ID",
+  "terminalId": "$TERMINAL_ID"
+}
+EOF
+echo "  Created apps/pos-terminal/public/demo-config.json"
+
+cat > "$ADMIN_PUBLIC_DIR/demo-config.json" << EOF
+{
+  "apiUrl": "http://localhost:8080",
+  "organizationId": "$ORG_ID"
+}
+EOF
+echo "  Created apps/admin-dashboard/public/demo-config.json"
+
 # --- 9. Summary ---
 echo ""
 echo "========================================="
@@ -206,6 +238,7 @@ echo "  Seed Data Complete!"
 echo "========================================="
 echo ""
 echo "Organization:  $ORG_ID"
+echo "Invoice No:    $INVOICE_NUMBER"
 echo "Store:         $STORE_ID"
 echo "Terminal:      $TERMINAL_ID"
 echo "Staff:"
@@ -219,5 +252,5 @@ echo ""
 echo "Categories: 飲料, パン・サンドイッチ, 弁当・おにぎり, 菓子, 日用品, その他"
 echo "Products:   17 items created"
 echo ""
-echo ".env.development.local files generated for pos-terminal and admin-dashboard"
+echo "Frontend demo config generated for pos-terminal and admin-dashboard"
 echo "========================================="

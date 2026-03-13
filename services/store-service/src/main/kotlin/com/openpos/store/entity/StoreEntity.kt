@@ -3,6 +3,8 @@ package com.openpos.store.entity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 
 /**
  * 店舗エンティティ。
@@ -26,7 +28,8 @@ class StoreEntity : BaseEntity() {
     @Column(name = "timezone", nullable = false, length = 50)
     var timezone: String = "Asia/Tokyo"
 
-    @Column(name = "settings", nullable = false, columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "settings", nullable = false, columnDefinition = "jsonb")
     var settings: String = "{}"
 
     @Column(name = "is_active", nullable = false)

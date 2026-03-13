@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { LoginScreen } from './login-screen'
+import { resetRuntimeConfigForTests } from '@/lib/runtime-config'
 import { useAuthStore } from '@/stores/auth-store'
 
 const mockStaffList = {
@@ -64,13 +65,23 @@ vi.mock('@/lib/api', () => ({
     }),
     post: (...args: unknown[]) => mockApiPost(...args),
     setOrganizationId: vi.fn(),
+    setBaseUrl: vi.fn(),
   },
+  configureApi: vi.fn(),
+  getDefaultApiConfig: () => ({
+    apiUrl: 'http://localhost:8080',
+    organizationId: '550e8400-e29b-41d4-a716-446655440000',
+  }),
 }))
 
 describe('LoginScreen', () => {
   beforeEach(() => {
-    vi.stubEnv('VITE_DEFAULT_STORE_ID', '550e8400-e29b-41d4-a716-446655440020')
-    vi.stubEnv('VITE_DEFAULT_TERMINAL_ID', 'terminal-1')
+    resetRuntimeConfigForTests({
+      apiUrl: 'http://localhost:8080',
+      organizationId: '550e8400-e29b-41d4-a716-446655440000',
+      storeId: '550e8400-e29b-41d4-a716-446655440020',
+      terminalId: 'terminal-1',
+    })
     useAuthStore.setState({
       isAuthenticated: false,
       staff: null,

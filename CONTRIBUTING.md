@@ -20,34 +20,27 @@ Thank you for your interest in contributing to open-pos! This guide will help yo
 git clone https://github.com/akaitigo/open-pos.git
 cd open-pos
 
-# Start infrastructure (PostgreSQL, Redis, RabbitMQ, Hydra)
-make up
-
-# Generate gRPC code from proto definitions
-make proto
-
-# Build backend services
-make build
-
-# Install frontend dependencies and build
+# Install frontend dependencies
 pnpm install
-make build-apps
+
+# Recommended local verification path
+make local-demo
+pnpm dev:admin
+pnpm dev:pos
 ```
 
 ### Running Locally
 
 ```bash
-# Start with dev tools (pgAdmin, Redis Commander)
-make up-dev
+# Host-run core backend (recommended for day-to-day work)
+make local-demo
 
-# Run a specific backend service in dev mode
-make dev-product   # product-service
-make dev-store     # store-service
-make dev-gateway   # api-gateway
+# Containerized core backend (useful for release verification)
+make docker-demo
 
-# Run frontend dev servers
-pnpm dev:pos       # POS terminal (port 5173)
-pnpm dev:admin     # Admin dashboard (port 5174)
+# Restart only the supported backend mode you are using
+make local-up-fast
+make docker-up-core
 ```
 
 ## How to Contribute
@@ -71,7 +64,8 @@ pnpm dev:admin     # Admin dashboard (port 5174)
    ```bash
    make test          # Backend tests
    make test-apps     # Frontend tests
-   make lint          # Lint all (proto, backend, frontend)
+   make local-smoke   # Seeded API smoke test
+   make lint          # Lint supported local targets (proto, frontend)
    ```
 
 4. **Create a Pull Request** with:

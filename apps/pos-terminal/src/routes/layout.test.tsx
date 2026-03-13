@@ -2,9 +2,17 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router'
 import { Layout } from './layout'
+import { resetRuntimeConfigForTests } from '@/lib/runtime-config'
 import { useAuthStore } from '@/stores/auth-store'
 
 beforeEach(() => {
+  resetRuntimeConfigForTests({
+    apiUrl: 'http://localhost:8080',
+    organizationId: '00000000-0000-0000-0000-000000000000',
+    storeId: '00000000-0000-0000-0000-000000000001',
+    terminalId: '00000000-0000-0000-0000-000000000001',
+  })
+
   vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
     const url = typeof input === 'string' ? input : input.toString()
 
@@ -56,7 +64,7 @@ beforeEach(() => {
 })
 
 describe('Layout', () => {
-  it('未認証時はログイン画面がレンダリングされる', () => {
+  it('未認証時はログイン画面がレンダリングされる', async () => {
     useAuthStore.setState({
       isAuthenticated: false,
       staff: null,
@@ -71,8 +79,8 @@ describe('Layout', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('OpenPOS Terminal')).toBeInTheDocument()
-    expect(screen.getByText('スタッフを選択してください')).toBeInTheDocument()
+    expect(await screen.findByText('OpenPOS Terminal')).toBeInTheDocument()
+    expect(await screen.findByText('スタッフを選択してください')).toBeInTheDocument()
   })
 
   it('認証済み時は Header とカートサイドバーがレンダリングされる', () => {
@@ -105,5 +113,29 @@ describe('Layout', () => {
     expect(screen.getByText('OpenPOS')).toBeInTheDocument()
     expect(screen.getByText('テスト店舗')).toBeInTheDocument()
     expect(screen.getByText('カート')).toBeInTheDocument()
+  })
+
+  it('terminal 設定が未構成ならセットアップ案内を表示する', () => {
+    resetRuntimeConfigForTests({
+      apiUrl: 'http://localhost:8080',
+      organizationId: '00000000-0000-0000-0000-000000000000',
+      storeId: null,
+      terminalId: null,
+    })
+    useAuthStore.setState({
+      isAuthenticated: false,
+      staff: null,
+      storeId: null,
+      storeName: null,
+      terminalId: null,
+    })
+
+    render(
+      <MemoryRouter>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('organization、store、terminal のデモ設定が未構成です。')).toBeInTheDocument()
   })
 })

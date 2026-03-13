@@ -22,48 +22,64 @@ gh repo clone akaitigo/open-pos
 cd open-pos
 ```
 
-### 2. インフラ起動
-```bash
-make up
-```
-
-PostgreSQL, Redis, RabbitMQ, ORY Hydra が起動します。
-
-### 3. DB 初期化確認
-初回起動時に `infra/init-scripts/postgres/01_init.sql` が自動実行され、各スキーマが作成されます。
-
-### 4. Proto コード生成
-```bash
-make proto
-```
-
-### 5. バックエンドビルド
-```bash
-./gradlew build
-```
-
-### 6. フロントエンドセットアップ
+### 2. 依存関係インストール
 ```bash
 pnpm install
-pnpm dev:pos     # POS端末 (http://localhost:5173)
-pnpm dev:admin   # 管理画面 (http://localhost:5174)
+```
+
+### 3. 推奨ローカル導線
+```bash
+make local-demo
+pnpm dev:admin   # http://localhost:5174
+pnpm dev:pos     # http://localhost:5173
+```
+
+`make local-demo` は以下をまとめて行います。
+- Docker で infra を起動
+- core backend (`product-service`, `store-service`, `pos-service`, `api-gateway`) を host で build / 起動
+- demo data を投入
+- frontend 用の `.env.development.local` を生成
+- frontend 用の `public/demo-config.json` を生成
+- API smoke test を実行
+
+### 4. container 導線
+```bash
+make docker-demo
+pnpm dev:admin
+pnpm dev:pos
+```
+
+こちらは core backend も Docker で起動します。`make local-demo` から切り替える時は `make local-down` を実行してください。
+
+### 5. 個別コマンド
+```bash
+# infra のみ起動
+make up
+
+# host-run backend の再起動
+make local-up-fast
+make local-down
+
+# container backend の起動 / 停止
+make docker-up-core
+make docker-down-core
+
+# demo data の再投入と API smoke
+make local-seed
+make local-smoke
 ```
 
 ## 動作確認
 
 ```bash
-# インフラヘルスチェック
+# Compose 状態
 docker compose -f infra/compose.yml ps
 
-# PostgreSQL 接続
-pgcli -h localhost -p 15432 -U openpos -d openpos
-
-# Redis 接続
-redis-cli -p 16379 ping
-
-# RabbitMQ 管理画面
-open http://localhost:15673  # admin/openpos_dev
+# API health
+curl -s http://localhost:8080/api/health
 ```
+
+`apps/admin-dashboard/.env.development.local` と `apps/pos-terminal/.env.development.local` は seed 時に自動生成されます。`apps/*/public/demo-config.json` も同時に生成されるので、frontend は dev server 再起動なしで browser reload だけで最新 seed を拾えます。
 
 ## 開発ツール付き起動
 

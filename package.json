@@ -14,7 +14,11 @@
     "lint": "pnpm -r run lint",
     "format": "prettier --write \"apps/**/*.{ts,tsx,js,jsx,json,css,md}\" \"packages/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"apps/**/*.{ts,tsx,js,jsx,json,css,md}\" \"packages/**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "test": "pnpm -r test",
+    "test": "pnpm run test:apps",
+    "test:apps": "pnpm --filter @shared-types/openpos --filter pos-terminal --filter admin-dashboard test",
+    "test:e2e": "pnpm --filter e2e test",
+    "test:all": "pnpm run test:apps && pnpm run test:e2e",
+    "e2e:install": "pnpm --filter e2e exec playwright install chromium",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

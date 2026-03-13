@@ -1,5 +1,14 @@
 {
   "vhosts": [{ "name": "/" }],
+  "permissions": [
+    {
+      "user": "openpos",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
   "exchanges": [
     {
       "name": "openpos.events",

@@ -23,7 +23,7 @@ export const PaymentSchema = z.object({
   amount: z.number().int(),
   received: z.number().int(),
   change: z.number().int(),
-  reference: z.string(),
+  reference: z.string().nullable().optional(),
 })
 
 export type Payment = z.infer<typeof PaymentSchema>
@@ -63,16 +63,21 @@ export const TransactionSchema = z.object({
   status: z.string(),
   items: z.array(TransactionItemSchema),
   payments: z.array(PaymentSchema),
-  appliedDiscounts: z.array(AppliedDiscountSchema),
+  appliedDiscounts: z.array(AppliedDiscountSchema).optional(),
+  discounts: z.array(AppliedDiscountSchema).optional(),
   taxSummaries: z.array(TaxSummarySchema),
   subtotal: z.number().int(),
   discountTotal: z.number().int(),
   taxTotal: z.number().int(),
   total: z.number().int(),
-  clientId: z.string(),
+  clientId: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
-})
+  completedAt: z.string().nullable().optional(),
+}).transform(({ discounts, appliedDiscounts, ...transaction }) => ({
+  ...transaction,
+  appliedDiscounts: appliedDiscounts ?? discounts ?? [],
+}))
 
 export type Transaction = z.infer<typeof TransactionSchema>
 
@@ -80,9 +85,9 @@ export type Transaction = z.infer<typeof TransactionSchema>
 export const ReceiptSchema = z.object({
   id: z.string().uuid(),
   transactionId: z.string().uuid(),
-  receiptNumber: z.string(),
   receiptData: z.string(),
-  issuedAt: z.string(),
+  pdfUrl: z.string().nullable().optional(),
+  createdAt: z.string(),
 })
 
 export type Receipt = z.infer<typeof ReceiptSchema>

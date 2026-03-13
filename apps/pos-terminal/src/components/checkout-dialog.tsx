@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -15,12 +15,16 @@ import { useAuthStore } from '@/stores/auth-store'
 import { api } from '@/lib/api'
 import {
   formatMoney,
+  TaxRateSchema,
   TransactionSchema,
   FinalizeTransactionResponseSchema,
 } from '@shared-types/openpos'
+import type { TaxRate } from '@shared-types/openpos'
 import { toast } from '@/hooks/use-toast'
 import { ReceiptDialog } from '@/components/receipt-dialog'
+import { getCartEstimatedTotal } from '@/lib/cart-totals'
 import { Loader2 } from 'lucide-react'
+import { z } from 'zod'
 
 interface CheckoutDialogProps {
   open: boolean
@@ -38,15 +42,35 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const [processing, setProcessing] = useState(false)
   const [receiptData, setReceiptData] = useState<string | null>(null)
   const [receiptOpen, setReceiptOpen] = useState(false)
+  const [taxRates, setTaxRates] = useState<TaxRate[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+
+    api
+      .get('/api/tax-rates', z.array(TaxRateSchema))
+      .then((result) => {
+        if (!cancelled) setTaxRates(result)
+      })
+      .catch(() => {
+        if (!cancelled) setTaxRates([])
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const subtotal = getCartSubtotal(items)
+  const total = getCartEstimatedTotal(items, taxRates)
+  const taxTotal = total - subtotal
 
   const received = receivedAmount ? parseInt(receivedAmount, 10) * 100 : 0
-  const change = paymentMethod === 'CASH' && received > subtotal ? received - subtotal : 0
-  const canFinalize = paymentMethod === 'CASH' ? received >= subtotal : true
+  const change = paymentMethod === 'CASH' && received > total ? received - total : 0
+  const canFinalize = paymentMethod === 'CASH' ? received >= total : true
 
   const presets = [
-    { label: 'ぴったり', value: subtotal },
+    { label: 'ぴったり', value: total },
     { label: '\u00a51,000', value: 100000 },
     { label: '\u00a52,000', value: 200000 },
     { label: '\u00a55,000', value: 500000 },
@@ -73,7 +97,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
       const payment = {
         method: paymentMethod,
-        amount: subtotal,
+        amount: total,
         ...(paymentMethod === 'CASH' && received > 0 ? { received } : {}),
         ...(reference ? { reference } : {}),
       }
@@ -125,7 +149,10 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
           <div className="text-center">
             <p className="text-sm text-muted-foreground">合計金額</p>
-            <p className="text-3xl font-bold">{formatMoney(subtotal)}</p>
+            <p className="text-3xl font-bold">{formatMoney(total)}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              小計 {formatMoney(subtotal)} / 税額 {formatMoney(taxTotal)}
+            </p>
           </div>
 
           <Separator />
