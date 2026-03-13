@@ -268,7 +268,7 @@ class StaffServiceTest {
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
-            val result = staffService.authenticateByPin(staffId, "1234") { plain, hash -> plain == hash }
+            val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
 
             // Assert
             assertTrue(result.success)
@@ -286,7 +286,33 @@ class StaffServiceTest {
             whenever(staffRepository.findById(staffId)).thenReturn(null)
 
             // Act
-            val result = staffService.authenticateByPin(staffId, "1234") { plain, hash -> plain == hash }
+            val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
+
+            // Assert
+            assertFalse(result.success)
+            assertNull(result.staff)
+            assertEquals("NOT_FOUND", result.reason)
+        }
+
+        @Test
+        fun `別店舗のスタッフIDの場合はNOT_FOUNDを返す`() {
+            // Arrange
+            val staffId = UUID.randomUUID()
+            val otherStoreId = UUID.randomUUID()
+            val entity =
+                StaffEntity().apply {
+                    this.id = staffId
+                    this.organizationId = orgId
+                    this.storeId = otherStoreId
+                    this.name = "田中太郎"
+                    this.role = "CASHIER"
+                    this.pinHash = "1234"
+                    this.isActive = true
+                }
+            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+
+            // Act
+            val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
 
             // Assert
             assertFalse(result.success)
@@ -311,7 +337,7 @@ class StaffServiceTest {
             whenever(staffRepository.findById(staffId)).thenReturn(entity)
 
             // Act
-            val result = staffService.authenticateByPin(staffId, "1234") { plain, hash -> plain == hash }
+            val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
 
             // Assert
             assertFalse(result.success)
@@ -338,7 +364,7 @@ class StaffServiceTest {
             whenever(staffRepository.findById(staffId)).thenReturn(entity)
 
             // Act
-            val result = staffService.authenticateByPin(staffId, "1234") { plain, hash -> plain == hash }
+            val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
 
             // Assert
             assertFalse(result.success)
@@ -365,7 +391,7 @@ class StaffServiceTest {
             whenever(staffRepository.findById(staffId)).thenReturn(entity)
 
             // Act
-            val result = staffService.authenticateByPin(staffId, "1234") { plain, hash -> plain == hash }
+            val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
 
             // Assert
             assertFalse(result.success)
@@ -393,7 +419,7 @@ class StaffServiceTest {
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
-            val result = staffService.authenticateByPin(staffId, "9999") { _, _ -> false }
+            val result = staffService.authenticateByPin(staffId, storeId, "9999") { _, _ -> false }
 
             // Assert
             assertFalse(result.success)
@@ -422,7 +448,7 @@ class StaffServiceTest {
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
-            val result = staffService.authenticateByPin(staffId, "9999") { _, _ -> false }
+            val result = staffService.authenticateByPin(staffId, storeId, "9999") { _, _ -> false }
 
             // Assert
             assertFalse(result.success)
@@ -451,7 +477,7 @@ class StaffServiceTest {
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
-            val result = staffService.authenticateByPin(staffId, "1234") { plain, hash -> plain == hash }
+            val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
 
             // Assert
             assertTrue(result.success)
@@ -479,7 +505,7 @@ class StaffServiceTest {
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
-            val result = staffService.authenticateByPin(staffId, "1234") { plain, hash -> plain == hash }
+            val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
 
             // Assert
             assertTrue(result.success)
@@ -507,7 +533,7 @@ class StaffServiceTest {
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
-            val result = staffService.authenticateByPin(staffId, "9999") { _, _ -> false }
+            val result = staffService.authenticateByPin(staffId, storeId, "9999") { _, _ -> false }
 
             // Assert
             assertFalse(result.success)

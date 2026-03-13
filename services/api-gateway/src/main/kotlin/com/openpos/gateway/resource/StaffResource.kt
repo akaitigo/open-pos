@@ -116,6 +116,7 @@ class StaffResource {
         val request =
             AuthenticateByPinRequest
                 .newBuilder()
+                .setStoreId(body.storeId)
                 .setStaffId(id)
                 .setPin(body.pin)
                 .build()
@@ -152,5 +153,6 @@ data class UpdateStaffBody(
 )
 
 data class AuthenticateBody(
+    val storeId: String,
     val pin: String,
 )

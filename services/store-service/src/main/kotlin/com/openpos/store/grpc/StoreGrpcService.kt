@@ -337,6 +337,7 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         val result =
             staffService.authenticateByPin(
                 staffId = request.staffId.toUUID(),
+                storeId = request.storeId.toUUID(),
                 pin = request.pin,
                 pinVerifier = { pin, hash ->
                     BCrypt.verifyer().verify(pin.toCharArray(), hash).verified

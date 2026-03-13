@@ -188,8 +188,12 @@ describe('createPaginatedResponseSchema', () => {
 })
 
 describe('AuthenticateByPin schemas', () => {
-  it('現在の gateway リクエスト形式をパースできる', () => {
-    const result = AuthenticateByPinRequestSchema.parse({ pin: '1234' })
+  it('storeId を含む認証リクエストをパースできる', () => {
+    const result = AuthenticateByPinRequestSchema.parse({
+      storeId: '550e8400-e29b-41d4-a716-446655440002',
+      pin: '1234',
+    })
+    expect(result.storeId).toBe('550e8400-e29b-41d4-a716-446655440002')
     expect(result.pin).toBe('1234')
   })
 

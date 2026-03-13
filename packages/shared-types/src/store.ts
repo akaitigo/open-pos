@@ -134,6 +134,7 @@ export const UpdateStaffRequestSchema = z.object({
 export type UpdateStaffRequest = z.infer<typeof UpdateStaffRequestSchema>
 
 export const AuthenticateByPinRequestSchema = z.object({
+  storeId: z.string().uuid(),
   pin: z.string().min(4).max(8),
 })
 

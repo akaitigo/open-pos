@@ -147,7 +147,10 @@ describe('LoginScreen', () => {
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith(
         `/api/staff/${mockStaffList.data[0]!.id}/authenticate`,
-        { pin: '1234' },
+        {
+          storeId: '550e8400-e29b-41d4-a716-446655440020',
+          pin: '1234',
+        },
         expect.anything(),
       )
     })
