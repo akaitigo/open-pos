@@ -59,6 +59,7 @@ class ProductServiceTest {
             val result =
                 productService.create(
                     name = "テスト商品",
+                    description = "商品説明",
                     barcode = "4901234567890",
                     sku = "SKU-001",
                     price = 10000L,
@@ -70,6 +71,7 @@ class ProductServiceTest {
 
             // Assert
             assertEquals("テスト商品", result.name)
+            assertEquals("商品説明", result.description)
             assertEquals("4901234567890", result.barcode)
             assertEquals("SKU-001", result.sku)
             assertEquals(10000L, result.price)
@@ -91,6 +93,7 @@ class ProductServiceTest {
             val result =
                 productService.create(
                     name = "シンプル商品",
+                    description = null,
                     barcode = null,
                     sku = null,
                     price = 5000L,
@@ -102,6 +105,7 @@ class ProductServiceTest {
 
             // Assert
             assertEquals("シンプル商品", result.name)
+            assertNull(result.description)
             assertNull(result.barcode)
             assertNull(result.sku)
             assertEquals(5000L, result.price)
@@ -301,6 +305,7 @@ class ProductServiceTest {
                 productService.update(
                     id = productId,
                     name = "更新後の商品",
+                    description = "更新後の説明",
                     barcode = null,
                     sku = null,
                     price = 20000L,
@@ -314,6 +319,7 @@ class ProductServiceTest {
             // Assert
             assertNotNull(result)
             assertEquals("更新後の商品", result!!.name)
+            assertEquals("更新後の説明", result.description)
             assertEquals(20000L, result.price)
             // null のフィールドは更新されない
             assertEquals("1111111111111", result.barcode)
@@ -333,6 +339,7 @@ class ProductServiceTest {
                 productService.update(
                     id = productId,
                     name = "更新後の商品",
+                    description = null,
                     barcode = null,
                     sku = null,
                     price = null,

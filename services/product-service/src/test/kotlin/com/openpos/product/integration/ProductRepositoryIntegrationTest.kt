@@ -56,6 +56,7 @@ class ProductRepositoryIntegrationTest {
             ProductEntity().apply {
                 organizationId = testOrgId
                 name = "テスト商品A"
+                description = "商品説明"
                 barcode = "4901234567890"
                 sku = "SKU-001"
                 price = 10000L
@@ -71,6 +72,7 @@ class ProductRepositoryIntegrationTest {
         assertNotNull(found)
         requireNotNull(found)
         assertEquals("テスト商品A", found.name)
+        assertEquals("商品説明", found.description)
         assertEquals("4901234567890", found.barcode)
         assertEquals(10000L, found.price)
         assertEquals(testOrgId, found.organizationId)

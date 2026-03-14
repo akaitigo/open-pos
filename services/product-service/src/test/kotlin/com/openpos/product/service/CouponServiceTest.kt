@@ -79,6 +79,7 @@ class CouponServiceTest {
             assertEquals(0, result.usedCount)
             assertEquals(validFrom, result.validFrom)
             assertEquals(validUntil, result.validUntil)
+            assertEquals(true, result.isActive)
             assertEquals(orgId, result.organizationId)
             verify(couponRepository).persist(any<CouponEntity>())
         }
@@ -103,6 +104,7 @@ class CouponServiceTest {
             assertNull(result.maxUses)
             assertNull(result.validFrom)
             assertNull(result.validUntil)
+            assertEquals(true, result.isActive)
             verify(couponRepository).persist(any<CouponEntity>())
         }
     }
@@ -232,6 +234,29 @@ class CouponServiceTest {
             assertFalse(result.isValid)
             assertNotNull(result.coupon)
             assertEquals("NOT_YET_VALID", result.reason)
+        }
+
+        @Test
+        fun `無効化されたクーポンはCOUPON_INACTIVEを返す`() {
+            // Arrange
+            val entity =
+                CouponEntity().apply {
+                    this.id = UUID.randomUUID()
+                    this.organizationId = orgId
+                    this.code = "INACTIVE"
+                    this.discountId = this@CouponServiceTest.discountId
+                    this.usedCount = 0
+                    this.isActive = false
+                }
+            whenever(couponRepository.findByCode("INACTIVE")).thenReturn(entity)
+
+            // Act
+            val result = couponService.validate("INACTIVE")
+
+            // Assert
+            assertFalse(result.isValid)
+            assertNotNull(result.coupon)
+            assertEquals("COUPON_INACTIVE", result.reason)
         }
 
         @Test
@@ -375,8 +400,10 @@ class CouponServiceTest {
             // Assert
             assertTrue(result.isValid)
             assertNotNull(result.coupon)
+            assertNotNull(result.discount)
             assertNull(result.reason)
             assertEquals("VALID", result.coupon!!.code)
+            assertEquals("有効割引", result.discount!!.name)
         }
 
         @Test

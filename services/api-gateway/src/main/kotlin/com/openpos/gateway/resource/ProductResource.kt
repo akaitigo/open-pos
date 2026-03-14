@@ -1,5 +1,8 @@
 package com.openpos.gateway.resource
 
+import com.google.protobuf.BoolValue
+import com.google.protobuf.Int32Value
+import com.google.protobuf.Int64Value
 import com.openpos.gateway.cache.RedisCacheService
 import com.openpos.gateway.config.GrpcClientHelper
 import com.openpos.gateway.config.paginatedResponse
@@ -116,12 +119,12 @@ class ProductResource {
                     body.description?.let { setDescription(it) }
                     body.barcode?.let { setBarcode(it) }
                     body.sku?.let { setSku(it) }
-                    body.price?.let { setPrice(it) }
+                    body.price?.let { setPriceValue(Int64Value.of(it)) }
                     body.categoryId?.let { setCategoryId(it) }
                     body.taxRateId?.let { setTaxRateId(it) }
                     body.imageUrl?.let { setImageUrl(it) }
-                    body.displayOrder?.let { setDisplayOrder(it) }
-                    body.isActive?.let { setIsActive(it) }
+                    body.displayOrder?.let { setDisplayOrderValue(Int32Value.of(it)) }
+                    body.isActive?.let { setIsActiveValue(BoolValue.of(it)) }
                 }.build()
         val response = grpc.withTenant(stub).updateProduct(request)
         cache.invalidatePattern("openpos:gateway:product:list:*")

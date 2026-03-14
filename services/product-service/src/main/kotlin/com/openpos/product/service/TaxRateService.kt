@@ -33,11 +33,16 @@ class TaxRateService {
         name: String,
         rate: BigDecimal,
         taxType: String,
+        isDefault: Boolean,
     ): TaxRateEntity {
         val orgId =
             requireNotNull(organizationIdHolder.organizationId) {
                 "organizationId is not set"
             }
+
+        if (isDefault) {
+            clearExistingDefaults(orgId)
+        }
 
         val entity =
             TaxRateEntity().apply {
@@ -45,6 +50,7 @@ class TaxRateService {
                 this.name = name
                 this.rate = rate
                 this.taxType = taxType
+                this.isDefault = isDefault
                 this.isActive = true
             }
         taxRateRepository.persist(entity)
@@ -77,6 +83,7 @@ class TaxRateService {
         rate: BigDecimal?,
         taxType: String?,
         isActive: Boolean?,
+        isDefault: Boolean?,
     ): TaxRateEntity? {
         tenantFilterService.enableFilter()
         val entity = taxRateRepository.findById(id) ?: return null
@@ -85,8 +92,28 @@ class TaxRateService {
         rate?.let { entity.rate = it }
         taxType?.let { entity.taxType = it }
         isActive?.let { entity.isActive = it }
+        isDefault?.let {
+            if (it) {
+                clearExistingDefaults(entity.organizationId, entity.id)
+            }
+            entity.isDefault = it
+        }
 
         taxRateRepository.persist(entity)
         return entity
+    }
+
+    private fun clearExistingDefaults(
+        organizationId: UUID,
+        excludedId: UUID? = null,
+    ) {
+        val defaults =
+            if (excludedId == null) {
+                taxRateRepository.findDefaultsByOrganizationId(organizationId)
+            } else {
+                taxRateRepository.findDefaultsByOrganizationIdExcludingId(organizationId, excludedId)
+            }
+
+        defaults.forEach { it.isDefault = false }
     }
 }

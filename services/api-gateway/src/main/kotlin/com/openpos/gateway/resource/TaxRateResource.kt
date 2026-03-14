@@ -1,5 +1,6 @@
 package com.openpos.gateway.resource
 
+import com.google.protobuf.BoolValue
 import com.openpos.gateway.config.GrpcClientHelper
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
@@ -61,8 +62,8 @@ class TaxRateResource {
                 .apply {
                     body.name?.let { setName(it) }
                     body.rate?.let { setRate(it) }
-                    body.isReduced?.let { setIsReduced(it) }
-                    body.isDefault?.let { setIsDefault(it) }
+                    body.isReduced?.let { setIsReducedValue(BoolValue.of(it)) }
+                    body.isDefault?.let { setIsDefaultValue(BoolValue.of(it)) }
                 }.build()
         return grpc
             .withTenant(stub)
