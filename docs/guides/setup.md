@@ -5,14 +5,15 @@
 | ツール | バージョン | インストール方法 |
 |--------|-----------|----------------|
 | Java (GraalVM CE) | 21 | `mise install java@graalce-21` |
-| Kotlin | 2.1+ | `sdk install kotlin` |
-| Gradle | 8.12+ | `mise install gradle` |
 | Node.js | 22+ | `mise install node@22` |
-| pnpm | 9+ | `npm install -g pnpm` |
-| Docker | 24+ | [公式サイト](https://docs.docker.com/engine/install/) |
+| pnpm | 10+ | `npm install -g pnpm` |
+| Docker | Docker Engine / Desktop | [公式サイト](https://docs.docker.com/engine/install/) |
 | Docker Compose | v2+ | Docker に同梱 |
 | buf | 1.x | `mise install buf` or [公式サイト](https://buf.build/docs/installation) |
-| gh | 最新 | `apt install gh` |
+| curl | 任意の現行版 | OS 標準 or パッケージマネージャ |
+| jq | 任意の現行版 | `apt install jq` など |
+| bc | 任意の現行版 | `apt install bc` など |
+| gh | 最新 (任意) | `apt install gh` |
 
 ## セットアップ手順
 
@@ -22,12 +23,17 @@ gh repo clone akaitigo/open-pos
 cd open-pos
 ```
 
-### 2. 依存関係インストール
+### 2. 前提確認
+```bash
+make doctor
+```
+
+### 3. 依存関係インストール
 ```bash
 pnpm install
 ```
 
-### 3. 推奨ローカル導線
+### 4. 推奨ローカル導線
 ```bash
 make local-demo
 pnpm dev:admin   # http://localhost:5174
@@ -42,7 +48,7 @@ pnpm dev:pos     # http://localhost:5173
 - frontend 用の `public/demo-config.json` を生成
 - API smoke test を実行
 
-### 4. container 導線
+### 5. container 導線
 ```bash
 make docker-demo
 pnpm dev:admin
@@ -51,7 +57,7 @@ pnpm dev:pos
 
 こちらは core backend も Docker で起動します。`make local-demo` から切り替える時は `make local-down` を実行してください。
 
-### 5. 個別コマンド
+### 6. 個別コマンド
 ```bash
 # infra のみ起動
 make up
@@ -67,6 +73,9 @@ make docker-down-core
 # demo data の再投入と API smoke
 make local-seed
 make local-smoke
+
+# ローカル品質ゲート
+make verify
 ```
 
 ## 動作確認

@@ -12,6 +12,13 @@ RABBITMQ_PORT="${RABBITMQ_PORT:-15672}"
 RABBITMQ_USER="${RABBITMQ_USER:-openpos}"
 RABBITMQ_PASS="${RABBITMQ_PASS:-openpos_dev}"
 
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "Missing required command: $1" >&2
+    exit 1
+  }
+}
+
 for arg in "$@"; do
   case "$arg" in
     --skip-build)
@@ -23,6 +30,8 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+require_command curl
 
 mkdir -p "$PID_DIR" "$LOG_DIR"
 

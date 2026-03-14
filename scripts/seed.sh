@@ -7,6 +7,13 @@ INVOICE_NUMBER="T$(date +%s%N | cut -c1-13)"
 
 # --- Helper Functions ---
 
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "ERROR: Missing required command: $1" >&2
+    exit 1
+  }
+}
+
 api_post_no_org() {
   local path="$1"
   local data="$2"
@@ -58,6 +65,10 @@ extract_id() {
   fi
   echo "$id"
 }
+
+require_command bc
+require_command curl
+require_command jq
 
 echo "=== open-pos Seed Data ==="
 echo "API: $API_URL"

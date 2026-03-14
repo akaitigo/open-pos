@@ -1,7 +1,12 @@
-#\!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 REPO="akaitigo/open-pos"
+
+command -v gh >/dev/null 2>&1 || {
+  echo "gh CLI is required" >&2
+  exit 1
+}
 
 echo "=== Deleting default labels ==="
 gh label list --repo "$REPO" --json name -q '.[].name' | while read -r label; do

@@ -7,11 +7,12 @@ Thank you for your interest in contributing to open-pos! This guide will help yo
 ### Prerequisites
 
 - Java 21 (GraalVM CE recommended)
-- Kotlin 2.3+
 - Node.js 22+ with pnpm
-- Docker & Docker Compose
+- Docker with `docker compose`
 - buf CLI (for Protocol Buffers)
-- Gradle 9+
+- curl
+- jq
+- bc
 
 ### Getting Started
 
@@ -19,6 +20,8 @@ Thank you for your interest in contributing to open-pos! This guide will help yo
 # Clone the repository
 git clone https://github.com/akaitigo/open-pos.git
 cd open-pos
+
+make doctor
 
 # Install frontend dependencies
 pnpm install
@@ -55,17 +58,18 @@ make docker-up-core
 
 1. **Fork** the repository and create a feature branch:
    ```bash
-   git checkout -b feature/#<issue-number>-short-description
+   git checkout -b feature/<issue-number>-short-description
    ```
 
 2. **Make your changes** following the coding conventions below.
 
-3. **Run tests** before submitting:
+3. **Run the local checks** before submitting:
    ```bash
-   make test          # Backend tests
-   make test-apps     # Frontend tests
-   make local-smoke   # Seeded API smoke test
-   make lint          # Lint supported local targets (proto, frontend)
+   make doctor        # Tooling sanity check
+   make verify        # typecheck + lint + backend/frontend unit-functional tests
+   make local-smoke   # Optional: seeded API smoke test if the demo stack is running
+   pnpm e2e:install   # One-time Playwright browser install
+   make verify-full   # Optional: full release-style verification including Playwright
    ```
 
 4. **Create a Pull Request** with:
@@ -76,8 +80,8 @@ make docker-up-core
 ### Branch Naming
 
 ```
-feature/#123-add-product-search
-fix/#456-fix-price-calculation
+feature/123-add-product-search
+fix/456-fix-price-calculation
 ```
 
 ## Coding Conventions
@@ -133,6 +137,10 @@ Proto -> Config/Filter -> Entity -> Repository -> Service -> gRPC Handler
 ## Code of Conduct
 
 Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
+
+## Support
+
+If you are blocked on setup or day-to-day usage, start with [SUPPORT.md](SUPPORT.md) and include the output of `make doctor` in your report.
 
 ## License
 
