@@ -1,4 +1,4 @@
-.PHONY: help up up-all up-dev down logs \
+.PHONY: help doctor verify verify-full up up-all up-dev down logs \
        dev-gateway dev-product dev-store dev-pos dev-inventory dev-analytics dev-backend \
        local-build local-up local-up-fast local-down local-seed local-smoke local-demo \
        docker-build-core docker-up-core docker-down-core docker-smoke docker-demo \
@@ -9,9 +9,20 @@
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
+doctor: ## Check whether the local development prerequisites are installed and usable
+	bash scripts/doctor.sh
+
+verify: ## Run the supported local quality gate (typecheck, lint, unit/functional tests)
+	pnpm -r typecheck
+	$(MAKE) lint
+	$(MAKE) test-all
+
+verify-full: verify docker-demo ## Run the full local quality gate including demo smoke and Playwright E2E
+	$(MAKE) test-e2e
+
 # === Infrastructure ===
 up: ## Start infrastructure only (PostgreSQL, Redis, RabbitMQ, Hydra)
-	docker compose -f infra/compose.yml up -d --wait postgres redis rabbitmq hydra-migrate hydra
+	docker compose -f infra/compose.yml up -d --wait postgres redis rabbitmq hydra
 
 up-all: ## Start infrastructure + all backend services
 	docker compose -f infra/compose.yml up -d

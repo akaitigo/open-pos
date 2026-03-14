@@ -3,24 +3,25 @@
 ## ブランチ戦略
 
 - `main`: 安定版。直接コミット禁止。
-- `feature/#{issue番号}-短い説明`: 機能開発ブランチ
+- `feature/{issue番号}-短い説明`: 機能開発ブランチ
 
 ### 例
 ```
-feature/#12-product-crud
-feature/#25-offline-sync
+feature/12-product-crud
+feature/25-offline-sync
 ```
 
 ## 開発ワークフロー
 
 1. **Issue 確認**: GitHub Issue の要件・受け入れ条件を確認
-2. **ブランチ作成**: `git checkout -b feature/#12-product-crud`
-3. **開発**: コード実装 + テスト
-4. **Lint**: `make lint`（proto / frontend）
-5. **テスト**: `make test`
-6. **PR 作成**: `gh pr create`（本文に `Closes #12` を記載）
-7. **CI 通過**: GitHub Actions の全チェック通過を確認
-8. **マージ**: Squash Merge → Issue 自動クローズ
+2. **ブランチ作成**: `git checkout -b feature/12-product-crud`
+3. **前提確認**: `make doctor`
+4. **開発**: コード実装 + テスト
+5. **ローカル品質ゲート**: `make verify`
+6. **必要なら E2E**: `pnpm e2e:install && make verify-full`
+7. **PR 作成**: `gh pr create`（本文に `Closes #12` を記載）
+8. **CI 通過**: GitHub Actions の全チェック通過を確認
+9. **マージ**: Squash Merge → Issue 自動クローズ
 
 ## コミットメッセージ
 

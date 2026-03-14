@@ -3,12 +3,20 @@
 > Universal Point of Sale System — 汎用POSシステム
 
 [![CI](https://github.com/akaitigo/open-pos/actions/workflows/ci.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/ci.yml)
+[![Security](https://github.com/akaitigo/open-pos/actions/workflows/security.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A multi-tenant, offline-capable POS (Point of Sale) system built with microservices architecture.
 
 > [!WARNING]
 > **This project is in early development (v0.1.x).** Authentication and authorization are NOT yet implemented on REST API endpoints. **Do not deploy to production or expose to the public internet.** See [SECURITY.md](SECURITY.md) for details.
+
+## Project Status
+
+- **Stage**: Public alpha for local development and architecture exploration
+- **Supported demo flows**: `make local-demo` and `make docker-demo`
+- **Quality gates on `main`**: CI, dependency audit, secret scanning, Playwright E2E
+- **Not supported yet**: production deployment, internet exposure, or hard security guarantees
 
 ## Features
 
@@ -75,10 +83,14 @@ A multi-tenant, offline-capable POS (Point of Sale) system built with microservi
 - Node.js 22+ with pnpm
 - Docker & Docker Compose
 - buf CLI
+- curl
+- jq
+- bc
 
 ### Quick Start
 
 ```bash
+make doctor
 pnpm install
 
 # Fastest supported local path: infra in Docker, core backend on the host
@@ -111,8 +123,9 @@ pnpm dev:admin     # Admin dashboard → http://localhost:5174
 # Run tests
 make test          # Backend tests
 make test-apps     # Frontend unit/functional tests
+make verify        # typecheck + lint + backend/frontend unit-functional tests
 pnpm e2e:install   # Install Playwright browser once
-make test-e2e      # E2E tests (starts app dev servers automatically)
+make verify-full   # verify + docker-demo + Playwright E2E
 
 # Lint supported local targets
 make lint          # Proto + Frontend
@@ -175,9 +188,24 @@ open-pos/
 └── docs/               # Architecture, design, guides
 ```
 
+## Documentation Map
+
+- Start here: [docs/README.md](docs/README.md)
+- Setup and local workflow: [docs/guides/setup.md](docs/guides/setup.md), [docs/runbook/local-dev.md](docs/runbook/local-dev.md)
+- Architecture: [docs/architecture/system-overview.md](docs/architecture/system-overview.md), [docs/architecture/api-design.md](docs/architecture/api-design.md), [docs/architecture/data-model.md](docs/architecture/data-model.md)
+- Requirements and roadmap: [docs/requirements/overview.md](docs/requirements/overview.md), [docs/plans/roadmap.md](docs/plans/roadmap.md)
+- Decision records: [docs/adr/001-monorepo.md](docs/adr/001-monorepo.md)
+
+## Support
+
+- Setup help and usage guidance: [SUPPORT.md](SUPPORT.md)
+- Security reporting: [SECURITY.md](SECURITY.md)
+- Maintainer expectations: [MAINTAINERS.md](MAINTAINERS.md)
+- Release history: [CHANGELOG.md](CHANGELOG.md)
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and how to submit changes.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and how to submit changes. Start with `make doctor`, then use `make verify` before opening a pull request.
 
 ## Security
 
