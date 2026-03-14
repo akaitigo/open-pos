@@ -1,102 +1,215 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProductsPage } from './products'
+import { useAuthStore } from '@/stores/auth-store'
+import { useCartStore } from '@/stores/cart-store'
 
 vi.mock('html5-qrcode', () => ({
-  Html5Qrcode: vi.fn().mockImplementation(() => ({
-    start: vi.fn().mockRejectedValue(new Error('No camera')),
-    stop: vi.fn().mockResolvedValue(undefined),
-    isScanning: false,
-  })),
+  Html5Qrcode: class MockHtml5Qrcode {
+    start = vi.fn().mockRejectedValue(new Error('No camera'))
+    stop = vi.fn().mockResolvedValue(undefined)
+    isScanning = false
+  },
 }))
 
-const mockCategories = [
-  {
-    id: 'a1b2c3d4-1111-4111-a111-111111111111',
-    organizationId: '00000000-0000-0000-0000-000000000000',
-    name: 'ドリンク',
-    parentId: null,
-    color: null,
-    icon: null,
-    displayOrder: 1,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-  },
-  {
-    id: 'b2c3d4e5-2222-4222-a222-222222222222',
-    organizationId: '00000000-0000-0000-0000-000000000000',
-    name: 'フード',
-    parentId: null,
-    color: null,
-    icon: null,
-    displayOrder: 2,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-  },
-]
+const mockStoreId = '00000000-0000-4000-a000-000000000001'
+const mockTerminalId = '00000000-0000-4000-a000-000000000010'
+
+const rootDrinkCategory = {
+  id: 'a1b2c3d4-1111-4111-a111-111111111111',
+  organizationId: '00000000-0000-0000-0000-000000000000',
+  name: 'ドリンク',
+  parentId: null,
+  color: '#2563eb',
+  icon: null,
+  displayOrder: 1,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+}
+
+const rootFoodCategory = {
+  id: 'b2c3d4e5-2222-4222-a222-222222222222',
+  organizationId: '00000000-0000-0000-0000-000000000000',
+  name: 'フード',
+  parentId: null,
+  color: '#f97316',
+  icon: null,
+  displayOrder: 2,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+}
+
+const hotDrinkCategory = {
+  id: 'c3d4e5f6-3333-4333-a333-333333333333',
+  organizationId: '00000000-0000-0000-0000-000000000000',
+  name: 'ホットドリンク',
+  parentId: rootDrinkCategory.id,
+  color: '#0f766e',
+  icon: null,
+  displayOrder: 1,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+}
+
+const mockCategories = [rootDrinkCategory, rootFoodCategory, hotDrinkCategory]
 
 const mockProducts = [
   {
-    id: 'c3d4e5f6-3333-4333-a333-333333333333',
+    id: 'd4e5f6a7-4444-4444-a444-444444444444',
     organizationId: '00000000-0000-0000-0000-000000000000',
     name: 'コーヒー',
     price: 35000,
     barcode: '4901234567890',
-    categoryId: 'a1b2c3d4-1111-4111-a111-111111111111',
+    sku: 'DRINK-001',
+    categoryId: hotDrinkCategory.id,
     displayOrder: 1,
     isActive: true,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   },
   {
-    id: 'd4e5f6a7-4444-4444-a444-444444444444',
+    id: 'e5f6a7b8-5555-4555-a555-555555555555',
     organizationId: '00000000-0000-0000-0000-000000000000',
     name: '抹茶ラテ',
     price: 50000,
-    categoryId: 'a1b2c3d4-1111-4111-a111-111111111111',
+    categoryId: hotDrinkCategory.id,
     imageUrl: 'https://example.com/matcha.jpg',
     displayOrder: 2,
     isActive: true,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   },
+  {
+    id: 'f6a7b8c9-6666-4666-a666-666666666666',
+    organizationId: '00000000-0000-0000-0000-000000000000',
+    name: 'サンドイッチ',
+    price: 65000,
+    barcode: '4901234567001',
+    sku: 'FOOD-001',
+    categoryId: rootFoodCategory.id,
+    displayOrder: 3,
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
 ]
 
-function mockFetchWith(categories: unknown[], products: unknown[], totalPages = 1) {
-  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
-    const url = typeof input === 'string' ? input : (input as Request).url || input.toString()
+const mockStocks = [
+  {
+    id: '11111111-1111-4111-a111-111111111111',
+    organizationId: '00000000-0000-0000-0000-000000000000',
+    storeId: mockStoreId,
+    productId: mockProducts[0]!.id,
+    quantity: 12,
+    lowStockThreshold: 3,
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: '22222222-2222-4222-a222-222222222222',
+    organizationId: '00000000-0000-0000-0000-000000000000',
+    storeId: mockStoreId,
+    productId: mockProducts[1]!.id,
+    quantity: 2,
+    lowStockThreshold: 3,
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: '33333333-3333-4333-a333-333333333333',
+    organizationId: '00000000-0000-0000-0000-000000000000',
+    storeId: mockStoreId,
+    productId: mockProducts[2]!.id,
+    quantity: 8,
+    lowStockThreshold: 3,
+    updatedAt: '2026-01-01T00:00:00Z',
+  },
+]
 
-    if (url.includes('/api/categories')) {
-      return Promise.resolve(
-        new Response(JSON.stringify(categories), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      )
+function jsonResponse(body: unknown) {
+  return Promise.resolve(
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  )
+}
+
+function mockFetchWith({
+  categories = mockCategories,
+  products = mockProducts,
+  stocks = mockStocks,
+}: {
+  categories?: unknown[]
+  products?: unknown[]
+  stocks?: unknown[]
+} = {}) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    const rawUrl = typeof input === 'string' ? input : (input as Request).url || input.toString()
+    const url = new URL(rawUrl)
+
+    if (url.pathname === '/api/categories') {
+      return jsonResponse(categories)
     }
 
-    return Promise.resolve(
-      new Response(
-        JSON.stringify({
-          data: products,
-          pagination: { page: 1, pageSize: 24, totalCount: products.length, totalPages },
-        }),
-        {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
+    if (url.pathname === '/api/products') {
+      return jsonResponse({
+        data: products,
+        pagination: {
+          page: Number(url.searchParams.get('page') ?? '1'),
+          pageSize: Number(url.searchParams.get('pageSize') ?? '100'),
+          totalCount: products.length,
+          totalPages: 1,
         },
-      ),
-    )
+      })
+    }
+
+    if (url.pathname === '/api/inventory/stocks') {
+      return jsonResponse({
+        data: stocks,
+        pagination: {
+          page: Number(url.searchParams.get('page') ?? '1'),
+          pageSize: Number(url.searchParams.get('pageSize') ?? '100'),
+          totalCount: stocks.length,
+          totalPages: 1,
+        },
+      })
+    }
+
+    return Promise.reject(new Error(`Unhandled URL: ${url.toString()}`))
   })
+}
+
+function createProduct(index: number) {
+  return {
+    id: `00000000-0000-4000-a000-${String(index + 1).padStart(12, '0')}`,
+    organizationId: '00000000-0000-0000-0000-000000000000',
+    name: `商品 ${index + 1}`,
+    price: 10000 + index,
+    barcode: `49012345${String(index).padStart(5, '0')}`,
+    sku: `ITEM-${String(index + 1).padStart(3, '0')}`,
+    categoryId: index % 2 === 0 ? hotDrinkCategory.id : rootFoodCategory.id,
+    displayOrder: index,
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  }
 }
 
 describe('ProductsPage', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    useCartStore.setState({ items: [] })
+    useAuthStore.setState({
+      isAuthenticated: true,
+      staff: null,
+      storeId: mockStoreId,
+      storeName: 'テスト店舗',
+      terminalId: mockTerminalId,
+    })
   })
 
   it('商品グリッドが表示される', async () => {
-    mockFetchWith([], mockProducts)
+    mockFetchWith()
 
     render(<ProductsPage />)
 
@@ -106,30 +219,44 @@ describe('ProductsPage', () => {
     })
   })
 
-  it('商品がない場合は「商品が見つかりません」を表示', async () => {
-    mockFetchWith([], [])
+  it('カテゴリの親子ナビゲーションが表示される', async () => {
+    mockFetchWith()
+    const user = userEvent.setup()
 
     render(<ProductsPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('商品が見つかりません')).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: 'ドリンク' })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: 'フード' })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('tab', { name: 'ドリンク' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'ホットドリンク' })).toBeInTheDocument()
     })
   })
 
-  it('カテゴリタブが表示される', async () => {
-    mockFetchWith(mockCategories, mockProducts)
+  it('親カテゴリ選択で子カテゴリ商品に絞り込まれる', async () => {
+    mockFetchWith()
+    const user = userEvent.setup()
 
     render(<ProductsPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('すべて')).toBeInTheDocument()
-      expect(screen.getByText('ドリンク')).toBeInTheDocument()
-      expect(screen.getByText('フード')).toBeInTheDocument()
+      expect(screen.getByText('サンドイッチ')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('tab', { name: 'ドリンク' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+      expect(screen.queryByText('サンドイッチ')).not.toBeInTheDocument()
     })
   })
 
-  it('カテゴリがない場合はタブが非表示', async () => {
-    mockFetchWith([], mockProducts)
+  it('検索入力で商品が絞り込まれる', async () => {
+    mockFetchWith()
 
     render(<ProductsPage />)
 
@@ -137,34 +264,18 @@ describe('ProductsPage', () => {
       expect(screen.getByText('コーヒー')).toBeInTheDocument()
     })
 
-    expect(screen.queryByText('すべて')).not.toBeInTheDocument()
-  })
-
-  it('検索入力でAPIリクエストが発生する', async () => {
-    const fetchSpy = mockFetchWith([], mockProducts)
-
-    render(<ProductsPage />)
-
-    await waitFor(() => {
-      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    fireEvent.change(screen.getByPlaceholderText('商品名・バーコードで検索...'), {
+      target: { value: 'サンド' },
     })
 
-    const searchInput = screen.getByPlaceholderText('商品名・バーコードで検索...')
-    fireEvent.change(searchInput, { target: { value: 'コーヒー' } })
-
     await waitFor(() => {
-      const calls = fetchSpy.mock.calls
-      const productCalls = calls.filter((call) => {
-        const url =
-          typeof call[0] === 'string' ? call[0] : (call[0] as Request).url || call[0].toString()
-        return url.includes('/api/products')
-      })
-      expect(productCalls.length).toBeGreaterThanOrEqual(2)
+      expect(screen.getByText('サンドイッチ')).toBeInTheDocument()
+      expect(screen.queryByText('コーヒー')).not.toBeInTheDocument()
     })
   })
 
   it('バーコードのある商品にバッジが表示される', async () => {
-    mockFetchWith([], mockProducts)
+    mockFetchWith()
 
     render(<ProductsPage />)
 
@@ -174,7 +285,7 @@ describe('ProductsPage', () => {
   })
 
   it('画像URLのある商品はimgタグで表示される', async () => {
-    mockFetchWith([], mockProducts)
+    mockFetchWith()
 
     render(<ProductsPage />)
 
@@ -186,7 +297,7 @@ describe('ProductsPage', () => {
   })
 
   it('画像URLのない商品は先頭文字を表示する', async () => {
-    mockFetchWith([], mockProducts)
+    mockFetchWith()
 
     render(<ProductsPage />)
 
@@ -195,52 +306,72 @@ describe('ProductsPage', () => {
     })
   })
 
-  it('ページネーションボタンが表示される（totalPages > 1）', async () => {
-    mockFetchWith([], mockProducts, 3)
+  it('在庫切れの商品は追加できない', async () => {
+    mockFetchWith({
+      stocks: mockStocks.map((stock) =>
+        stock.productId === mockProducts[0]!.id ? { ...stock, quantity: 0 } : stock,
+      ),
+    })
 
     render(<ProductsPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('前へ')).toBeInTheDocument()
-      expect(screen.getByText('次へ')).toBeInTheDocument()
-      expect(screen.getByText('1 / 3')).toBeInTheDocument()
+      expect(screen.getByText('在庫切れ')).toBeInTheDocument()
     })
+
+    fireEvent.click(screen.getByText('コーヒー'))
+
+    expect(useCartStore.getState().items).toHaveLength(0)
   })
 
-  it('前へボタンは1ページ目で無効', async () => {
-    mockFetchWith([], mockProducts, 3)
+  it('商品クリックでカートに追加される', async () => {
+    mockFetchWith()
 
     render(<ProductsPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('前へ')).toBeDisabled()
-      expect(screen.getByText('次へ')).toBeEnabled()
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
     })
+
+    fireEvent.click(screen.getByText('コーヒー'))
+
+    const items = useCartStore.getState().items
+    expect(items).toHaveLength(1)
+    expect(items[0]!.product.id).toBe(mockProducts[0]!.id)
+    expect(items[0]!.quantity).toBe(1)
   })
 
-  it('次へボタンでページが進む', async () => {
-    const fetchSpy = mockFetchWith([], mockProducts, 3)
+  it('ローカルページネーションが表示される', async () => {
+    mockFetchWith({
+      products: Array.from({ length: 30 }, (_, index) => createProduct(index)),
+      stocks: Array.from({ length: 30 }, (_, index) => ({
+        id: `99999999-0000-4000-a000-${String(index + 1).padStart(12, '0')}`,
+        organizationId: '00000000-0000-0000-0000-000000000000',
+        storeId: mockStoreId,
+        productId: createProduct(index).id,
+        quantity: 10,
+        lowStockThreshold: 3,
+        updatedAt: '2026-01-01T00:00:00Z',
+      })),
+    })
 
     render(<ProductsPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('次へ')).toBeInTheDocument()
+      expect(screen.getByText('1 / 2')).toBeInTheDocument()
+      expect(screen.getByText('商品 1')).toBeInTheDocument()
     })
 
     fireEvent.click(screen.getByText('次へ'))
 
     await waitFor(() => {
-      const productCalls = fetchSpy.mock.calls.filter((call) => {
-        const url =
-          typeof call[0] === 'string' ? call[0] : (call[0] as Request).url || call[0].toString()
-        return url.includes('/api/products') && url.includes('page=2')
-      })
-      expect(productCalls.length).toBeGreaterThanOrEqual(1)
+      expect(screen.getByText('2 / 2')).toBeInTheDocument()
+      expect(screen.getByText('商品 30')).toBeInTheDocument()
     })
   })
 
   it('スキャンボタンでバーコードスキャナーダイアログが開く', async () => {
-    mockFetchWith([], mockProducts)
+    mockFetchWith()
 
     render(<ProductsPage />)
 
@@ -257,7 +388,7 @@ describe('ProductsPage', () => {
   })
 
   it('手動バーコード入力で検索が更新される', async () => {
-    mockFetchWith([], mockProducts)
+    mockFetchWith()
 
     render(<ProductsPage />)
 
@@ -272,63 +403,24 @@ describe('ProductsPage', () => {
     })
 
     const barcodeInput = screen.getByPlaceholderText('バーコードを手入力...')
-    fireEvent.change(barcodeInput, { target: { value: '4901234567890' } })
+    fireEvent.change(barcodeInput, { target: { value: '4901234567001' } })
     fireEvent.submit(barcodeInput.closest('form')!)
 
     await waitFor(() => {
       const searchInput = screen.getByPlaceholderText('商品名・バーコードで検索...')
-      expect(searchInput).toHaveValue('4901234567890')
+      expect(searchInput).toHaveValue('4901234567001')
+      expect(screen.getByText('サンドイッチ')).toBeInTheDocument()
     })
   })
 
-  it('カテゴリタブが正しいrole属性を持つ', async () => {
-    mockFetchWith(mockCategories, mockProducts)
+  it('商品取得に失敗した場合はエラー表示になる', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network error'))
 
     render(<ProductsPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('ドリンク')).toBeInTheDocument()
+      expect(screen.getByText('商品カタログを読み込めませんでした')).toBeInTheDocument()
+      expect(screen.getByText('network error')).toBeInTheDocument()
     })
-
-    const allTab = screen.getByRole('tab', { name: 'すべて' })
-    const drinkTab = screen.getByRole('tab', { name: 'ドリンク' })
-    const foodTab = screen.getByRole('tab', { name: 'フード' })
-
-    expect(allTab).toHaveAttribute('aria-selected', 'true')
-    expect(drinkTab).toHaveAttribute('aria-selected', 'false')
-    expect(foodTab).toHaveAttribute('aria-selected', 'false')
-  })
-
-  it('商品クリックでカートに追加される', async () => {
-    mockFetchWith([], mockProducts)
-
-    const { useCartStore } = await import('@/stores/cart-store')
-    useCartStore.setState({ items: [] })
-
-    render(<ProductsPage />)
-
-    await waitFor(() => {
-      expect(screen.getByText('コーヒー')).toBeInTheDocument()
-    })
-
-    fireEvent.click(screen.getByText('コーヒー'))
-
-    const items = useCartStore.getState().items
-    expect(items).toHaveLength(1)
-    expect(items[0]!.product.id).toBe('c3d4e5f6-3333-4333-a333-333333333333')
-    expect(items[0]!.quantity).toBe(1)
-  })
-
-  it('ページネーションが1ページの場合はボタンが表示されない', async () => {
-    mockFetchWith([], mockProducts, 1)
-
-    render(<ProductsPage />)
-
-    await waitFor(() => {
-      expect(screen.getByText('コーヒー')).toBeInTheDocument()
-    })
-
-    expect(screen.queryByText('前へ')).not.toBeInTheDocument()
-    expect(screen.queryByText('次へ')).not.toBeInTheDocument()
   })
 })
