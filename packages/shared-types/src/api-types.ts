@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { PaginationResponseSchema } from './pagination'
 import { ProductSchema, CategorySchema, TaxRateSchema } from './product'
+import { StockSchema } from './inventory'
 import { StoreSchema, StaffSchema } from './store'
 
 /** API エラーレスポンススキーマ */
@@ -33,3 +34,4 @@ export const PaginatedCategoriesSchema = createPaginatedResponseSchema(CategoryS
 export const PaginatedStoresSchema = createPaginatedResponseSchema(StoreSchema)
 export const PaginatedStaffSchema = createPaginatedResponseSchema(StaffSchema)
 export const PaginatedTaxRatesSchema = createPaginatedResponseSchema(TaxRateSchema)
+export const PaginatedStocksSchema = createPaginatedResponseSchema(StockSchema)
