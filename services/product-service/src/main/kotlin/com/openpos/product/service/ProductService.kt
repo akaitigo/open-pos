@@ -31,6 +31,7 @@ class ProductService {
     @Transactional
     fun create(
         name: String,
+        description: String?,
         barcode: String?,
         sku: String?,
         price: Long,
@@ -48,6 +49,7 @@ class ProductService {
             ProductEntity().apply {
                 this.organizationId = orgId
                 this.name = name
+                this.description = description
                 this.barcode = barcode
                 this.sku = sku
                 this.price = price
@@ -103,6 +105,7 @@ class ProductService {
     fun update(
         id: UUID,
         name: String?,
+        description: String?,
         barcode: String?,
         sku: String?,
         price: Long?,
@@ -116,6 +119,7 @@ class ProductService {
         val entity = productRepository.findById(id) ?: return null
 
         name?.let { entity.name = it }
+        description?.let { entity.description = it }
         barcode?.let { entity.barcode = it }
         sku?.let { entity.sku = it }
         price?.let { entity.price = it }

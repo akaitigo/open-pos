@@ -31,4 +31,7 @@ class CouponEntity : BaseEntity() {
 
     @Column(name = "valid_until")
     var validUntil: Instant? = null
+
+    @Column(name = "is_active", nullable = false)
+    var isActive: Boolean = true
 }

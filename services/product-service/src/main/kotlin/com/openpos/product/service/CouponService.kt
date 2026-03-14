@@ -3,6 +3,7 @@ package com.openpos.product.service
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.CouponEntity
+import com.openpos.product.entity.DiscountEntity
 import com.openpos.product.repository.CouponRepository
 import com.openpos.product.repository.DiscountRepository
 import jakarta.enterprise.context.ApplicationScoped
@@ -17,6 +18,7 @@ import java.util.UUID
 data class CouponValidationResult(
     val isValid: Boolean,
     val coupon: CouponEntity? = null,
+    val discount: DiscountEntity? = null,
     val reason: String? = null,
 )
 
@@ -63,6 +65,7 @@ class CouponService {
                 this.usedCount = 0
                 this.validFrom = validFrom
                 this.validUntil = validUntil
+                this.isActive = true
             }
         couponRepository.persist(entity)
         return entity
@@ -94,6 +97,10 @@ class CouponService {
             couponRepository.findByCode(code)
                 ?: return CouponValidationResult(isValid = false, reason = "NOT_FOUND")
 
+        if (!coupon.isActive) {
+            return CouponValidationResult(isValid = false, coupon = coupon, reason = "COUPON_INACTIVE")
+        }
+
         val now = Instant.now()
 
         // 有効期間チェック
@@ -121,6 +128,6 @@ class CouponService {
             return CouponValidationResult(isValid = false, coupon = coupon, reason = "DISCOUNT_INACTIVE")
         }
 
-        return CouponValidationResult(isValid = true, coupon = coupon)
+        return CouponValidationResult(isValid = true, coupon = coupon, discount = discount)
     }
 }

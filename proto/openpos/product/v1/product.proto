@@ -3,6 +3,7 @@ syntax = "proto3";
 // openpos.product.v1 パッケージは商品マスタ管理の型とサービスを提供します
 package openpos.product.v1;
 
+import "google/protobuf/wrappers.proto";
 import "openpos/common/v1/common.proto";
 
 option java_multiple_files = true;
@@ -341,6 +342,12 @@ message UpdateProductRequest {
   int32 display_order = 10;
   // 有効フラグ
   bool is_active = 11;
+  // 販売価格（presence 付き更新用）
+  google.protobuf.Int64Value price_value = 12;
+  // 表示順序（presence 付き更新用）
+  google.protobuf.Int32Value display_order_value = 13;
+  // 有効フラグ（presence 付き更新用）
+  google.protobuf.BoolValue is_active_value = 14;
 }
 
 // 商品削除リクエスト
@@ -436,6 +443,10 @@ message UpdateTaxRateRequest {
   bool is_reduced = 4;
   // デフォルト税率フラグ
   bool is_default = 5;
+  // 軽減税率フラグ（presence 付き更新用）
+  google.protobuf.BoolValue is_reduced_value = 6;
+  // デフォルト税率フラグ（presence 付き更新用）
+  google.protobuf.BoolValue is_default_value = 7;
 }
 
 // 割引作成リクエスト
@@ -480,6 +491,8 @@ message UpdateDiscountRequest {
   string end_date = 6;
   // 有効フラグ
   bool is_active = 7;
+  // 有効フラグ（presence 付き更新用）
+  google.protobuf.BoolValue is_active_value = 8;
 }
 
 // クーポン作成リクエスト

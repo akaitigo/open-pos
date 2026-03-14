@@ -93,6 +93,7 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         val entity =
             productService.create(
                 name = request.name,
+                description = request.description.ifBlank { null },
                 barcode = request.barcode.ifBlank { null },
                 sku = request.sku.ifBlank { null },
                 price = request.price,
@@ -163,14 +164,15 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
             productService.update(
                 id = request.id.toUUID(),
                 name = request.name.ifBlank { null },
+                description = request.description.ifBlank { null },
                 barcode = request.barcode.ifBlank { null },
                 sku = request.sku.ifBlank { null },
-                price = if (request.price > 0) request.price else null,
+                price = request.priceOrNull(),
                 categoryId = request.categoryId.uuidOrNull(),
                 taxRateId = request.taxRateId.uuidOrNull(),
                 imageUrl = request.imageUrl.ifBlank { null },
-                displayOrder = if (request.displayOrder > 0) request.displayOrder else null,
-                isActive = if (request.isActive) true else null,
+                displayOrder = request.displayOrderOrNull(),
+                isActive = request.isActiveOrNull(),
             ) ?: throw Status.NOT_FOUND.withDescription("Product not found: ${request.id}").asRuntimeException()
         responseObserver.onNext(
             UpdateProductResponse.newBuilder().setProduct(entity.toProto()).build(),
@@ -283,6 +285,7 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
                 name = request.name,
                 rate = BigDecimal(request.rate),
                 taxType = if (request.isReduced) "REDUCED" else "STANDARD",
+                isDefault = request.isDefault,
             )
         responseObserver.onNext(
             CreateTaxRateResponse.newBuilder().setTaxRate(entity.toProto()).build(),
@@ -312,8 +315,9 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
                 id = request.id.toUUID(),
                 name = request.name.ifBlank { null },
                 rate = if (request.rate.isNotBlank()) BigDecimal(request.rate) else null,
-                taxType = if (request.isReduced) "REDUCED" else null,
+                taxType = request.taxTypeOrNull(),
                 isActive = null,
+                isDefault = request.isDefaultOrNull(),
             ) ?: throw Status.NOT_FOUND.withDescription("TaxRate not found: ${request.id}").asRuntimeException()
         responseObserver.onNext(
             UpdateTaxRateResponse.newBuilder().setTaxRate(entity.toProto()).build(),
@@ -377,7 +381,7 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
                 value = if (request.value.isNotBlank()) request.value.toLong() else null,
                 validFrom = request.startDate.instantOrNull(),
                 validUntil = request.endDate.instantOrNull(),
-                isActive = if (request.isActive) true else null,
+                isActive = request.isActiveOrNull(),
             ) ?: throw Status.NOT_FOUND.withDescription("Discount not found: ${request.id}").asRuntimeException()
         responseObserver.onNext(
             UpdateDiscountResponse.newBuilder().setDiscount(entity.toProto()).build(),
@@ -414,8 +418,8 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         val result = couponService.validate(request.code)
         val builder = ValidateCouponResponse.newBuilder().setIsValid(result.isValid)
         result.coupon?.let { builder.setCoupon(it.toProto()) }
+        result.discount?.let { builder.setDiscount(it.toProto()) }
         result.reason?.let { builder.setReason(it) }
-        // TODO: 割引情報も返す場合は discount を設定
         responseObserver.onNext(builder.build())
         responseObserver.onCompleted()
     }
@@ -428,6 +432,7 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())
             .setName(name)
+            .setDescription(description.orEmpty())
             .setBarcode(barcode.orEmpty())
             .setSku(sku.orEmpty())
             .setPrice(price)
@@ -462,6 +467,7 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
             .setName(name)
             .setRate(rate.toPlainString())
             .setIsReduced(taxType == "REDUCED")
+            .setIsDefault(isDefault)
             .setCreatedAt(createdAt.toString())
             .setUpdatedAt(updatedAt.toString())
             .build()
@@ -497,6 +503,7 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
             .setCurrentUses(usedCount)
             .setStartDate(validFrom?.toString().orEmpty())
             .setEndDate(validUntil?.toString().orEmpty())
+            .setIsActive(isActive)
             .setCreatedAt(createdAt.toString())
             .setUpdatedAt(updatedAt.toString())
             .build()
@@ -513,4 +520,46 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
     private fun String.uuidOrNull(): UUID? = if (isBlank()) null else toUUID()
 
     private fun String.instantOrNull(): Instant? = if (isBlank()) null else Instant.parse(this)
+
+    private fun UpdateProductRequest.priceOrNull(): Long? =
+        when {
+            hasPriceValue() -> priceValue.value
+            price > 0 -> price
+            else -> null
+        }
+
+    private fun UpdateProductRequest.displayOrderOrNull(): Int? =
+        when {
+            hasDisplayOrderValue() -> displayOrderValue.value
+            displayOrder > 0 -> displayOrder
+            else -> null
+        }
+
+    private fun UpdateProductRequest.isActiveOrNull(): Boolean? =
+        when {
+            hasIsActiveValue() -> isActiveValue.value
+            isActive -> true
+            else -> null
+        }
+
+    private fun UpdateTaxRateRequest.taxTypeOrNull(): String? =
+        when {
+            hasIsReducedValue() -> if (isReducedValue.value) "REDUCED" else "STANDARD"
+            isReduced -> "REDUCED"
+            else -> null
+        }
+
+    private fun UpdateTaxRateRequest.isDefaultOrNull(): Boolean? =
+        when {
+            hasIsDefaultValue() -> isDefaultValue.value
+            isDefault -> true
+            else -> null
+        }
+
+    private fun UpdateDiscountRequest.isActiveOrNull(): Boolean? =
+        when {
+            hasIsActiveValue() -> isActiveValue.value
+            isActive -> true
+            else -> null
+        }
 }

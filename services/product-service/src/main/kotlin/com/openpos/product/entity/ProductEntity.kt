@@ -22,6 +22,9 @@ class ProductEntity : BaseEntity() {
     @Column(name = "name", nullable = false, length = 255)
     lateinit var name: String
 
+    @Column(name = "description")
+    var description: String? = null
+
     @Column(name = "barcode", length = 100)
     var barcode: String? = null
 
