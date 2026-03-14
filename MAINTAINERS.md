@@ -19,7 +19,7 @@
 
 - Architectural and release decisions are made by the active maintainer set.
 - For now, the repository owner is the final decision maker when tradeoffs are unclear.
-- Significant decisions should be documented in `docs/adr/` or linked issues.
+- Significant decisions should be documented in `docs/adr/`, linked issues, or [GOVERNANCE.md](GOVERNANCE.md) when the process itself changes.
 
 ## Review Expectations
 

@@ -8,6 +8,7 @@ This directory contains the project design, runbooks, product requirements, and 
 - [../CONTRIBUTING.md](../CONTRIBUTING.md): contribution workflow and local verification
 - [../SUPPORT.md](../SUPPORT.md): how to ask for help or report problems
 - [../SECURITY.md](../SECURITY.md): private vulnerability reporting policy
+- [../GOVERNANCE.md](../GOVERNANCE.md): maintainer-led decision process and escalation paths
 - [../CHANGELOG.md](../CHANGELOG.md): release notes and notable changes
 
 ## Setup and Daily Development
@@ -17,6 +18,7 @@ This directory contains the project design, runbooks, product requirements, and 
 - [guides/contributing.md](guides/contributing.md): lightweight contribution workflow
 - [guides/branching-strategy.md](guides/branching-strategy.md): branch and PR conventions
 - [runbook/release.md](runbook/release.md): maintainer release checklist
+- [runbook/triage.md](runbook/triage.md): issue, PR, and label triage policy
 
 ## Architecture
 

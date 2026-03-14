@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+title: open-pos
+message: If you use open-pos in research, demos, or derived work, please cite the project using this metadata.
+type: software
+license: MIT
+authors:
+  - family-names: Nakayama
+    given-names: Ryusei
+    alias: akaitigo
+repository-code: https://github.com/akaitigo/open-pos
+url: https://github.com/akaitigo/open-pos
+abstract: Multi-tenant, offline-capable point-of-sale system built with Kotlin, Quarkus, React, and TypeScript.
+keywords:
+  - point-of-sale
+  - pos
+  - microservices
+  - offline-first
+  - quarkus
+  - react

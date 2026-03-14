@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Setup and usage support
-    url: https://github.com/akaitigo/open-pos/blob/main/SUPPORT.md
-    about: Start here for setup problems, usage questions, and what to include in a report.
+  - name: Questions and setup help
+    url: https://github.com/akaitigo/open-pos/discussions
+    about: Use GitHub Discussions for setup help, usage questions, and open-ended OSS conversation.
   - name: Security vulnerability
     url: https://github.com/akaitigo/open-pos/security/advisories/new
     about: Report vulnerabilities privately instead of opening a public issue.
