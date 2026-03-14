@@ -14,7 +14,7 @@ This directory contains the project design, runbooks, product requirements, and 
 ## Setup and Daily Development
 
 - [guides/setup.md](guides/setup.md): local environment setup and supported startup flows
-- [runbook/local-dev.md](runbook/local-dev.md): day-to-day commands and troubleshooting
+- [runbook/local-dev.md](runbook/local-dev.md): supported local modes, runtime config outputs, and troubleshooting
 - [guides/contributing.md](guides/contributing.md): lightweight contribution workflow
 - [guides/branching-strategy.md](guides/branching-strategy.md): branch and PR conventions
 - [runbook/release.md](runbook/release.md): maintainer release checklist
