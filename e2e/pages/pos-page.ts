@@ -25,7 +25,9 @@ export class PosPage {
     this.productList = page.locator('.grid .cursor-pointer')
     this.productSearchInput = page.getByPlaceholder('商品名・バーコードで検索...')
 
-    this.cart = page.locator('aside')
+    this.cart = page.locator('section').filter({
+      has: page.getByRole('heading', { name: 'カート' }),
+    })
     this.cartClearButton = page.getByRole('button', { name: 'クリア' })
 
     this.payButton = page.getByRole('button', { name: /お会計/ })
@@ -68,7 +70,7 @@ export class PosPage {
   }
 
   async getCartItemCount(): Promise<number> {
-    return this.cart.locator('div[class*="rounded-lg"][class*="border"]').count()
+    return this.cart.locator('input[aria-label$="の数量"]').count()
   }
 
   async clearCart(): Promise<void> {

@@ -1,12 +1,14 @@
 import { Link, useLocation } from 'react-router'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { getCartItemCount, useCartStore } from '@/stores/cart-store'
 import { useAuthStore } from '@/stores/auth-store'
-import { History, LogOut } from 'lucide-react'
+import { History, LogOut, ShoppingCart } from 'lucide-react'
 
 export function Header() {
   const { staff, storeName, logout } = useAuthStore()
   const location = useLocation()
+  const itemCount = useCartStore((state) => getCartItemCount(state.items))
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
@@ -22,6 +24,13 @@ export function Header() {
       </div>
       <div className="flex items-center gap-2">
         {staff && <span className="text-sm text-muted-foreground">{staff.name}</span>}
+        <Button variant={location.pathname === '/cart' ? 'secondary' : 'ghost'} size="sm" asChild>
+          <Link to="/cart" aria-label={itemCount > 0 ? `カート ${itemCount}` : 'カート'}>
+            <ShoppingCart className="h-4 w-4" />
+            カート
+            {itemCount > 0 && <span className="text-xs tabular-nums">{itemCount}</span>}
+          </Link>
+        </Button>
         <Button
           variant={location.pathname === '/history' ? 'secondary' : 'ghost'}
           size="sm"

@@ -3,14 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { CartSidebar } from './cart-sidebar'
 import { useCartStore } from '@/stores/cart-store'
+import { api } from '@/lib/api'
 import type { Product } from '@shared-types/openpos'
 
 vi.mock('@/lib/api', () => ({
   api: {
-    get: vi.fn().mockResolvedValue({
-      data: [],
-      pagination: { page: 1, pageSize: 20, totalCount: 0, totalPages: 0 },
-    }),
+    get: vi.fn(),
     post: vi.fn().mockResolvedValue({}),
     setOrganizationId: vi.fn(),
   },
@@ -39,6 +37,7 @@ const mockProduct: Product = {
   organizationId: '550e8400-e29b-41d4-a716-446655440000',
   name: 'ドリップコーヒー',
   price: 15000,
+  taxRateId: '550e8400-e29b-41d4-a716-446655440099',
   displayOrder: 0,
   isActive: true,
   createdAt: '2026-01-01T00:00:00Z',
@@ -59,12 +58,24 @@ const mockProduct2: Product = {
 describe('CartSidebar', () => {
   beforeEach(() => {
     useCartStore.setState({ items: [] })
+    vi.mocked(api.get).mockResolvedValue([
+      {
+        id: '550e8400-e29b-41d4-a716-446655440099',
+        organizationId: '550e8400-e29b-41d4-a716-446655440000',
+        name: '軽減税率',
+        rate: '0.08',
+        isReduced: true,
+        isDefault: false,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+    ])
   })
 
   it('空カートでは「カートは空です」と表示する', () => {
     render(<CartSidebar />)
     expect(screen.getByText('カートは空です')).toBeInTheDocument()
-    expect(screen.getByText('カート')).toBeInTheDocument()
+    expect(screen.getByText('商品を追加してください')).toBeInTheDocument()
   })
 
   it('カートに商品があると名前が表示される', () => {
@@ -115,10 +126,7 @@ describe('CartSidebar', () => {
       items: [{ product: mockProduct, quantity: 1 }],
     })
     render(<CartSidebar />)
-    // h-7 w-7 のアイコンボタン: [minus, plus, delete]
-    const iconButtons = screen.getAllByRole('button').filter((btn) => btn.className.includes('h-7'))
-    // plus is the second icon button
-    await userEvent.click(iconButtons[1]!)
+    await userEvent.click(screen.getByLabelText('ドリップコーヒー の数量を増やす'))
     const state = useCartStore.getState()
     expect(state.items[0]!.quantity).toBe(2)
   })
@@ -128,18 +136,32 @@ describe('CartSidebar', () => {
       items: [{ product: mockProduct, quantity: 1 }],
     })
     render(<CartSidebar />)
-    const iconButtons = screen.getAllByRole('button').filter((btn) => btn.className.includes('h-7'))
-    // minus is the first icon button
-    await userEvent.click(iconButtons[0]!)
+    await userEvent.click(screen.getByLabelText('ドリップコーヒー の数量を減らす'))
     expect(screen.getByText('カートは空です')).toBeInTheDocument()
   })
 
-  it('小計が正しく表示される', () => {
+  it('数量を直接入力できる', async () => {
+    useCartStore.setState({
+      items: [{ product: mockProduct, quantity: 1 }],
+    })
+    render(<CartSidebar />)
+
+    const quantityInput = screen.getByLabelText('ドリップコーヒー の数量')
+    await userEvent.clear(quantityInput)
+    await userEvent.type(quantityInput, '3')
+
+    expect(useCartStore.getState().items[0]!.quantity).toBe(3)
+  })
+
+  it('小計と税率別内訳が表示される', async () => {
     useCartStore.setState({
       items: [{ product: mockProduct, quantity: 2 }],
     })
     render(<CartSidebar />)
-    // 15000 * 2 = 30000銭 = ¥300
-    expect(screen.getByText('小計')).toBeInTheDocument()
+
+    expect(await screen.findAllByText('軽減税率 8%')).not.toHaveLength(0)
+    expect(screen.getByText('税率別内訳')).toBeInTheDocument()
+    expect(screen.getByText('商品点数')).toBeInTheDocument()
+    expect(screen.getByText('合計（税込）')).toBeInTheDocument()
   })
 })
