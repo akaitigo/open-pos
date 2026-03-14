@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -15,16 +15,14 @@ import { useAuthStore } from '@/stores/auth-store'
 import { api } from '@/lib/api'
 import {
   formatMoney,
-  TaxRateSchema,
   TransactionSchema,
   FinalizeTransactionResponseSchema,
 } from '@shared-types/openpos'
-import type { TaxRate } from '@shared-types/openpos'
 import { toast } from '@/hooks/use-toast'
 import { ReceiptDialog } from '@/components/receipt-dialog'
+import { useTaxRates } from '@/hooks/use-tax-rates'
 import { getCartEstimatedTotal } from '@/lib/cart-totals'
 import { Loader2 } from 'lucide-react'
-import { z } from 'zod'
 
 interface CheckoutDialogProps {
   open: boolean
@@ -42,24 +40,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const [processing, setProcessing] = useState(false)
   const [receiptData, setReceiptData] = useState<string | null>(null)
   const [receiptOpen, setReceiptOpen] = useState(false)
-  const [taxRates, setTaxRates] = useState<TaxRate[]>([])
-
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get('/api/tax-rates', z.array(TaxRateSchema))
-      .then((result) => {
-        if (!cancelled) setTaxRates(result)
-      })
-      .catch(() => {
-        if (!cancelled) setTaxRates([])
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const taxRates = useTaxRates()
 
   const subtotal = getCartSubtotal(items)
   const total = getCartEstimatedTotal(items, taxRates)

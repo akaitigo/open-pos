@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - Added GitHub CodeQL scanning and tightened the documented security reporting path to GitHub private advisories only.
+- Expanded the POS terminal cart flow with a reusable cart panel, direct quantity editing, per-item subtotals, tax-rate breakdowns, and a dedicated `/cart` page for full-screen review.
 - Enhanced the POS terminal catalog with hierarchical category tabs, client-side product search/pagination, stock-aware product tiles, and retryable loading/error states.
 - Tightened contributor setup docs around actual required tools (`curl`, `jq`, `bc`) and the supported verification flow.
 - Rewrote the local development runbook to match the supported `make local-demo` / `make docker-demo` flows, generated runtime config files, and current troubleshooting steps.

@@ -112,7 +112,8 @@ describe('Layout', () => {
 
     expect(screen.getByText('OpenPOS')).toBeInTheDocument()
     expect(screen.getByText('テスト店舗')).toBeInTheDocument()
-    expect(screen.getByText('カート')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'カート' })).toBeInTheDocument()
+    expect(screen.getByText('カートは空です')).toBeInTheDocument()
   })
 
   it('terminal 設定が未構成ならセットアップ案内を表示する', () => {
