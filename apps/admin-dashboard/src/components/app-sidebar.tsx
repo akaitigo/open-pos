@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router'
-import { LayoutDashboard, Package, FolderTree, Store, Users, Settings } from 'lucide-react'
+import { LayoutDashboard, Package, FolderTree, Store, Users, Settings, Percent } from 'lucide-react'
 
 import {
   Sidebar,
@@ -18,6 +18,7 @@ const navItems = [
   { title: 'ダッシュボード', url: '/', icon: LayoutDashboard },
   { title: '商品管理', url: '/products', icon: Package },
   { title: 'カテゴリ管理', url: '/categories', icon: FolderTree },
+  { title: '税率管理', url: '/tax-rates', icon: Percent },
   { title: '店舗管理', url: '/stores', icon: Store },
   { title: 'スタッフ管理', url: '/staff', icon: Users },
   { title: '設定', url: '/settings', icon: Settings },

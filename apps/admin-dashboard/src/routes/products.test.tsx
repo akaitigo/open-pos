@@ -142,7 +142,7 @@ describe('ProductsPage', () => {
     expect(screen.getByDisplayValue('300')).toBeInTheDocument() // 30000 / 100
   })
 
-  it('削除ボタンでapi.deleteを呼ぶ', async () => {
+  it('削除ボタンで確認ダイアログを表示し、確認後にapi.deleteを呼ぶ', async () => {
     setupMocks()
     mockApi.delete.mockResolvedValue(undefined)
     renderPage()
@@ -150,6 +150,16 @@ describe('ProductsPage', () => {
       expect(screen.getByText('コーヒー')).toBeInTheDocument()
     })
     fireEvent.click(screen.getByText('削除'))
+    // 確認ダイアログが表示される
+    await waitFor(() => {
+      expect(screen.getByText('本当に削除しますか？この操作は取り消せません。')).toBeInTheDocument()
+    })
+    // ダイアログ内の削除ボタンをクリック
+    const dialogDeleteButton = screen
+      .getAllByRole('button', { name: '削除' })
+      .find((btn) => btn.closest('[role="dialog"]') !== null)
+    expect(dialogDeleteButton).toBeTruthy()
+    fireEvent.click(dialogDeleteButton!)
     await waitFor(() => {
       expect(mockApi.delete).toHaveBeenCalledWith('/api/products/prod-1')
     })
