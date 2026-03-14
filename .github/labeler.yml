@@ -1,0 +1,58 @@
+svc:api-gateway:
+- changed-files:
+  - any-glob-to-any-file: services/api-gateway/**
+
+svc:pos:
+- changed-files:
+  - any-glob-to-any-file: services/pos-service/**
+
+svc:product:
+- changed-files:
+  - any-glob-to-any-file: services/product-service/**
+
+svc:analytics:
+- changed-files:
+  - any-glob-to-any-file: services/analytics-service/**
+
+svc:inventory:
+- changed-files:
+  - any-glob-to-any-file: services/inventory-service/**
+
+svc:store:
+- changed-files:
+  - any-glob-to-any-file: services/store-service/**
+
+app:pos-terminal:
+- changed-files:
+  - any-glob-to-any-file: apps/pos-terminal/**
+
+app:admin:
+- changed-files:
+  - any-glob-to-any-file: apps/admin-dashboard/**
+
+pkg:shared-types:
+- changed-files:
+  - any-glob-to-any-file: packages/shared-types/**
+
+proto:
+- changed-files:
+  - any-glob-to-any-file: proto/**
+
+infra:
+- changed-files:
+  - any-glob-to-any-file:
+    - .github/**
+    - infra/**
+    - scripts/**
+    - gradle/**
+    - .mise.toml
+    - .editorconfig
+    - .dockerignore
+    - .gitleaks.toml
+    - Makefile
+    - build.gradle.kts
+    - settings.gradle.kts
+    - gradle.properties
+    - package.json
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
