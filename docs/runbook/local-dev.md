@@ -47,6 +47,7 @@ make docker-up-core
 make up       # PostgreSQL, Redis, RabbitMQ, Hydra
 make up-dev   # infra + pgAdmin + Redis Commander
 make down
+make logs     # Docker Compose logs
 ```
 
 ### Host-run backend
@@ -55,6 +56,7 @@ make down
 make local-up       # rebuild and start the core backend
 make local-up-fast  # start without rebuilding
 make local-down
+make logs-pos       # tail .local/logs/pos-service.log while host-run mode is active
 ```
 
 Logs and PIDs for the host-run backend are written to:
@@ -65,6 +67,7 @@ Logs and PIDs for the host-run backend are written to:
 ### Containerized backend
 
 ```bash
+make docker-build        # all backend images
 make docker-build-core
 make docker-up-core
 make docker-down-core
@@ -76,7 +79,13 @@ make docker-down-core
 make local-seed
 make local-smoke
 make docker-smoke
+make grpc-test
+make db-backup
+make db-restore FILE=.local/backups/openpos-YYYYmmdd-HHMMSS.sql
+make reset
 ```
+
+`make reset` recreates the PostgreSQL data volume, restores the last detected supported backend mode, and reseeds the demo data. If no supported backend mode was running, it starts the host-run core backend before reseeding.
 
 ### Frontend dev servers
 
@@ -93,6 +102,8 @@ make verify
 pnpm e2e:install
 make verify-full
 ```
+
+`make doctor` warns if `grpcurl` is missing, because `make grpc-test` depends on it.
 
 ## Runtime Config Files
 

@@ -87,6 +87,7 @@ A multi-tenant, offline-capable POS (Point of Sale) system built with microservi
 - curl
 - jq
 - bc
+- grpcurl (optional, for `make grpc-test`)
 
 ### Quick Start
 
@@ -113,6 +114,8 @@ pnpm dev:pos
 ```bash
 # Start with dev tools (pgAdmin, Redis Commander)
 make up-dev
+make logs         # Docker Compose logs
+make logs-pos     # pos-service logs in the active backend mode
 
 # Run backend service in dev mode
 make dev-product   # product-service on quarkusDev
@@ -125,12 +128,18 @@ pnpm dev:admin     # Admin dashboard → http://localhost:5174
 # Run tests
 make test          # Backend tests
 make test-apps     # Frontend unit/functional tests
+make grpc-test     # gRPC health checks for running backend services
 make verify        # typecheck + lint + backend/frontend unit-functional tests
 pnpm e2e:install   # Install Playwright browser once
 make verify-full   # verify + docker-demo + Playwright E2E
 
 # Lint supported local targets
 make lint          # Proto + Frontend
+
+# Database helpers
+make db-backup
+make db-restore FILE=.local/backups/openpos-20260314-120000.sql
+make reset
 ```
 
 `pnpm test` runs unit/functional tests for `packages/` and `apps/`. E2E is opt-in via `pnpm test:e2e` so routine local verification does not depend on Playwright browsers.
@@ -162,9 +171,12 @@ make local-smoke
 make docker-up-core
 make docker-down-core
 make docker-build-core
+make docker-build
 ```
 
 `make docker-up-core` stops the locally managed host backend first, so switching between the two supported modes is predictable.
+
+`make reset` recreates the PostgreSQL data volume, then brings the last detected supported backend mode back up and reseeds the demo data. `make db-backup` writes a plain SQL dump under `.local/backups/` by default, and `make db-restore FILE=...` restores that dump and restarts the detected backend mode.
 
 See [docs/guides/setup.md](docs/guides/setup.md) for detailed setup instructions.
 
