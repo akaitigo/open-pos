@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router'
+import { Outlet, useLocation } from 'react-router'
 import { Header } from '@/components/header'
 import { CartSidebar } from '@/components/cart-sidebar'
 import { LoginScreen } from '@/components/login-screen'
@@ -9,6 +9,8 @@ import { useAuthStore } from '@/stores/auth-store'
 
 export function Layout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const location = useLocation()
+  const showSidebar = location.pathname !== '/cart'
 
   if (!hasPosRuntimeConfig()) {
     return (
@@ -35,7 +37,7 @@ export function Layout() {
         <main className="flex flex-1 flex-col overflow-auto">
           <Outlet />
         </main>
-        <CartSidebar />
+        {showSidebar && <CartSidebar />}
       </div>
       <Toaster />
     </div>
