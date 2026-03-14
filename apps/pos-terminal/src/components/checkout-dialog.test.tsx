@@ -1,9 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CheckoutDialog } from './checkout-dialog'
 import { useCartStore } from '@/stores/cart-store'
 import { useAuthStore } from '@/stores/auth-store'
+import { FinalizeTransactionResponseSchema } from '@shared-types/openpos'
 import type { Product, Staff } from '@shared-types/openpos'
 
 const mockApiPost = vi.fn()
@@ -65,47 +66,80 @@ describe('CheckoutDialog', () => {
     expect(screen.getByText('現金')).toBeInTheDocument()
     expect(screen.getByText('カード')).toBeInTheDocument()
     expect(screen.getByText('QR')).toBeInTheDocument()
+    expect(screen.getByText('残額')).toBeInTheDocument()
   })
 
-  it('お預かり金額の入力欄が表示される', () => {
+  it('現金入力欄とクイック金額ボタンが表示される', () => {
     render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
     expect(screen.getByPlaceholderText('0')).toBeInTheDocument()
     expect(screen.getByText('ぴったり')).toBeInTheDocument()
+    expect(screen.getByText('¥500')).toBeInTheDocument()
+    expect(screen.getByText('¥10,000')).toBeInTheDocument()
   })
 
-  it('プリセットボタンで金額が入力される', async () => {
+  it('現金テンキーで金額を入力できる', async () => {
     render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
-    await userEvent.click(screen.getByText('¥1,000'))
+
+    await userEvent.click(screen.getByRole('button', { name: '1' }))
+    await userEvent.click(screen.getAllByRole('button', { name: '0' })[0]!)
+    await userEvent.click(screen.getAllByRole('button', { name: '0' })[0]!)
+
     const input = screen.getByPlaceholderText('0') as HTMLInputElement
-    expect(input.value).toBe('1000')
-  })
-
-  it('お会計を確定ボタンが表示される', () => {
-    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
-    expect(screen.getByText('お会計を確定')).toBeInTheDocument()
-  })
-
-  it('open=false のとき何も表示しない', () => {
-    render(<CheckoutDialog open={false} onOpenChange={vi.fn()} />)
-    expect(screen.queryByText('お会計')).not.toBeInTheDocument()
+    expect(input.value).toBe('100')
   })
 
   it('ぴったりボタンで合計金額が入力される', async () => {
     render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
     await userEvent.click(screen.getByText('ぴったり'))
     const input = screen.getByPlaceholderText('0') as HTMLInputElement
-    // subtotal = 15000 * 2 = 30000 (銭), 30000/100 = 300 (円)
     expect(input.value).toBe('300')
   })
 
-  it('お釣り表示が正しく計算される', async () => {
+  it('支払不足時に不足額を表示する', async () => {
     render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
-    await userEvent.click(screen.getByText('¥1,000'))
-    // ¥1,000 - ¥300 = ¥700 お釣り
-    expect(screen.getByText('お釣り')).toBeInTheDocument()
+    const input = screen.getByPlaceholderText('0') as HTMLInputElement
+
+    await userEvent.type(input, '100')
+
+    expect(screen.getByText('あと ￥200 不足しています。')).toBeInTheDocument()
+    expect(screen.getByText('お会計を確定')).toBeDisabled()
   })
 
-  it('決済確定で API シーケンスが呼ばれる', async () => {
+  it('カードタブに切り替えると決済金額と参照番号入力が表示される', async () => {
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    await userEvent.click(screen.getByText('カード'))
+
+    expect(screen.getByPlaceholderText('残額を入力')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('カード承認番号')).toBeInTheDocument()
+    expect(screen.getByText('カード端末プレースホルダー')).toBeInTheDocument()
+  })
+
+  it('カード支払で残額を超える金額は追加できない', async () => {
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    await userEvent.click(screen.getByText('カード'))
+    await userEvent.clear(screen.getByPlaceholderText('残額を入力'))
+    await userEvent.type(screen.getByPlaceholderText('残額を入力'), '500')
+    await userEvent.type(screen.getByPlaceholderText('カード承認番号'), 'CARD-OVER')
+
+    expect(screen.getByText('残額を超える金額は追加できません。')).toBeInTheDocument()
+    expect(screen.getByText('この支払を追加')).toBeDisabled()
+    expect(screen.getByText('お会計を確定')).toBeDisabled()
+  })
+
+  it('QRタブに切り替えると決済IDとプレースホルダーが表示される', async () => {
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    await userEvent.click(screen.getByText('QR'))
+
+    expect(screen.getByPlaceholderText('残額を入力')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('決済ID')).toBeInTheDocument()
+    expect(screen.getByText('QR 決済プレースホルダー')).toBeInTheDocument()
+    expect(screen.getByText('OPENPOS-QR')).toBeInTheDocument()
+  })
+
+  it('分割払いを追加して finalize に複数 payments を送る', async () => {
     const txResponse = {
       id: 'tx-1',
       organizationId: 'org-1',
@@ -138,23 +172,52 @@ describe('CheckoutDialog', () => {
       },
     }
     mockApiPost
-      .mockResolvedValueOnce(txResponse) // create
-      .mockResolvedValueOnce(txResponse) // add item
-      .mockResolvedValueOnce(finalizeResponse) // finalize
+      .mockResolvedValueOnce(txResponse)
+      .mockResolvedValueOnce(txResponse)
+      .mockResolvedValueOnce(finalizeResponse)
 
-    const onOpenChange = vi.fn()
-    render(<CheckoutDialog open={true} onOpenChange={onOpenChange} />)
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    await userEvent.click(screen.getByText('カード'))
+    const amountInput = screen.getByPlaceholderText('残額を入力')
+    await userEvent.clear(amountInput)
+    await userEvent.type(amountInput, '100')
+    await userEvent.type(screen.getByPlaceholderText('カード承認番号'), 'CARD-001')
+    await userEvent.click(screen.getByText('この支払を追加'))
+
+    expect(screen.getByText('追加済みの支払')).toBeInTheDocument()
+    expect(screen.getByText('参照番号: CARD-001')).toBeInTheDocument()
+
     await userEvent.click(screen.getByText('ぴったり'))
     await userEvent.click(screen.getByText('お会計を確定'))
 
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledTimes(3)
     })
-    expect(onOpenChange).toHaveBeenCalledWith(false)
+
+    expect(mockApiPost).toHaveBeenLastCalledWith(
+      '/api/transactions/tx-1/finalize',
+      {
+        payments: [
+          {
+            method: 'CREDIT_CARD',
+            amount: 10000,
+            reference: 'CARD-001',
+          },
+          {
+            method: 'CASH',
+            amount: 20000,
+            received: 20000,
+          },
+        ],
+      },
+      FinalizeTransactionResponseSchema,
+    )
   })
 
-  it('決済エラー時にトーストが表示される', async () => {
+  it('決済エラー時にトースト用 API 呼び出しまで進む', async () => {
     mockApiPost.mockRejectedValueOnce(new Error('ネットワークエラー'))
+
     render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
     await userEvent.click(screen.getByText('ぴったり'))
     await userEvent.click(screen.getByText('お会計を確定'))
@@ -164,23 +227,9 @@ describe('CheckoutDialog', () => {
     })
   })
 
-  it('カードタブに切り替えると参照番号入力が表示される', async () => {
-    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
-    await userEvent.click(screen.getByText('カード'))
-    expect(screen.getByPlaceholderText('カード承認番号')).toBeInTheDocument()
-  })
-
-  it('QRタブに切り替えると決済ID入力が表示される', async () => {
-    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
-    await userEvent.click(screen.getByText('QR'))
-    expect(screen.getByPlaceholderText('決済ID')).toBeInTheDocument()
-  })
-
-  it('カード決済では金額入力なしで確定可能', async () => {
-    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
-    await userEvent.click(screen.getByText('カード'))
-    const confirmButton = screen.getByText('お会計を確定')
-    expect(confirmButton).not.toBeDisabled()
+  it('open=false のとき何も表示しない', () => {
+    render(<CheckoutDialog open={false} onOpenChange={vi.fn()} />)
+    expect(screen.queryByText('お会計')).not.toBeInTheDocument()
   })
 
   it('ぴったりボタンは端数税額を切り上げた円額を入力する', async () => {
