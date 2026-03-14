@@ -3,6 +3,7 @@ package com.openpos.gateway.resource
 import com.openpos.gateway.config.GrpcClientHelper
 import com.openpos.gateway.config.paginatedResponse
 import com.openpos.gateway.config.toMap
+import com.google.protobuf.BoolValue
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
@@ -98,7 +99,7 @@ class StaffResource {
                     body.email?.let { setEmail(it) }
                     body.role?.let { setRole(it.toProtoRole()) }
                     body.pin?.let { setPin(it) }
-                    body.isActive?.let { setIsActive(it) }
+                    body.isActive?.let { setIsActiveValue(BoolValue.of(it)) }
                 }.build()
         return grpc
             .withTenant(stub)

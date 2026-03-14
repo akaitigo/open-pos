@@ -4,6 +4,7 @@ syntax = "proto3";
 package openpos.store.v1;
 
 import "openpos/common/v1/common.proto";
+import "google/protobuf/wrappers.proto";
 
 option java_multiple_files = true;
 
@@ -305,6 +306,8 @@ message UpdateStoreRequest {
   string settings = 6;
   // 有効フラグ
   bool is_active = 7;
+  // 有効フラグ（presence 付き更新用）
+  google.protobuf.BoolValue is_active_value = 8;
 }
 
 // 端末登録リクエスト
@@ -387,6 +390,8 @@ message UpdateStaffRequest {
   string pin = 5;
   // 有効フラグ
   bool is_active = 6;
+  // 有効フラグ（presence 付き更新用）
+  google.protobuf.BoolValue is_active_value = 7;
 }
 
 // PIN 認証リクエスト
