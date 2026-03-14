@@ -22,6 +22,9 @@ class TaxRateEntity : BaseEntity() {
     @Column(name = "tax_type", nullable = false, length = 20)
     var taxType: String = "STANDARD"
 
+    @Column(name = "is_default", nullable = false)
+    var isDefault: Boolean = false
+
     @Column(name = "is_active", nullable = false)
     var isActive: Boolean = true
 }
