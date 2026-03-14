@@ -42,8 +42,10 @@ export class PosPage {
     await expect(this.page.getByText('OpenPOS Terminal')).toBeVisible()
   }
 
-  async login(staffName = '田中太郎', pin = '1234'): Promise<void> {
-    await this.page.getByRole('button', { name: new RegExp(staffName) }).click()
+  async login(staffName = '渋谷店 オーナー', pin = '1234'): Promise<void> {
+    const staffButton = this.page.getByRole('button', { name: new RegExp(staffName) })
+    await expect(staffButton).toBeVisible()
+    await staffButton.click()
     for (const digit of pin.split('')) {
       await this.page.getByRole('button', { name: digit, exact: true }).click()
     }

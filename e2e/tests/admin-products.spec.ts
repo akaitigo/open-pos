@@ -1,5 +1,17 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { AdminPage } from '../pages/admin-page'
+
+function summaryCardValue(page: Page, title: string) {
+  return page
+    .getByText(title)
+    .locator('xpath=ancestor::div[contains(@class,"rounded-xl")]')
+    .locator('.text-2xl.font-bold')
+}
+
+async function summaryCardNumber(page: Page, title: string) {
+  const value = await summaryCardValue(page, title).textContent()
+  return Number(value?.trim() ?? '0')
+}
 
 test.describe('Admin Smoke', () => {
   let adminPage: AdminPage
@@ -11,10 +23,12 @@ test.describe('Admin Smoke', () => {
 
   test('dashboard shows seeded summary counts', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible()
-    await expect(page.locator('.text-2xl.font-bold').nth(0)).toHaveText('17')
-    await expect(page.locator('.text-2xl.font-bold').nth(1)).toHaveText('1')
-    await expect(page.locator('.text-2xl.font-bold').nth(2)).toHaveText('2')
-    await expect(page.locator('.text-2xl.font-bold').nth(3)).not.toHaveText('...')
+    await expect(summaryCardValue(page, '商品数')).toHaveText('40')
+    await expect(summaryCardValue(page, '店舗数')).toHaveText('2')
+    await expect(summaryCardValue(page, 'スタッフ数')).toHaveText('3')
+    await expect
+      .poll(() => summaryCardNumber(page, '取引数'))
+      .toBeGreaterThanOrEqual(10)
   })
 
   test('products page shows seeded products and supports search', async () => {
@@ -25,7 +39,7 @@ test.describe('Admin Smoke', () => {
 
     await adminPage.searchProduct('ドリップコーヒー')
     await adminPage.expectProductVisible('ドリップコーヒー')
-    await adminPage.expectProductNotVisible('おにぎり 梅')
+    await adminPage.expectProductNotVisible('北海道おにぎり鮭')
   })
 
   test('products page opens edit dialog for seeded product', async () => {
