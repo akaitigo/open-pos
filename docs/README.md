@@ -19,6 +19,7 @@ This directory contains the project design, runbooks, product requirements, and 
 - [guides/branching-strategy.md](guides/branching-strategy.md): branch and PR conventions
 - [runbook/release.md](runbook/release.md): maintainer release checklist
 - [runbook/triage.md](runbook/triage.md): issue, PR, and label triage policy
+- [runbook/labels.md](runbook/labels.md): label taxonomy and PR auto-labeling rules
 
 ## Architecture
 

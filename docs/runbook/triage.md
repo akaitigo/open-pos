@@ -21,9 +21,11 @@ This runbook describes the minimum maintainer workflow for incoming issues and p
 Use at least one label from each relevant group:
 
 - `type:*` for the work shape, for example `type:bug`, `type:feature`, `type:docs`, `type:chore`
-- `svc:*`, `app:*`, `infra`, or `proto` for the affected surface
+- `svc:*`, `app:*`, `pkg:*`, `infra`, or `proto` for the affected surface
 - `area:*` when the problem maps to a product or technical concern
 - `P0:*` to `P3:*` when priority needs to be made explicit
+
+See [labels.md](labels.md) for the current label taxonomy and PR label automation rules.
 
 ## Priority Guidance
 
@@ -37,6 +39,7 @@ Use at least one label from each relevant group:
 Before merge, confirm that:
 
 - the title and labels describe the change
+- auto-applied surface labels still match the final diff
 - the linked issue or rationale is clear for non-trivial work
 - the author ran the relevant local checks
 - required GitHub checks are green
