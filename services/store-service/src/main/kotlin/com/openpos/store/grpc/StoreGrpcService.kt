@@ -193,7 +193,12 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
                 phone = request.phone.ifBlank { null },
                 timezone = request.timezone.ifBlank { null },
                 settings = request.settings.ifBlank { null },
-                isActive = if (request.isActive) true else null,
+                isActive =
+                    when {
+                        request.hasIsActiveValue() -> request.isActiveValue.value
+                        request.isActive -> true
+                        else -> null
+                    },
             ) ?: throw Status.NOT_FOUND.withDescription("Store not found: ${request.id}").asRuntimeException()
         responseObserver.onNext(
             UpdateStoreResponse.newBuilder().setStore(entity.toProto()).build(),
@@ -321,7 +326,12 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
                 email = request.email.ifBlank { null },
                 role = if (request.role != StaffRole.STAFF_ROLE_UNSPECIFIED) request.role.toDbRole() else null,
                 pinHash = pinHash,
-                isActive = if (request.isActive) true else null,
+                isActive =
+                    when {
+                        request.hasIsActiveValue() -> request.isActiveValue.value
+                        request.isActive -> true
+                        else -> null
+                    },
             ) ?: throw Status.NOT_FOUND.withDescription("Staff not found: ${request.id}").asRuntimeException()
         responseObserver.onNext(
             UpdateStaffResponse.newBuilder().setStaff(entity.toProto()).build(),
