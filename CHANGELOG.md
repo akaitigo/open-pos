@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Added GitHub CodeQL scanning and tightened the documented security reporting path to GitHub private advisories only.
 - Tightened contributor setup docs around actual required tools (`curl`, `jq`, `bc`) and the supported verification flow.
+- Rewrote the local development runbook to match the supported `make local-demo` / `make docker-demo` flows, generated runtime config files, and current troubleshooting steps.
 - Added clearer prerequisite checks to local helper scripts.
 - Fixed the Docker-based startup flow to wait on `hydra` health instead of the one-shot `hydra-migrate` container.
 - Shifted open-ended setup and usage questions toward GitHub Discussions, keeping Issues focused on bugs and feature work.
