@@ -160,7 +160,6 @@ check_docker() {
 check_utilities() {
   require_command curl "Install curl for seed/smoke scripts." || true
   require_command jq "Install jq for seed/smoke scripts." || true
-  require_command bc "Install bc for seed output formatting." || true
   optional_command grpcurl "Install grpcurl to use 'make grpc-test'." || true
 }
 

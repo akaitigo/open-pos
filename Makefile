@@ -66,18 +66,19 @@ dev-backend: ## Start all backend services in dev mode (background)
 	cd services/analytics-service && ../../gradlew quarkusDev &
 	cd services/api-gateway && ../../gradlew quarkusDev &
 
-local-build: ## Build the core backend services locally for reliable dev startup
+local-build: ## Build the supported local backend services locally for reliable dev startup
 	./gradlew \
 		:services:product-service:quarkusBuild \
 		:services:store-service:quarkusBuild \
 		:services:pos-service:quarkusBuild \
+		:services:inventory-service:quarkusBuild \
 		:services:api-gateway:quarkusBuild \
 		-Dquarkus.package.jar.type=uber-jar
 
-local-up: ## Build and start the core backend services locally
+local-up: ## Build and start the supported local backend services
 	bash scripts/local-stack-up.sh
 
-local-up-fast: ## Start the core backend services locally without rebuilding
+local-up-fast: ## Start the supported local backend services without rebuilding
 	bash scripts/local-stack-up.sh --skip-build
 
 local-down: ## Stop backend services started by scripts/local-stack-up.sh
@@ -103,17 +104,18 @@ docker-build: ## Build all backend service container images sequentially
 	docker compose -f infra/compose.yml build analytics-service
 	docker compose -f infra/compose.yml build api-gateway
 
-docker-build-core: ## Build the core backend container images sequentially
+docker-build-core: ## Build the supported local backend container images sequentially
 	docker compose -f infra/compose.yml build product-service
 	docker compose -f infra/compose.yml build store-service
 	docker compose -f infra/compose.yml build pos-service
+	docker compose -f infra/compose.yml build inventory-service
 	docker compose -f infra/compose.yml build api-gateway
 
-docker-up-core: up local-down ## Start the core backend services in containers
-	docker compose -f infra/compose.yml up -d --wait product-service store-service pos-service api-gateway
+docker-up-core: up local-down ## Start the supported local backend services in containers
+	docker compose -f infra/compose.yml up -d --wait product-service store-service pos-service inventory-service api-gateway
 
-docker-down-core: ## Stop only the containerized core backend services
-	docker compose -f infra/compose.yml stop api-gateway product-service store-service pos-service
+docker-down-core: ## Stop only the supported local backend services in containers
+	docker compose -f infra/compose.yml stop api-gateway product-service store-service pos-service inventory-service
 
 docker-smoke: ## Seed demo data and verify the containerized core stack via the API gateway
 	bash scripts/seed.sh

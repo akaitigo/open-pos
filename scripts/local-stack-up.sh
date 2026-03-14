@@ -145,6 +145,7 @@ if [[ "$SKIP_BUILD" -eq 0 ]]; then
     :services:product-service:quarkusBuild \
     :services:store-service:quarkusBuild \
     :services:pos-service:quarkusBuild \
+    :services:inventory-service:quarkusBuild \
     :services:api-gateway:quarkusBuild \
     -Dquarkus.package.jar.type=uber-jar
 fi
@@ -179,6 +180,15 @@ start_service \
   RABBITMQ_USER="$RABBITMQ_USER" \
   RABBITMQ_PASS="$RABBITMQ_PASS"
 start_service \
+  inventory-service \
+  "http://localhost:8084/health" \
+  QUARKUS_HTTP_PORT=8084 \
+  QUARKUS_GRPC_SERVER_PORT=9004 \
+  RABBITMQ_HOST="$RABBITMQ_HOST" \
+  RABBITMQ_PORT="$RABBITMQ_PORT" \
+  RABBITMQ_USER="$RABBITMQ_USER" \
+  RABBITMQ_PASS="$RABBITMQ_PASS"
+start_service \
   api-gateway \
   "http://localhost:8080/api/health" \
   QUARKUS_HTTP_PORT=8080 \
@@ -187,7 +197,9 @@ start_service \
   STORE_SERVICE_HOST=localhost \
   STORE_SERVICE_PORT=9002 \
   POS_SERVICE_HOST=localhost \
-  POS_SERVICE_PORT=9003
+  POS_SERVICE_PORT=9003 \
+  INVENTORY_SERVICE_HOST=localhost \
+  INVENTORY_SERVICE_PORT=9004
 
 cat <<EOF
 Local backend is running.
