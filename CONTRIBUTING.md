@@ -12,7 +12,6 @@ Thank you for your interest in contributing to open-pos! This guide will help yo
 - buf CLI (for Protocol Buffers)
 - curl
 - jq
-- bc
 
 ### Getting Started
 
@@ -36,10 +35,10 @@ pnpm dev:pos
 ### Running Locally
 
 ```bash
-# Host-run core backend (recommended for day-to-day work)
+# Host-run local backend (recommended for day-to-day work)
 make local-demo
 
-# Containerized core backend (useful for release verification)
+# Containerized local backend (useful for release verification)
 make docker-demo
 
 # Restart only the supported backend mode you are using

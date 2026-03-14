@@ -37,10 +37,6 @@ service_container_is_running() {
 running_optional_container_services() {
   local services=()
 
-  if service_container_is_running inventory-service; then
-    services+=("inventory-service")
-  fi
-
   if service_container_is_running analytics-service; then
     services+=("analytics-service")
   fi
@@ -55,12 +51,14 @@ detect_core_backend_mode() {
   local docker_running=0
 
   if service_pid_is_running product-service || service_pid_is_running store-service || \
-    service_pid_is_running pos-service || service_pid_is_running api-gateway; then
+    service_pid_is_running pos-service || service_pid_is_running inventory-service || \
+    service_pid_is_running api-gateway; then
     host_running=1
   fi
 
   if service_container_is_running product-service || service_container_is_running store-service || \
-    service_container_is_running pos-service || service_container_is_running api-gateway; then
+    service_container_is_running pos-service || service_container_is_running inventory-service || \
+    service_container_is_running api-gateway; then
     docker_running=1
   fi
 
@@ -87,7 +85,7 @@ ensure_supported_mode() {
 
   if [[ "$mode" == "mixed" ]]; then
     cat >&2 <<EOF
-Detected both host-run and containerized core backend services.
+Detected both host-run and containerized supported backend services.
 Stop one mode first with 'make local-down' or 'make docker-down-core', then retry.
 EOF
     exit 1
@@ -102,7 +100,7 @@ stop_detected_core_backend() {
       bash "$ROOT_DIR/scripts/local-stack-down.sh"
       ;;
     docker)
-      compose stop api-gateway product-service store-service pos-service >/dev/null
+      compose stop api-gateway product-service store-service pos-service inventory-service >/dev/null
       ;;
     none)
       ;;
@@ -121,7 +119,7 @@ start_core_backend_for_mode() {
       bash "$ROOT_DIR/scripts/local-stack-up.sh" --skip-build
       ;;
     docker)
-      compose up -d --wait product-service store-service pos-service api-gateway
+      compose up -d --wait product-service store-service pos-service inventory-service api-gateway
       ;;
     none)
       bash "$ROOT_DIR/scripts/local-stack-up.sh"

@@ -98,7 +98,7 @@ EOF
 check_health "product-service" "localhost" "9001" "required"
 check_health "store-service" "localhost" "9002" "required"
 check_health "pos-service" "localhost" "9003" "required"
-check_health "inventory-service" "localhost" "9004" "optional"
+check_health "inventory-service" "localhost" "9004" "required"
 check_health "analytics-service" "localhost" "9005" "optional"
 
 if [[ "$FAILURES" -gt 0 ]]; then

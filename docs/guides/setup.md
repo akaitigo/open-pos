@@ -12,7 +12,6 @@
 | buf | 1.x | `mise install buf` or [公式サイト](https://buf.build/docs/installation) |
 | curl | 任意の現行版 | OS 標準 or パッケージマネージャ |
 | jq | 任意の現行版 | `apt install jq` など |
-| bc | 任意の現行版 | `apt install bc` など |
 | gh | 最新 (任意) | `apt install gh` |
 
 ## セットアップ手順
@@ -47,11 +46,13 @@ pnpm dev:pos     # http://localhost:5173
 
 `make local-demo` は以下をまとめて行います。
 - Docker で infra を起動
-- core backend (`product-service`, `store-service`, `pos-service`, `api-gateway`) を host で build / 起動
+- supported local backend (`product-service`, `store-service`, `pos-service`, `inventory-service`, `api-gateway`) を host で build / 起動
 - demo data を投入
 - frontend 用の `.env.development.local` を生成
 - frontend 用の `public/demo-config.json` を生成
 - API smoke test を実行
+
+seed される demo data は冪等で、固定の組織・2店舗・各店舗2端末・staff・40商品・在庫・サンプル取引を再実行でも重複なく揃えます。
 
 ### 6. container 導線
 ```bash
@@ -60,7 +61,7 @@ pnpm dev:admin
 pnpm dev:pos
 ```
 
-こちらは core backend も Docker で起動します。`make local-demo` から切り替える時は `make local-down` を実行してください。
+こちらは supported local backend も Docker で起動します。`make local-demo` から切り替える時は `make local-down` を実行してください。
 
 ### 7. 個別コマンド
 ```bash
