@@ -12,9 +12,9 @@ If you discover a security vulnerability in open-pos, please report it responsib
 
 **DO NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, please send an email to: **security@openpos.dev**
+Use [GitHub's private vulnerability reporting](https://github.com/akaitigo/open-pos/security/advisories/new).
 
-Alternatively, use [GitHub's private vulnerability reporting](https://github.com/akaitigo/open-pos/security/advisories/new).
+This is currently the only supported private reporting channel for security issues.
 
 ### What to include
 
