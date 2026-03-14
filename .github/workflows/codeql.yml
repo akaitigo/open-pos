@@ -40,10 +40,19 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Initialize CodeQL
+      - name: Initialize CodeQL (javascript-typescript)
+        if: ${{ matrix.language == 'javascript-typescript' }}
         uses: github/codeql-action/init@0d579ffd059c29b07949a3cce3983f0780820c98 # v4
         with:
           languages: ${{ matrix.language }}
+          build-mode: none
+
+      - name: Initialize CodeQL (java-kotlin)
+        if: ${{ matrix.language == 'java-kotlin' }}
+        uses: github/codeql-action/init@0d579ffd059c29b07949a3cce3983f0780820c98 # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: autobuild
 
       - name: Autobuild
         if: ${{ matrix.language == 'java-kotlin' }}
