@@ -12,7 +12,7 @@ Use this guide to decide where to ask for help or report a problem.
 
 - **Confirmed bug**: open a GitHub issue with the bug template.
 - **Feature request**: open a GitHub issue with the feature template.
-- **Setup or usage problem**: open a GitHub issue and include the output of `make doctor`, the command you ran, and the exact error.
+- **Setup or usage problem**: start a [GitHub Discussion](https://github.com/akaitigo/open-pos/discussions) for questions or unclear behavior, and include the output of `make doctor`, the command you ran, and the exact error.
 - **Security vulnerability**: do **not** open a public issue. Use [GitHub private vulnerability reporting](https://github.com/akaitigo/open-pos/security/advisories/new) or email `security@openpos.dev`.
 
 ## What to Include
@@ -29,4 +29,4 @@ Use this guide to decide where to ask for help or report a problem.
 
 - This is currently a maintainer-led project with best-effort support.
 - Security reports follow the SLA in [SECURITY.md](SECURITY.md).
-- Bug reports and contribution questions are usually handled asynchronously through GitHub.
+- Discussions, bug reports, and contribution questions are handled asynchronously through GitHub.

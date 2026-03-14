@@ -23,17 +23,22 @@ gh repo clone akaitigo/open-pos
 cd open-pos
 ```
 
-### 2. 前提確認
+### 2. ツール自動導入（mise を使う場合）
+```bash
+mise install
+```
+
+### 3. 前提確認
 ```bash
 make doctor
 ```
 
-### 3. 依存関係インストール
+### 4. 依存関係インストール
 ```bash
 pnpm install
 ```
 
-### 4. 推奨ローカル導線
+### 5. 推奨ローカル導線
 ```bash
 make local-demo
 pnpm dev:admin   # http://localhost:5174
@@ -48,7 +53,7 @@ pnpm dev:pos     # http://localhost:5173
 - frontend 用の `public/demo-config.json` を生成
 - API smoke test を実行
 
-### 5. container 導線
+### 6. container 導線
 ```bash
 make docker-demo
 pnpm dev:admin
@@ -57,7 +62,7 @@ pnpm dev:pos
 
 こちらは core backend も Docker で起動します。`make local-demo` から切り替える時は `make local-down` を実行してください。
 
-### 6. 個別コマンド
+### 7. 個別コマンド
 ```bash
 # infra のみ起動
 make up
