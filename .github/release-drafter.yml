@@ -1,0 +1,48 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+template: |
+  ## What Changed
+
+  $CHANGES
+
+  ## Contributors
+
+  $CONTRIBUTORS
+
+version-resolver:
+  major:
+    labels:
+      - breaking-change
+  minor:
+    labels:
+      - type:feature
+  patch:
+    labels:
+      - type:bug
+      - type:chore
+      - type:docs
+      - type:test
+  default: patch
+
+categories:
+  - title: 'Features'
+    labels:
+      - type:feature
+  - title: 'Bug Fixes'
+    labels:
+      - type:bug
+  - title: 'Documentation'
+    labels:
+      - type:docs
+  - title: 'Tests and QA'
+    labels:
+      - type:test
+  - title: 'Maintenance'
+    labels:
+      - type:chore
+
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+change-title-escapes: '\<*_&'
+exclude-labels:
+  - skip-changelog
+no-changes-template: '- No user-facing changes in this draft.'

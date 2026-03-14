@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/akaitigo/open-pos/actions/workflows/ci.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/ci.yml)
 [![Security](https://github.com/akaitigo/open-pos/actions/workflows/security.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/security.yml)
+[![Release Drafter](https://github.com/akaitigo/open-pos/actions/workflows/release-drafter.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/release-drafter.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A multi-tenant, offline-capable POS (Point of Sale) system built with microservices architecture.
@@ -15,7 +16,7 @@ A multi-tenant, offline-capable POS (Point of Sale) system built with microservi
 
 - **Stage**: Public alpha for local development and architecture exploration
 - **Supported demo flows**: `make local-demo` and `make docker-demo`
-- **Quality gates on `main`**: CI, dependency audit, secret scanning, Playwright E2E
+- **Quality gates on `main`**: CI, dependency audit, secret scanning, CodeQL, Playwright E2E
 - **Not supported yet**: production deployment, internet exposure, or hard security guarantees
 
 ## Features
@@ -90,6 +91,7 @@ A multi-tenant, offline-capable POS (Point of Sale) system built with microservi
 ### Quick Start
 
 ```bash
+mise install
 make doctor
 pnpm install
 
@@ -198,10 +200,13 @@ open-pos/
 
 ## Support
 
+- Questions and setup help: [GitHub Discussions](https://github.com/akaitigo/open-pos/discussions)
 - Setup help and usage guidance: [SUPPORT.md](SUPPORT.md)
 - Security reporting: [SECURITY.md](SECURITY.md)
+- Governance and decision process: [GOVERNANCE.md](GOVERNANCE.md)
 - Maintainer expectations: [MAINTAINERS.md](MAINTAINERS.md)
 - Release history: [CHANGELOG.md](CHANGELOG.md)
+- Citation metadata: [CITATION.cff](CITATION.cff)
 
 ## Contributing
 

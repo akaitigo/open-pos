@@ -21,6 +21,7 @@ Thank you for your interest in contributing to open-pos! This guide will help yo
 git clone https://github.com/akaitigo/open-pos.git
 cd open-pos
 
+mise install
 make doctor
 
 # Install frontend dependencies
@@ -140,7 +141,7 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
 ## Support
 
-If you are blocked on setup or day-to-day usage, start with [SUPPORT.md](SUPPORT.md) and include the output of `make doctor` in your report.
+If you are blocked on setup or day-to-day usage, start with [SUPPORT.md](SUPPORT.md), include the output of `make doctor`, and prefer GitHub Discussions for open-ended questions before opening a bug.
 
 ## License
 
