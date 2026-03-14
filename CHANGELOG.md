@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - Added `GOVERNANCE.md` and `docs/runbook/triage.md` to make maintainer decision-making and issue triage explicit.
+- Added PR component auto-labeling and a label taxonomy runbook for maintainer triage consistency.
 - Added `make doctor`, `make verify`, and `make verify-full` as supported local quality gates.
 - Added maintainer-facing release guidance in [docs/runbook/release.md](docs/runbook/release.md).
 - Added a documentation index in [docs/README.md](docs/README.md).
