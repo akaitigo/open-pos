@@ -4,9 +4,9 @@ This runbook describes the supported day-to-day development flows for `open-pos`
 
 ## Recommended Modes
 
-### Host-run core backend
+### Host-run local backend
 
-Use this for normal development. Infrastructure runs in Docker, while the core backend runs on the host as built Quarkus jars.
+Use this for normal development. Infrastructure runs in Docker, while the supported local backend runs on the host as built Quarkus jars.
 
 ```bash
 make local-demo
@@ -17,14 +17,14 @@ pnpm dev:pos     # http://localhost:5173
 `make local-demo` performs all of the following:
 
 - starts infrastructure via Docker Compose
-- builds and starts `product-service`, `store-service`, `pos-service`, and `api-gateway` on the host
-- seeds demo data
+- builds and starts `product-service`, `store-service`, `pos-service`, `inventory-service`, and `api-gateway` on the host
+- seeds idempotent demo data
 - writes frontend runtime config files
 - runs the API smoke check
 
-### Containerized core backend
+### Containerized local backend
 
-Use this when you want the core backend to match the containerized CI/release-style path more closely.
+Use this when you want the supported local backend to match the containerized CI/release-style path more closely.
 
 ```bash
 make docker-demo
@@ -53,7 +53,7 @@ make logs     # Docker Compose logs
 ### Host-run backend
 
 ```bash
-make local-up       # rebuild and start the core backend
+make local-up       # rebuild and start the local backend
 make local-up-fast  # start without rebuilding
 make local-down
 make logs-pos       # tail .local/logs/pos-service.log while host-run mode is active
@@ -85,7 +85,15 @@ make db-restore FILE=.local/backups/openpos-YYYYmmdd-HHMMSS.sql
 make reset
 ```
 
-`make reset` recreates the PostgreSQL data volume, restores the last detected supported backend mode, and reseeds the demo data. If no supported backend mode was running, it starts the host-run core backend before reseeding.
+`make reset` recreates the PostgreSQL data volume, restores the last detected supported backend mode, and reseeds the demo data. If no supported backend mode was running, it starts the host-run local backend before reseeding.
+
+The seeded dataset contains:
+
+- `テスト株式会社` (`T1234567890123`)
+- stores `渋谷店` and `新宿店`
+- owner / manager / cashier staff in each store (`1234` / `2345` / `3456`)
+- 4 categories, 40 products, and inventory normalized to `100`
+- 10 sample transactions (`COMPLETED 3 / VOIDED 1 / DRAFT 6`)
 
 ### Frontend dev servers
 
@@ -187,7 +195,7 @@ If the frontend still shows old data, reload the browser tab.
 
 ### Smoke check fails after switching modes
 
-Make sure only one core backend mode is active at a time:
+Make sure only one supported backend mode is active at a time:
 
 ```bash
 make local-down

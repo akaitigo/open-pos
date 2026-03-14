@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Added [SUPPORT.md](SUPPORT.md) and [MAINTAINERS.md](MAINTAINERS.md) for public OSS operations.
 - Added GitHub issue contact links and release note categorization.
 - Added `.mise.toml`, `CITATION.cff`, and Release Drafter configuration for reproducible setup and release metadata.
+- Added an idempotent demo seed dataset with two stores, per-store terminals/staff, inventory, and sample transactions.
 
 ### Changed
 
@@ -25,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Rewrote the local development runbook to match the supported `make local-demo` / `make docker-demo` flows, generated runtime config files, and current troubleshooting steps.
 - Added clearer prerequisite checks to local helper scripts.
 - Expanded the documented local development command set to include `make docker-build`, `make reset`, `make db-backup`, `make db-restore`, `make logs-pos`, and `make grpc-test`.
+- Expanded the supported local demo path to include `inventory-service` so seeded inventory and transaction history are available immediately.
 - Fixed the Docker-based startup flow to wait on `hydra` health instead of the one-shot `hydra-migrate` container.
 - Shifted open-ended setup and usage questions toward GitHub Discussions, keeping Issues focused on bugs and feature work.
 - Enabled GitHub Discussions, branch protection on `main`, auto-merge support, and GitHub-native secret scanning / push protection.

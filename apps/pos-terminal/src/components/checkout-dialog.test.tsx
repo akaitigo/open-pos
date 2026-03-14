@@ -182,4 +182,43 @@ describe('CheckoutDialog', () => {
     const confirmButton = screen.getByText('お会計を確定')
     expect(confirmButton).not.toBeDisabled()
   })
+
+  it('ぴったりボタンは端数税額を切り上げた円額を入力する', async () => {
+    useCartStore.setState({
+      items: [
+        {
+          product: {
+            ...mockProduct,
+            price: 18800,
+            taxRateId: '550e8400-e29b-41d4-a716-446655440099',
+          },
+          quantity: 1,
+        },
+      ],
+    })
+    mockApiGet.mockResolvedValue([
+      {
+        id: '550e8400-e29b-41d4-a716-446655440099',
+        organizationId: '550e8400-e29b-41d4-a716-446655440000',
+        name: '軽減税率',
+        rate: '0.08',
+        isReduced: true,
+        isDefault: false,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+    ])
+
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalled()
+    })
+
+    await userEvent.click(screen.getByText('ぴったり'))
+
+    const input = screen.getByPlaceholderText('0') as HTMLInputElement
+    expect(input.value).toBe('204')
+    expect(screen.getByText('お会計を確定')).not.toBeDisabled()
+  })
 })

@@ -86,7 +86,6 @@ A multi-tenant, offline-capable POS (Point of Sale) system built with microservi
 - buf CLI
 - curl
 - jq
-- bc
 - grpcurl (optional, for `make grpc-test`)
 
 ### Quick Start
@@ -96,18 +95,20 @@ mise install
 make doctor
 pnpm install
 
-# Fastest supported local path: infra in Docker, core backend on the host
+# Fastest supported local path: infra in Docker, supported local backend on the host
 make local-demo
 pnpm dev:admin   # http://localhost:5174
 pnpm dev:pos     # http://localhost:5173
 
-# Containerized alternative: core backend in Docker too
+# Containerized alternative: the same local backend in Docker too
 make docker-demo
 pnpm dev:admin
 pnpm dev:pos
 ```
 
 `make local-demo` / `make docker-demo` writes `apps/*/public/demo-config.json`, so reloading the browser is enough to pick up the latest seeded organization, store, and terminal IDs.
+
+The seeded demo data is idempotent. It creates a fixed organization (`テスト株式会社`), two stores, two terminals per store, owner/manager/cashier staff, 40 products, normalized inventory, and 10 sample transactions.
 
 ### Development
 
@@ -146,18 +147,18 @@ make reset
 
 ### Supported Demo Paths
 
-For day-to-day development, run infra in Docker and the core backend services on the host:
+For day-to-day development, run infra in Docker and the supported local backend services on the host:
 
 ```bash
-make local-demo  # starts infra + core backend + seed data + runtime demo-config files
+make local-demo  # starts infra + local backend + seed data + runtime demo-config files
 pnpm dev:admin   # http://localhost:5174
 pnpm dev:pos     # http://localhost:5173
 ```
 
-If you want the same core stack containerized:
+If you want the same local stack containerized:
 
 ```bash
-make docker-demo # builds the core images, starts them, seeds data, and verifies the API
+make docker-demo # builds the local-demo images, starts them, seeds data, and verifies the API
 pnpm dev:admin   # http://localhost:5174
 pnpm dev:pos     # http://localhost:5173
 ```

@@ -65,12 +65,18 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const total = getCartEstimatedTotal(items, taxRates)
   const taxTotal = total - subtotal
 
-  const received = receivedAmount ? parseInt(receivedAmount, 10) * 100 : 0
-  const change = paymentMethod === 'CASH' && received > total ? received - total : 0
-  const canFinalize = paymentMethod === 'CASH' ? received >= total : true
+  const minimumCashReceived = Math.ceil(total / 100) * 100
+  const parsedReceivedAmount = receivedAmount ? Number(receivedAmount) : 0
+  const received =
+    Number.isFinite(parsedReceivedAmount) && parsedReceivedAmount > 0
+      ? Math.round(parsedReceivedAmount * 100)
+      : 0
+  const change =
+    paymentMethod === 'CASH' && received > minimumCashReceived ? received - minimumCashReceived : 0
+  const canFinalize = paymentMethod === 'CASH' ? received >= minimumCashReceived : true
 
   const presets = [
-    { label: 'ぴったり', value: total },
+    { label: 'ぴったり', value: minimumCashReceived },
     { label: '\u00a51,000', value: 100000 },
     { label: '\u00a52,000', value: 200000 },
     { label: '\u00a55,000', value: 500000 },
@@ -193,7 +199,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                   </Button>
                 ))}
               </div>
-              {received > 0 && received >= subtotal && (
+              {received > 0 && received >= minimumCashReceived && (
                 <div className="rounded-lg bg-muted p-3 text-center">
                   <p className="text-sm text-muted-foreground">お釣り</p>
                   <p className="text-xl font-bold">{formatMoney(change)}</p>

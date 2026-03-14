@@ -17,13 +17,13 @@ test.describe('POS Smoke', () => {
   test('filters products by search term', async () => {
     await posPage.searchProduct('ドリップコーヒー')
     await expect(posPage.page.getByText('ドリップコーヒー')).toBeVisible()
-    await expect(posPage.page.getByText('おにぎり 梅')).not.toBeVisible()
+    await expect(posPage.page.getByText('北海道おにぎり鮭')).not.toBeVisible()
   })
 
   test('adds a seeded product to cart', async () => {
     await posPage.addProductToCart('ドリップコーヒー')
     await expect(posPage.cart).toContainText('ドリップコーヒー')
-    await expect(posPage.cart).toContainText('￥150')
+    await expect(posPage.cart).toContainText('￥188')
   })
 
   test('completes a cash checkout flow', async () => {
