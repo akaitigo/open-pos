@@ -60,6 +60,19 @@ require_command() {
   return 1
 }
 
+optional_command() {
+  local name="$1"
+  local hint="$2"
+
+  if command -v "$name" >/dev/null 2>&1; then
+    pass "$name is installed"
+    return 0
+  fi
+
+  warn "$name is not installed. $hint"
+  return 0
+}
+
 check_version() {
   local label="$1"
   local actual="$2"
@@ -148,6 +161,7 @@ check_utilities() {
   require_command curl "Install curl for seed/smoke scripts." || true
   require_command jq "Install jq for seed/smoke scripts." || true
   require_command bc "Install bc for seed output formatting." || true
+  optional_command grpcurl "Install grpcurl to use 'make grpc-test'." || true
 }
 
 check_workspace_state() {

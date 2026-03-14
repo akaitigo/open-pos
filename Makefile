@@ -1,10 +1,10 @@
-.PHONY: help doctor verify verify-full up up-all up-dev down logs \
+.PHONY: help doctor verify verify-full up up-all up-dev down logs logs-pos \
        dev-gateway dev-product dev-store dev-pos dev-inventory dev-analytics dev-backend \
-       local-build local-up local-up-fast local-down local-seed local-smoke local-demo \
-       docker-build-core docker-up-core docker-down-core docker-smoke docker-demo \
+       local-build local-up local-up-fast local-down local-seed local-smoke local-demo reset \
+       docker-build docker-build-core docker-up-core docker-down-core docker-smoke docker-demo \
        build build-apps build-services \
-       test test-apps test-backend test-frontend test-e2e test-all \
-       lint proto proto-lint proto-breaking seed clean
+       test test-apps test-backend test-frontend test-e2e test-all grpc-test \
+       lint proto proto-lint proto-breaking seed db-backup db-restore clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -33,8 +33,11 @@ down: ## Stop all containers
 up-dev: ## Start infrastructure with dev tools (pgAdmin, Redis Commander)
 	docker compose -f infra/compose.yml -f infra/compose.override.yml up -d
 
-logs: ## Show infrastructure logs
+logs: ## Show Docker Compose logs for infrastructure and any containerized backend services
 	docker compose -f infra/compose.yml logs -f
+
+logs-pos: ## Show pos-service logs (host-run or containerized mode)
+	bash scripts/logs-pos.sh
 
 # === Local Development (quarkusDev) ===
 dev-gateway: ## Start api-gateway in dev mode
@@ -89,6 +92,17 @@ local-smoke: ## Verify the seeded local demo data via the API gateway
 local-demo: up local-up local-seed local-smoke ## Start infra, local backend, seed demo data, and verify the API path
 	@echo "Demo data is ready. Reload the browser to pick up the latest demo-config.json."
 
+reset: ## Reset PostgreSQL data, restart the supported backend mode, and reseed the demo data
+	bash scripts/reset.sh
+
+docker-build: ## Build all backend service container images sequentially
+	docker compose -f infra/compose.yml build product-service
+	docker compose -f infra/compose.yml build store-service
+	docker compose -f infra/compose.yml build pos-service
+	docker compose -f infra/compose.yml build inventory-service
+	docker compose -f infra/compose.yml build analytics-service
+	docker compose -f infra/compose.yml build api-gateway
+
 docker-build-core: ## Build the core backend container images sequentially
 	docker compose -f infra/compose.yml build product-service
 	docker compose -f infra/compose.yml build store-service
@@ -136,6 +150,9 @@ test-e2e: ## Run Playwright E2E tests (requires browsers via `pnpm e2e:install`)
 
 test-all: test-backend test-frontend ## Run backend + frontend unit/functional tests
 
+grpc-test: ## Run grpcurl-based health checks against the running backend gRPC services
+	bash scripts/grpc-test.sh
+
 # === Lint ===
 lint: ## Lint proto and frontend
 	cd proto && buf lint
@@ -155,8 +172,17 @@ proto-breaking: ## Check proto breaking changes
 seed: ## Seed demo data (requires running backend)
 	bash scripts/seed.sh
 
+db-backup: ## Write a PostgreSQL SQL backup to FILE=.local/backups/openpos-YYYYmmdd-HHMMSS.sql by default
+	bash scripts/db-backup.sh "$(FILE)"
+
+db-restore: ## Restore a PostgreSQL SQL backup from FILE=path and restart the detected backend mode
+	bash scripts/db-restore.sh "$(FILE)"
+
 # === Clean ===
 clean: ## Clean all build artifacts
 	./gradlew clean
 	pnpm -r clean
 	rm -rf proto/gen
+	rm -rf .local
+	rm -f apps/admin-dashboard/.env.development.local apps/pos-terminal/.env.development.local
+	rm -f apps/admin-dashboard/public/demo-config.json apps/pos-terminal/public/demo-config.json
