@@ -21,3 +21,8 @@ assignees: ''
 - OS:
 - Browser:
 - Version:
+- Demo path: `make local-demo` / `make docker-demo` / その他
+
+## 診断情報
+- `make doctor` の出力:
+- 関連ログ / スクリーンショット:

@@ -49,6 +49,7 @@ coverage/
 *.lcov
 test-results/
 playwright-report/
+hs_err_pid*.log
 
 # === Claude Code ===
 .claude/worktrees/
