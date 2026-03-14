@@ -1,5 +1,6 @@
 package com.openpos.gateway.resource
 
+import com.google.protobuf.BoolValue
 import com.openpos.gateway.config.GrpcClientHelper
 import com.openpos.gateway.config.paginatedResponse
 import com.openpos.gateway.config.toMap
@@ -99,7 +100,7 @@ class StoreResource {
                     body.phone?.let { setPhone(it) }
                     body.timezone?.let { setTimezone(it) }
                     body.settings?.let { setSettings(it) }
-                    body.isActive?.let { setIsActive(it) }
+                    body.isActive?.let { setIsActiveValue(BoolValue.of(it)) }
                 }.build()
         return grpc
             .withTenant(stub)
