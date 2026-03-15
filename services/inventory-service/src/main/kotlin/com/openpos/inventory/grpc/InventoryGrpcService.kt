@@ -2,7 +2,10 @@ package com.openpos.inventory.grpc
 
 import com.openpos.inventory.entity.StockEntity
 import com.openpos.inventory.entity.StockMovementEntity
+import com.openpos.inventory.entity.StocktakeEntity
+import com.openpos.inventory.entity.StocktakeItemEntity
 import com.openpos.inventory.service.StockService
+import com.openpos.inventory.service.StocktakeService
 import io.grpc.Status
 import io.quarkus.grpc.GrpcService
 import io.smallrye.common.annotation.Blocking
@@ -10,16 +13,26 @@ import jakarta.inject.Inject
 import openpos.common.v1.PaginationResponse
 import openpos.inventory.v1.AdjustStockRequest
 import openpos.inventory.v1.AdjustStockResponse
+import openpos.inventory.v1.CompleteStocktakeRequest
+import openpos.inventory.v1.CompleteStocktakeResponse
 import openpos.inventory.v1.GetStockRequest
 import openpos.inventory.v1.GetStockResponse
+import openpos.inventory.v1.GetStocktakeRequest
 import openpos.inventory.v1.InventoryServiceGrpc
 import openpos.inventory.v1.ListStockMovementsRequest
 import openpos.inventory.v1.ListStockMovementsResponse
 import openpos.inventory.v1.ListStocksRequest
 import openpos.inventory.v1.ListStocksResponse
 import openpos.inventory.v1.MovementType
+import openpos.inventory.v1.RecordStocktakeItemRequest
+import openpos.inventory.v1.RecordStocktakeItemResponse
+import openpos.inventory.v1.StartStocktakeRequest
+import openpos.inventory.v1.StartStocktakeResponse
 import openpos.inventory.v1.Stock
 import openpos.inventory.v1.StockMovement
+import openpos.inventory.v1.Stocktake
+import openpos.inventory.v1.StocktakeItem
+import openpos.inventory.v1.StocktakeStatus
 import java.time.Instant
 import java.util.UUID
 
@@ -28,6 +41,9 @@ import java.util.UUID
 class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
     @Inject
     lateinit var stockService: StockService
+
+    @Inject
+    lateinit var stocktakeService: StocktakeService
 
     @Inject
     lateinit var tenantHelper: GrpcTenantHelper
@@ -158,6 +174,121 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
         )
         responseObserver.onCompleted()
     }
+
+    // === Stocktake (#146) ===
+
+    override fun startStocktake(
+        request: StartStocktakeRequest,
+        responseObserver: io.grpc.stub.StreamObserver<StartStocktakeResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        val entity = stocktakeService.startStocktake(request.storeId.toUUID())
+        responseObserver.onNext(
+            StartStocktakeResponse.newBuilder().setStocktake(entity.toProto()).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun recordStocktakeItem(
+        request: RecordStocktakeItemRequest,
+        responseObserver: io.grpc.stub.StreamObserver<RecordStocktakeItemResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        try {
+            val entity =
+                stocktakeService.recordItem(
+                    stocktakeId = request.stocktakeId.toUUID(),
+                    productId = request.productId.toUUID(),
+                    actualQty = request.actualQuantity,
+                )
+            responseObserver.onNext(
+                RecordStocktakeItemResponse.newBuilder().setStocktake(entity.toProtoWithItems()).build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: IllegalArgumentException) {
+            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        }
+    }
+
+    override fun completeStocktake(
+        request: CompleteStocktakeRequest,
+        responseObserver: io.grpc.stub.StreamObserver<CompleteStocktakeResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        try {
+            val entity = stocktakeService.completeStocktake(request.stocktakeId.toUUID())
+            responseObserver.onNext(
+                CompleteStocktakeResponse.newBuilder().setStocktake(entity.toProtoWithItems()).build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: IllegalArgumentException) {
+            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        }
+    }
+
+    override fun getStocktake(
+        request: GetStocktakeRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.inventory.v1.GetStocktakeResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val entity = stocktakeService.getStocktake(request.id.toUUID())
+            responseObserver.onNext(
+                openpos.inventory.v1.GetStocktakeResponse
+                    .newBuilder()
+                    .setStocktake(entity.toProtoWithItems())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: IllegalArgumentException) {
+            throw Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
+        }
+    }
+
+    // === Stocktake Mapper Extensions ===
+
+    private fun StocktakeEntity.toProto(): Stocktake =
+        Stocktake
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setStoreId(storeId.toString())
+            .setStatus(status.toProtoStocktakeStatus())
+            .setStartedAt(startedAt?.toString().orEmpty())
+            .setCompletedAt(completedAt?.toString().orEmpty())
+            .build()
+
+    private fun StocktakeEntity.toProtoWithItems(): Stocktake {
+        val items = stocktakeService.getStocktakeItems(id)
+        return Stocktake
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setStoreId(storeId.toString())
+            .setStatus(status.toProtoStocktakeStatus())
+            .setStartedAt(startedAt?.toString().orEmpty())
+            .setCompletedAt(completedAt?.toString().orEmpty())
+            .addAllItems(items.map { it.toProto() })
+            .build()
+    }
+
+    private fun StocktakeItemEntity.toProto(): StocktakeItem =
+        StocktakeItem
+            .newBuilder()
+            .setId(id.toString())
+            .setProductId(productId.toString())
+            .setExpectedQuantity(expectedQty)
+            .setActualQuantity(actualQty)
+            .setDifference(difference)
+            .build()
+
+    private fun String.toProtoStocktakeStatus(): StocktakeStatus =
+        when (this) {
+            "IN_PROGRESS" -> StocktakeStatus.STOCKTAKE_STATUS_IN_PROGRESS
+            "COMPLETED" -> StocktakeStatus.STOCKTAKE_STATUS_COMPLETED
+            "CANCELLED" -> StocktakeStatus.STOCKTAKE_STATUS_CANCELLED
+            else -> StocktakeStatus.STOCKTAKE_STATUS_UNSPECIFIED
+        }
 
     // === Mapper Extensions ===
 

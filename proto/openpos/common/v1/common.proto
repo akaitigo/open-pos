@@ -36,6 +36,39 @@ message PaginationResponse {
   int32 total_pages = 4;
 }
 
+// カーソルベースページネーションリクエスト
+// 大規模データセットの効率的なページングに使用します
+message CursorPaginationRequest {
+  // カーソル（前回レスポンスの next_cursor / previous_cursor）
+  string cursor = 1;
+  // 取得件数（最大100を推奨）
+  int32 limit = 2;
+  // 方向（FORWARD: 次ページ、BACKWARD: 前ページ）
+  CursorDirection direction = 3;
+}
+
+// カーソルベースページネーションレスポンス
+message CursorPaginationResponse {
+  // 次ページ取得用カーソル（最終ページの場合は空文字）
+  string next_cursor = 1;
+  // 前ページ取得用カーソル（先頭ページの場合は空文字）
+  string previous_cursor = 2;
+  // 次ページが存在するか
+  bool has_next = 3;
+  // 前ページが存在するか
+  bool has_previous = 4;
+}
+
+// カーソルページネーション方向
+enum CursorDirection {
+  // 未指定（FORWARD と同等）
+  CURSOR_DIRECTION_UNSPECIFIED = 0;
+  // 次ページ方向
+  CURSOR_DIRECTION_FORWARD = 1;
+  // 前ページ方向
+  CURSOR_DIRECTION_BACKWARD = 2;
+}
+
 // エラー詳細
 // gRPC Status の details フィールドに含めるエラー情報
 message ErrorDetail {

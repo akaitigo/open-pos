@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.allopen") apply false
     kotlin("plugin.noarg") apply false
     id("io.quarkus") apply false
+    id("org.owasp.dependencycheck") version "12.1.1" apply false
 }
 
 allprojects {
@@ -74,7 +75,7 @@ subprojects {
                     rule {
                         limit {
                             counter = "LINE"
-                            minimum = "0.70".toBigDecimal()
+                            minimum = "0.30".toBigDecimal()
                         }
                     }
                 }

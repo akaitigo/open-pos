@@ -1,0 +1,34 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'api-gateway'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['api-gateway:8080']
+
+  - job_name: 'product-service'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['product-service:8080']
+
+  - job_name: 'store-service'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['store-service:8080']
+
+  - job_name: 'pos-service'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['pos-service:8080']
+
+  - job_name: 'inventory-service'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['inventory-service:8080']
+
+  - job_name: 'analytics-service'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['analytics-service:8080']

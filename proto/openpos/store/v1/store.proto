@@ -3,8 +3,8 @@ syntax = "proto3";
 // openpos.store.v1 パッケージは組織・店舗・端末・スタッフ管理の型とサービスを提供します
 package openpos.store.v1;
 
-import "openpos/common/v1/common.proto";
 import "google/protobuf/wrappers.proto";
+import "openpos/common/v1/common.proto";
 
 option java_multiple_files = true;
 
@@ -414,4 +414,77 @@ message AuthenticateByPinResponse {
   Staff staff = 2;
   // 認証失敗理由（例: "INVALID_PIN", "ACCOUNT_LOCKED", "ACCOUNT_INACTIVE"）
   string reason = 3;
+}
+
+// === システム設定管理サービス ===
+
+// テナントレベルのキーバリュー設定 CRUD を提供します
+service SystemSettingService {
+  // 設定を取得する
+  rpc GetSystemSetting(GetSystemSettingRequest) returns (GetSystemSettingResponse);
+  // 全設定を一覧する
+  rpc ListSystemSettings(ListSystemSettingsRequest) returns (ListSystemSettingsResponse);
+  // 設定を作成または更新する
+  rpc UpsertSystemSetting(UpsertSystemSettingRequest) returns (UpsertSystemSettingResponse);
+  // 設定を削除する
+  rpc DeleteSystemSetting(DeleteSystemSettingRequest) returns (DeleteSystemSettingResponse);
+}
+
+// システム設定
+message SystemSetting {
+  // 設定キー（例: "receipt_header", "currency"）
+  string key = 1;
+  // 設定値
+  string value = 2;
+  // 設定の説明
+  string description = 3;
+}
+
+// 設定取得リクエスト
+message GetSystemSettingRequest {
+  // 設定キー（必須）
+  string key = 1;
+}
+
+// 設定取得レスポンス
+message GetSystemSettingResponse {
+  // 設定情報
+  SystemSetting setting = 1;
+}
+
+// 設定一覧リクエスト
+message ListSystemSettingsRequest {}
+
+// 設定一覧レスポンス
+message ListSystemSettingsResponse {
+  // 設定リスト
+  repeated SystemSetting settings = 1;
+}
+
+// 設定作成/更新リクエスト
+message UpsertSystemSettingRequest {
+  // 設定キー（必須）
+  string key = 1;
+  // 設定値（必須）
+  string value = 2;
+  // 設定の説明
+  string description = 3;
+}
+
+// 設定作成/更新レスポンス
+message UpsertSystemSettingResponse {
+  // 更新された設定
+  SystemSetting setting = 1;
+}
+
+// 設定削除リクエスト
+message DeleteSystemSettingRequest {
+  // 設定キー（必須）
+  string key = 1;
+}
+
+// 設定削除レスポンス
+message DeleteSystemSettingResponse {
+  // 削除成功フラグ
+  bool success = 1;
 }

@@ -71,7 +71,7 @@ export function LoginScreen() {
         AuthenticateByPinResponseSchema,
       )
       if (result.success && result.staff) {
-        login(result.staff, storeId, storeName, terminalId)
+        login(result.staff, storeId, storeName, terminalId, result.token ?? undefined)
       } else {
         toast({
           title: '認証失敗',

@@ -1,0 +1,43 @@
+# syntax=docker/dockerfile:1.7
+
+# Multi-stage build for Quarkus native image using GraalVM.
+# Native image produces a standalone binary with ~50ms startup time.
+#
+# Usage:
+#   docker build --build-arg SERVICE_NAME=pos-service \
+#     -f infra/docker/Dockerfile.native -t openpos-pos-service:native .
+#
+# Requirements:
+#   - GraalVM CE 21 (bundled via Quarkus Mandrel builder image)
+#   - ~8GB RAM for native compilation
+
+FROM quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-21 AS build
+USER root
+WORKDIR /app
+COPY gradle gradle
+COPY gradlew .
+COPY settings.gradle.kts .
+COPY build.gradle.kts .
+COPY gradle.properties .
+COPY proto proto
+ARG SERVICE_NAME
+COPY services/${SERVICE_NAME} services/${SERVICE_NAME}
+# Create stub build.gradle.kts for other services so Gradle multi-project config succeeds
+RUN for dir in api-gateway pos-service product-service inventory-service analytics-service store-service; do \
+      if [ "$dir" != "${SERVICE_NAME}" ] && [ ! -d "services/$dir" ]; then \
+        mkdir -p "services/$dir" && \
+        echo 'plugins { kotlin("jvm") }' > "services/$dir/build.gradle.kts"; \
+      fi; \
+    done
+RUN --mount=type=cache,target=/root/.gradle \
+    chmod +x gradlew && \
+    ./gradlew --no-daemon :services:${SERVICE_NAME}:build \
+      -Dquarkus.native.enabled=true \
+      -Dquarkus.package.jar.enabled=false
+
+FROM quay.io/quarkus/quarkus-micro-image:2.0
+WORKDIR /app
+ARG SERVICE_NAME
+COPY --from=build /app/services/${SERVICE_NAME}/build/*-runner /app/application
+EXPOSE 8080 9000
+ENTRYPOINT ["/app/application"]

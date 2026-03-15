@@ -228,6 +228,29 @@ describe('AuthenticateByPin schemas', () => {
     expect(result.staff).toBeUndefined()
     expect(result.reason).toBe('INVALID_PIN')
   })
+
+  it('success 時にセッショントークンを含むレスポンスをパースできる', () => {
+    const result = AuthenticateByPinResponseSchema.parse({
+      success: true,
+      staff: {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        organizationId: '550e8400-e29b-41d4-a716-446655440001',
+        storeId: '550e8400-e29b-41d4-a716-446655440002',
+        name: '田中太郎',
+        email: 'tanaka@example.com',
+        role: 'MANAGER',
+        isActive: true,
+        failedPinAttempts: 0,
+        isLocked: false,
+        createdAt: now,
+        updatedAt: now,
+      },
+      token: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test.signature',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.token).toBe('eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test.signature')
+  })
 })
 
 describe('ReceiptSchema', () => {

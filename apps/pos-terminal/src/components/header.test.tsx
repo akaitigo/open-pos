@@ -24,6 +24,8 @@ beforeEach(() => {
     storeId: '00000000-0000-0000-0000-000000000001',
     storeName: '本店',
     terminalId: '00000000-0000-0000-0000-000000000001',
+    sessionStartedAt: Date.now(),
+    lastActivityAt: Date.now(),
   })
   useCartStore.setState({ items: [] })
 })

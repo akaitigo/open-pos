@@ -110,3 +110,33 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* High contrast mode (#155) */
+.high-contrast {
+  --foreground: 0 0% 0%;
+  --primary: 0 0% 0%;
+  --primary-foreground: 0 0% 100%;
+  --muted-foreground: 0 0% 20%;
+  --border: 0 0% 0%;
+}
+
+.high-contrast.dark {
+  --foreground: 0 0% 100%;
+  --primary: 0 0% 100%;
+  --primary-foreground: 0 0% 0%;
+  --muted-foreground: 0 0% 80%;
+  --border: 0 0% 100%;
+}
+
+/* Large font size mode (#155) */
+.large-font {
+  font-size: 18px;
+}
+
+.large-font .text-sm {
+  font-size: 1rem;
+}
+
+.large-font .text-xs {
+  font-size: 0.875rem;
+}

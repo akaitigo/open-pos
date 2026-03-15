@@ -1,9 +1,10 @@
 package com.openpos.gateway.resource
 
+import com.google.protobuf.BoolValue
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.SessionTokenService
 import com.openpos.gateway.config.paginatedResponse
 import com.openpos.gateway.config.toMap
-import com.google.protobuf.BoolValue
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
@@ -33,6 +34,9 @@ class StaffResource {
 
     @Inject
     lateinit var grpc: GrpcClientHelper
+
+    @Inject
+    lateinit var sessionTokenService: SessionTokenService
 
     @POST
     fun create(body: CreateStaffBody): Response {
@@ -123,7 +127,29 @@ class StaffResource {
                 .build()
         val response = grpc.withTenant(stub).authenticateByPin(request)
         val result = mutableMapOf<String, Any?>("success" to response.success)
-        if (response.hasStaff()) result["staff"] = response.staff.toMap()
+        if (response.hasStaff()) {
+            val staff = response.staff
+            result["staff"] = staff.toMap()
+
+            // 認証成功時にセッショントークンを発行
+            if (response.success) {
+                val roleName =
+                    when (staff.role) {
+                        StaffRole.STAFF_ROLE_OWNER -> "OWNER"
+                        StaffRole.STAFF_ROLE_MANAGER -> "MANAGER"
+                        StaffRole.STAFF_ROLE_CASHIER -> "CASHIER"
+                        else -> "CASHIER"
+                    }
+                val token =
+                    sessionTokenService.generateToken(
+                        staffId = staff.id,
+                        staffRole = roleName,
+                        storeId = staff.storeId,
+                        organizationId = staff.organizationId,
+                    )
+                result["token"] = token
+            }
+        }
         if (response.reason.isNotEmpty()) result["reason"] = response.reason
         return result
     }

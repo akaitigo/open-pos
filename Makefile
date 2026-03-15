@@ -31,7 +31,7 @@ down: ## Stop all containers
 	docker compose -f infra/compose.yml down
 
 up-dev: ## Start infrastructure with dev tools (pgAdmin, Redis Commander)
-	docker compose -f infra/compose.yml -f infra/compose.override.yml up -d
+	docker compose -f infra/compose.yml --profile dev up -d
 
 logs: ## Show Docker Compose logs for infrastructure and any containerized backend services
 	docker compose -f infra/compose.yml logs -f

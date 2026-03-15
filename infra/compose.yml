@@ -21,6 +21,33 @@ services:
     networks:
       - openpos-net
 
+  pgbouncer:
+    image: bitnami/pgbouncer:1
+    container_name: openpos-pgbouncer
+    ports:
+      - '16432:6432'
+    environment:
+      POSTGRESQL_HOST: postgres
+      POSTGRESQL_PORT: 5432
+      POSTGRESQL_USERNAME: openpos
+      POSTGRESQL_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
+      POSTGRESQL_DATABASE: openpos
+      PGBOUNCER_DATABASE: openpos
+      PGBOUNCER_POOL_MODE: transaction
+      PGBOUNCER_MAX_CLIENT_CONN: 200
+      PGBOUNCER_DEFAULT_POOL_SIZE: 20
+      PGBOUNCER_MIN_POOL_SIZE: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -p 6432 -U openpos || exit 1']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - openpos-net
+
   redis:
     image: redis:7-alpine
     container_name: openpos-redis
@@ -337,10 +364,51 @@ services:
     networks:
       - openpos-net
 
+  # === Observability ===
+  loki:
+    image: grafana/loki:3.4.2
+    container_name: openpos-loki
+    ports:
+      - '13100:3100'
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:3100/ready || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openpos-net
+
+  grafana:
+    image: grafana/grafana:12.0.1
+    container_name: openpos-grafana
+    ports:
+      - '13000:3000'
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - openpos-grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openpos-net
+
 volumes:
   openpos-pgdata:
   openpos-redis:
   openpos-rabbitmq:
+  openpos-grafana:
 
 networks:
   openpos-net:

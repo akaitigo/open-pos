@@ -127,7 +127,7 @@ describe('CategoriesPage', () => {
     expect(optionValues).toContain('cat-2')
   })
 
-  it('削除ボタンでapi.deleteを呼ぶ', async () => {
+  it('削除ボタンで確認ダイアログを表示し、確認後にapi.deleteを呼ぶ', async () => {
     mockApi.get.mockResolvedValue(mockCategories)
     mockApi.delete.mockResolvedValue(undefined)
     renderPage()
@@ -136,6 +136,16 @@ describe('CategoriesPage', () => {
     })
     const deleteButtons = screen.getAllByText('削除')
     fireEvent.click(deleteButtons[0]!)
+    // 確認ダイアログが表示される
+    await waitFor(() => {
+      expect(screen.getByText('本当に削除しますか？この操作は取り消せません。')).toBeInTheDocument()
+    })
+    // ダイアログ内の削除ボタンをクリック
+    const dialogDeleteButton = screen
+      .getAllByRole('button', { name: '削除' })
+      .find((btn) => btn.closest('[role="dialog"]') !== null)
+    expect(dialogDeleteButton).toBeTruthy()
+    fireEvent.click(dialogDeleteButton!)
     await waitFor(() => {
       expect(mockApi.delete).toHaveBeenCalledWith('/api/categories/cat-1')
     })

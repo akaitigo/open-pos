@@ -1,5 +1,6 @@
 package com.openpos.store.service
 
+import com.openpos.store.cache.StoreCacheService
 import com.openpos.store.entity.OrganizationEntity
 import com.openpos.store.repository.OrganizationRepository
 import jakarta.enterprise.context.ApplicationScoped
@@ -11,6 +12,9 @@ import java.util.UUID
 class OrganizationService {
     @Inject
     lateinit var organizationRepository: OrganizationRepository
+
+    @Inject
+    lateinit var cacheService: StoreCacheService
 
     @Transactional
     fun create(
@@ -42,6 +46,7 @@ class OrganizationService {
         businessType?.let { entity.businessType = it }
         invoiceNumber?.let { entity.invoiceNumber = it }
         organizationRepository.persist(entity)
+        cacheService.invalidateOrganization(id.toString())
         return entity
     }
 }

@@ -3,6 +3,7 @@ package com.openpos.store.grpc
 import com.google.protobuf.BoolValue
 import com.openpos.store.entity.StaffEntity
 import com.openpos.store.entity.StoreEntity
+import com.openpos.store.service.AuditLogService
 import com.openpos.store.service.StaffService
 import com.openpos.store.service.StoreService
 import io.grpc.stub.StreamObserver
@@ -24,6 +25,7 @@ class StoreGrpcServiceTest {
     private lateinit var grpcService: StoreGrpcService
     private val storeService = mock<StoreService>()
     private val staffService = mock<StaffService>()
+    private val auditLogService = mock<AuditLogService>()
     private val tenantHelper = mock<GrpcTenantHelper>()
 
     @BeforeEach
@@ -32,6 +34,7 @@ class StoreGrpcServiceTest {
             StoreGrpcService().apply {
                 this.storeService = this@StoreGrpcServiceTest.storeService
                 this.staffService = this@StoreGrpcServiceTest.staffService
+                this.auditLogService = this@StoreGrpcServiceTest.auditLogService
                 this.tenantHelper = this@StoreGrpcServiceTest.tenantHelper
             }
     }
@@ -54,7 +57,11 @@ class StoreGrpcServiceTest {
         val observer = CapturingObserver<openpos.store.v1.UpdateStoreResponse>()
 
         grpcService.updateStore(
-            UpdateStoreRequest.newBuilder().setId(storeId.toString()).setIsActiveValue(BoolValue.of(false)).build(),
+            UpdateStoreRequest
+                .newBuilder()
+                .setId(storeId.toString())
+                .setIsActiveValue(BoolValue.of(false))
+                .build(),
             observer,
         )
 
@@ -124,7 +131,11 @@ class StoreGrpcServiceTest {
         val observer = CapturingObserver<openpos.store.v1.UpdateStaffResponse>()
 
         grpcService.updateStaff(
-            UpdateStaffRequest.newBuilder().setId(staffId.toString()).setIsActiveValue(BoolValue.of(false)).build(),
+            UpdateStaffRequest
+                .newBuilder()
+                .setId(staffId.toString())
+                .setIsActiveValue(BoolValue.of(false))
+                .build(),
             observer,
         )
 
@@ -202,9 +213,7 @@ class StoreGrpcServiceTest {
             this.value = value
         }
 
-        override fun onError(t: Throwable) {
-            throw AssertionError("Unexpected error", t)
-        }
+        override fun onError(t: Throwable): Unit = throw AssertionError("Unexpected error", t)
 
         override fun onCompleted() {
             completed = true

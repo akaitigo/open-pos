@@ -3,6 +3,7 @@ package com.openpos.inventory.entity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
+import jakarta.persistence.Version
 import java.util.UUID
 
 /**
@@ -24,4 +25,17 @@ class StockEntity : BaseEntity() {
 
     @Column(name = "low_stock_threshold", nullable = false)
     var lowStockThreshold: Int = 10
+
+    @Column(name = "reorder_point", nullable = false)
+    var reorderPoint: Int = 0
+
+    @Column(name = "reorder_quantity", nullable = false)
+    var reorderQuantity: Int = 0
+
+    /**
+     * 楽観的ロック用バージョン番号。
+     */
+    @Version
+    @Column(name = "version", nullable = false)
+    var version: Long = 0
 }

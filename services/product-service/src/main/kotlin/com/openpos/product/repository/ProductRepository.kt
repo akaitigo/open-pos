@@ -42,6 +42,9 @@ class ProductRepository : PanacheRepositoryBase<ProductEntity, UUID> {
         val conditions = mutableListOf<String>()
         val params = mutableMapOf<String, Any>()
 
+        // ソフトデリート済みの商品を除外する
+        conditions.add("deletedAt IS NULL")
+
         if (!query.isNullOrBlank()) {
             conditions.add("(LOWER(name) LIKE :query OR LOWER(barcode) LIKE :query OR LOWER(sku) LIKE :query)")
             params["query"] = "%${query.lowercase()}%"
@@ -56,7 +59,7 @@ class ProductRepository : PanacheRepositoryBase<ProductEntity, UUID> {
             conditions.add("isActive = true")
         }
 
-        val whereClause = if (conditions.isEmpty()) "" else conditions.joinToString(" AND ")
+        val whereClause = conditions.joinToString(" AND ")
 
         return find(whereClause, Sort.ascending("displayOrder", "name"), params)
             .page(page)
@@ -74,6 +77,9 @@ class ProductRepository : PanacheRepositoryBase<ProductEntity, UUID> {
         val conditions = mutableListOf<String>()
         val params = mutableMapOf<String, Any>()
 
+        // ソフトデリート済みの商品を除外する
+        conditions.add("deletedAt IS NULL")
+
         if (!query.isNullOrBlank()) {
             conditions.add("(LOWER(name) LIKE :query OR LOWER(barcode) LIKE :query OR LOWER(sku) LIKE :query)")
             params["query"] = "%${query.lowercase()}%"
@@ -88,7 +94,7 @@ class ProductRepository : PanacheRepositoryBase<ProductEntity, UUID> {
             conditions.add("isActive = true")
         }
 
-        val whereClause = if (conditions.isEmpty()) "" else conditions.joinToString(" AND ")
+        val whereClause = conditions.joinToString(" AND ")
 
         return count(whereClause, params)
     }

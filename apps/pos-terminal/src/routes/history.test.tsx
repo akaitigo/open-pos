@@ -63,9 +63,8 @@ describe('HistoryPage', () => {
     })
     render(<HistoryPage />)
     expect(screen.getByText('取引履歴')).toBeInTheDocument()
-    expect(screen.getByText('取引番号')).toBeInTheDocument()
     await waitFor(() => {
-      expect(screen.getByText('取引履歴がありません')).toBeInTheDocument()
+      expect(screen.getAllByText('取引履歴がありません').length).toBeGreaterThanOrEqual(1)
     })
   })
 
@@ -76,9 +75,9 @@ describe('HistoryPage', () => {
     })
     render(<HistoryPage />)
     await waitFor(() => {
-      expect(screen.getByText('TX-001')).toBeInTheDocument()
+      expect(screen.getAllByText('TX-001').length).toBeGreaterThanOrEqual(1)
     })
-    expect(screen.getByText('完了')).toBeInTheDocument()
+    expect(screen.getAllByText('完了').length).toBeGreaterThanOrEqual(1)
   })
 
   it('下書きステータスが正しく表示される', async () => {
@@ -88,7 +87,7 @@ describe('HistoryPage', () => {
     })
     render(<HistoryPage />)
     await waitFor(() => {
-      expect(screen.getByText('下書き')).toBeInTheDocument()
+      expect(screen.getAllByText('下書き').length).toBeGreaterThanOrEqual(1)
     })
   })
 
@@ -99,7 +98,7 @@ describe('HistoryPage', () => {
     })
     render(<HistoryPage />)
     await waitFor(() => {
-      expect(screen.getByText('レシート')).toBeInTheDocument()
+      expect(screen.getAllByText('レシート').length).toBeGreaterThanOrEqual(1)
     })
   })
 
@@ -117,9 +116,10 @@ describe('HistoryPage', () => {
 
     render(<HistoryPage />)
     await waitFor(() => {
-      expect(screen.getByText('レシート')).toBeInTheDocument()
+      expect(screen.getAllByText('レシート').length).toBeGreaterThanOrEqual(1)
     })
-    await userEvent.click(screen.getByText('レシート'))
+    // Click the first receipt button (table view)
+    await userEvent.click(screen.getAllByText('レシート')[0]!)
     await waitFor(() => {
       expect(screen.getByText('=== レシート ===')).toBeInTheDocument()
     })

@@ -24,6 +24,8 @@ describe('auth-store', () => {
       storeId: null,
       storeName: null,
       terminalId: null,
+      sessionStartedAt: null,
+      lastActivityAt: null,
     })
   })
 

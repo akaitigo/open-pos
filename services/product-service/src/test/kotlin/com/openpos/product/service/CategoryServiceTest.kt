@@ -1,5 +1,6 @@
 package com.openpos.product.service
 
+import com.openpos.product.cache.ProductCacheService
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.CategoryEntity
@@ -35,12 +36,17 @@ class CategoryServiceTest {
     @InjectMock
     lateinit var tenantFilterService: TenantFilterService
 
+    @InjectMock
+    lateinit var cacheService: ProductCacheService
+
     private val orgId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
+        doNothing().whenever(cacheService).invalidateCategory(any())
+        doNothing().whenever(cacheService).invalidateAllCategoryLists()
     }
 
     // === create ===

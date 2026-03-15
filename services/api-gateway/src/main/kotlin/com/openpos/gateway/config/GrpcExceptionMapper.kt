@@ -16,6 +16,8 @@ class GrpcExceptionMapper : ExceptionMapper<StatusRuntimeException> {
                 Status.Code.ALREADY_EXISTS -> Response.Status.CONFLICT
                 Status.Code.UNAUTHENTICATED -> Response.Status.UNAUTHORIZED
                 Status.Code.PERMISSION_DENIED -> Response.Status.FORBIDDEN
+                Status.Code.ABORTED -> Response.Status.CONFLICT
+                Status.Code.FAILED_PRECONDITION -> Response.Status.PRECONDITION_FAILED
                 Status.Code.UNAVAILABLE -> Response.Status.SERVICE_UNAVAILABLE
                 Status.Code.DEADLINE_EXCEEDED -> Response.Status.GATEWAY_TIMEOUT
                 else -> Response.Status.INTERNAL_SERVER_ERROR
