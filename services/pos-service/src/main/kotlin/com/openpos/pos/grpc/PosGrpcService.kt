@@ -524,7 +524,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         for (payment in payments) {
             sb.appendLine("${payment.method}: ${payment.amount / 100}円")
             if (payment.method == "CASH" && (payment.change ?: 0) > 0) {
-                sb.appendLine("お釣り: ${payment.change!! / 100}円")
+                val changeAmount = requireNotNull(payment.change) { "change must not be null when > 0" }
+                sb.appendLine("お釣り: ${changeAmount / 100}円")
             }
         }
         sb.appendLine("--------------------------------")
