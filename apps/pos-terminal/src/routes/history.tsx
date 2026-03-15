@@ -4,7 +4,23 @@ import { useAuthStore } from '@/stores/auth-store'
 import { formatMoney, PaginatedTransactionsSchema, ReceiptSchema } from '@shared-types/openpos'
 import type { Transaction, PaginatedResponse } from '@shared-types/openpos'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { ReceiptDialog } from '@/components/receipt-dialog'
+
+function getStatusBadge(status: string) {
+  if (status === 'COMPLETED') {
+    return (
+      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">完了</span>
+    )
+  }
+  if (status === 'VOIDED') {
+    return <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800">取消</span>
+  }
+  return (
+    <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">下書き</span>
+  )
+}
 
 export function HistoryPage() {
   const storeId = useAuthStore((s) => s.storeId)
@@ -40,7 +56,8 @@ export function HistoryPage() {
     <div className="flex flex-1 flex-col gap-4 p-4">
       <h2 className="text-lg font-semibold">取引履歴</h2>
 
-      <div className="overflow-auto rounded-lg border">
+      {/* デスクトップ: テーブル表示 */}
+      <div className="hidden overflow-auto rounded-lg border md:block">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50">
             <tr>
@@ -57,23 +74,7 @@ export function HistoryPage() {
                 <td className="p-3 font-mono text-xs">{tx.transactionNumber}</td>
                 <td className="p-3 text-xs">{new Date(tx.createdAt).toLocaleString('ja-JP')}</td>
                 <td className="p-3 text-right font-medium">{formatMoney(tx.total)}</td>
-                <td className="p-3">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
-                      tx.status === 'COMPLETED'
-                        ? 'bg-green-100 text-green-800'
-                        : tx.status === 'VOIDED'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                    }`}
-                  >
-                    {tx.status === 'COMPLETED'
-                      ? '完了'
-                      : tx.status === 'VOIDED'
-                        ? '取消'
-                        : '下書き'}
-                  </span>
-                </td>
+                <td className="p-3">{getStatusBadge(tx.status)}</td>
                 <td className="p-3">
                   {tx.status === 'COMPLETED' && (
                     <Button variant="ghost" size="sm" onClick={() => handleViewReceipt(tx.id)}>
@@ -92,6 +93,34 @@ export function HistoryPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* モバイル: カード表示 */}
+      <div className="space-y-3 md:hidden">
+        {transactions.map((tx) => (
+          <Card key={tx.id} className="p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1">
+                <p className="font-mono text-xs text-muted-foreground">{tx.transactionNumber}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(tx.createdAt).toLocaleString('ja-JP')}
+                </p>
+              </div>
+              {getStatusBadge(tx.status)}
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-base font-semibold">{formatMoney(tx.total)}</p>
+              {tx.status === 'COMPLETED' && (
+                <Button variant="outline" size="sm" onClick={() => handleViewReceipt(tx.id)}>
+                  レシート
+                </Button>
+              )}
+            </div>
+          </Card>
+        ))}
+        {transactions.length === 0 && (
+          <div className="p-8 text-center text-muted-foreground">取引履歴がありません</div>
+        )}
       </div>
 
       {totalPages > 1 && (

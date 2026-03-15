@@ -84,7 +84,9 @@ export function ProductsPage() {
   useEffect(() => {
     if (
       selectedParentCategory !== 'all' &&
-      !categories.some((category) => category.id === selectedParentCategory && category.parentId === null)
+      !categories.some(
+        (category) => category.id === selectedParentCategory && category.parentId === null,
+      )
     ) {
       setSelectedParentCategory('all')
     }
@@ -227,7 +229,7 @@ export function ProductsPage() {
       </div>
 
       {catalogLoading ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {Array.from({ length: 12 }).map((_, index) => (
             <Card key={index} className="space-y-3 p-3">
               <div className="aspect-square animate-pulse rounded-md bg-muted" />
@@ -252,12 +254,14 @@ export function ProductsPage() {
           商品が見つかりません
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {pagedProducts.map((product) => {
             const category = product.categoryId ? categoryById[product.categoryId] : undefined
             const stock = stocksByProductId[product.id]
             const isSoldOut = stock ? stock.quantity <= 0 : false
-            const isLowStock = stock ? stock.quantity > 0 && stock.quantity <= stock.lowStockThreshold : false
+            const isLowStock = stock
+              ? stock.quantity > 0 && stock.quantity <= stock.lowStockThreshold
+              : false
 
             return (
               <Card
@@ -471,7 +475,11 @@ function filterProducts(
   selectedChildCategory: string,
   search: string,
 ): Product[] {
-  const categoryIds = getSelectedCategoryIds(categories, selectedParentCategory, selectedChildCategory)
+  const categoryIds = getSelectedCategoryIds(
+    categories,
+    selectedParentCategory,
+    selectedChildCategory,
+  )
   const normalizedSearch = search.trim().toLowerCase()
 
   return sortProducts(

@@ -110,3 +110,28 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* レシート印刷用スタイル */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #receipt-print-area,
+  #receipt-print-area * {
+    visibility: visible;
+  }
+
+  #receipt-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 80mm;
+    max-height: none;
+    overflow: visible;
+    padding: 4mm;
+    background: white;
+    border: none;
+    border-radius: 0;
+  }
+}

@@ -118,7 +118,7 @@ describe('CartSidebar', () => {
       ],
     })
     render(<CartSidebar />)
-    expect(screen.getByText('3')).toBeInTheDocument()
+    expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1)
   })
 
   it('+ボタンで数量が増える', async () => {

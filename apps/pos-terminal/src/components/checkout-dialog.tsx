@@ -13,17 +13,19 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { useCartStore, getCartSubtotal } from '@/stores/cart-store'
 import { useAuthStore } from '@/stores/auth-store'
+import { useDiscountStore } from '@/stores/discount-store'
 import { api } from '@/lib/api'
 import {
   FinalizeTransactionResponseSchema,
   formatMoney,
   TransactionSchema,
+  ValidateCouponResponseSchema,
 } from '@shared-types/openpos'
 import { toast } from '@/hooks/use-toast'
 import { ReceiptDialog } from '@/components/receipt-dialog'
 import { useTaxRates } from '@/hooks/use-tax-rates'
 import { getCartEstimatedTotal } from '@/lib/cart-totals'
-import { CreditCard, Loader2, QrCode, Receipt, Wallet, X } from 'lucide-react'
+import { CreditCard, Loader2, Percent, QrCode, Receipt, Tag, Wallet, X } from 'lucide-react'
 
 interface CheckoutDialogProps {
   open: boolean
@@ -88,11 +90,19 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const [processing, setProcessing] = useState(false)
   const [receiptData, setReceiptData] = useState<string | null>(null)
   const [receiptOpen, setReceiptOpen] = useState(false)
+  const [couponCode, setCouponCode] = useState('')
+  const [couponValidating, setCouponValidating] = useState(false)
   const taxRates = useTaxRates()
+  const appliedDiscounts = useDiscountStore((s) => s.appliedDiscounts)
+  const addDiscount = useDiscountStore((s) => s.addDiscount)
+  const removeDiscount = useDiscountStore((s) => s.removeDiscount)
+  const clearDiscounts = useDiscountStore((s) => s.clearDiscounts)
 
   const subtotal = getCartSubtotal(items)
-  const total = getCartEstimatedTotal(items, taxRates)
-  const taxTotal = total - subtotal
+  const grossTotal = getCartEstimatedTotal(items, taxRates)
+  const taxTotal = grossTotal - subtotal
+  const discountTotal = appliedDiscounts.reduce((sum, d) => sum + d.amount, 0)
+  const total = Math.max(grossTotal - discountTotal, 0)
 
   const paidAmount = addedPayments.reduce((sum, payment) => sum + payment.amount, 0)
   const remainingAmount = Math.max(total - paidAmount, 0)
@@ -113,17 +123,11 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       ? parsedReceivedAmount - roundedRemainingAmount
       : 0
   const cashShortfall =
-    paymentMethod === 'CASH'
-      ? Math.max(roundedRemainingAmount - parsedReceivedAmount, 0)
-      : 0
+    paymentMethod === 'CASH' ? Math.max(roundedRemainingAmount - parsedReceivedAmount, 0) : 0
   const nonCashShortfall =
-    paymentMethod !== 'CASH'
-      ? Math.max(total - (paidAmount + parsedPaymentAmount), 0)
-      : 0
+    paymentMethod !== 'CASH' ? Math.max(total - (paidAmount + parsedPaymentAmount), 0) : 0
   const nonCashOverpayment =
-    paymentMethod !== 'CASH'
-      ? Math.max(parsedPaymentAmount - remainingAmount, 0)
-      : 0
+    paymentMethod !== 'CASH' ? Math.max(parsedPaymentAmount - remainingAmount, 0) : 0
   const canAddCurrentPayment =
     paymentMethod !== 'CASH' &&
     parsedPaymentAmount > 0 &&
@@ -188,6 +192,14 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         )
       }
 
+      for (const entry of appliedDiscounts) {
+        await api.post(
+          `/api/transactions/${tx.id}/discount`,
+          { couponCode: entry.couponCode },
+          TransactionSchema,
+        )
+      }
+
       const result = await api.post(
         `/api/transactions/${tx.id}/finalize`,
         { payments },
@@ -205,18 +217,55 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
     }
   }
 
+  async function handleApplyCoupon() {
+    const code = couponCode.trim()
+    if (!code) return
+    if (appliedDiscounts.some((d) => d.couponCode === code)) {
+      toast({ title: 'このクーポンは既に適用されています', variant: 'destructive' })
+      return
+    }
+
+    setCouponValidating(true)
+    try {
+      const result = await api.get(
+        `/api/coupons/validate/${encodeURIComponent(code)}`,
+        ValidateCouponResponseSchema,
+      )
+
+      if (!result.isValid || !result.discount) {
+        toast({
+          title: 'クーポン無効',
+          description: result.reason ?? 'このクーポンは使用できません。',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      addDiscount(code, result.discount, grossTotal)
+      setCouponCode('')
+      toast({ title: `クーポン「${code}」を適用しました` })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'クーポンの検証に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    } finally {
+      setCouponValidating(false)
+    }
+  }
+
   function resetDialogState() {
     setPaymentMethod('CASH')
     setPaymentAmount('')
     setReceivedAmount('')
     setReference('')
     setAddedPayments([])
+    setCouponCode('')
   }
 
   function handleReceiptClose() {
     setReceiptOpen(false)
     setReceiptData(null)
     clearCart()
+    clearDiscounts()
     resetDialogState()
   }
 
@@ -281,6 +330,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                   <p className="text-3xl font-bold">{formatMoney(total)}</p>
                   <p className="text-sm text-muted-foreground">
                     小計 {formatMoney(subtotal)} / 税額 {formatMoney(taxTotal)}
+                    {discountTotal > 0 && ` / 割引 -${formatMoney(discountTotal)}`}
                   </p>
                 </div>
                 <div className="grid gap-2 rounded-xl border bg-background/80 p-3 text-sm">
@@ -298,6 +348,74 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium">割引・クーポン</p>
+              </div>
+
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <label className="text-sm font-medium">クーポンコード</label>
+                  <Input
+                    placeholder="クーポンコードを入力"
+                    value={couponCode}
+                    onChange={(event) => setCouponCode(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void handleApplyCoupon()
+                      }
+                    }}
+                    className="mt-1"
+                    disabled={couponValidating}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => void handleApplyCoupon()}
+                  disabled={couponValidating || !couponCode.trim()}
+                >
+                  {couponValidating ? <Loader2 className="h-4 w-4 animate-spin" /> : '適用'}
+                </Button>
+              </div>
+
+              {appliedDiscounts.length > 0 && (
+                <div className="space-y-2">
+                  {appliedDiscounts.map((entry) => (
+                    <div
+                      key={entry.couponCode}
+                      className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Percent className="h-3 w-3 text-green-600 dark:text-green-400" />
+                          <span className="text-sm font-medium">{entry.discount.name}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {entry.couponCode}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {entry.discount.discountType === 'PERCENTAGE'
+                            ? `${Math.round(Number(entry.discount.value) * 100)}% 割引`
+                            : `${formatMoney(Number.parseInt(entry.discount.value, 10))} 割引`}{' '}
+                          &rarr; -{formatMoney(entry.amount)}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeDiscount(entry.couponCode)}
+                        aria-label={`クーポン ${entry.couponCode} を削除`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {addedPayments.length > 0 && (
@@ -318,7 +436,9 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                           <span className="font-medium">{formatMoney(payment.amount)}</span>
                         </div>
                         {payment.reference && (
-                          <p className="text-xs text-muted-foreground">参照番号: {payment.reference}</p>
+                          <p className="text-xs text-muted-foreground">
+                            参照番号: {payment.reference}
+                          </p>
                         )}
                       </div>
                       <Button
@@ -371,7 +491,9 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                     inputMode="numeric"
                     placeholder="0"
                     value={receivedAmount}
-                    onChange={(event) => setReceivedAmount(normalizeNumericInput(event.target.value))}
+                    onChange={(event) =>
+                      setReceivedAmount(normalizeNumericInput(event.target.value))
+                    }
                     className="mt-1 text-right text-lg"
                   />
                 </div>
@@ -444,7 +566,9 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                     inputMode="numeric"
                     placeholder="残額を入力"
                     value={paymentAmount}
-                    onChange={(event) => setPaymentAmount(normalizeNumericInput(event.target.value))}
+                    onChange={(event) =>
+                      setPaymentAmount(normalizeNumericInput(event.target.value))
+                    }
                     className="mt-1"
                   />
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -472,9 +596,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                   </p>
                 )}
                 {nonCashOverpayment > 0 && (
-                  <p className="text-sm text-destructive">
-                    残額を超える金額は追加できません。
-                  </p>
+                  <p className="text-sm text-destructive">残額を超える金額は追加できません。</p>
                 )}
               </TabsContent>
 
@@ -499,7 +621,9 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                     inputMode="numeric"
                     placeholder="残額を入力"
                     value={paymentAmount}
-                    onChange={(event) => setPaymentAmount(normalizeNumericInput(event.target.value))}
+                    onChange={(event) =>
+                      setPaymentAmount(normalizeNumericInput(event.target.value))
+                    }
                     className="mt-1"
                   />
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -527,9 +651,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                   </p>
                 )}
                 {nonCashOverpayment > 0 && (
-                  <p className="text-sm text-destructive">
-                    残額を超える金額は追加できません。
-                  </p>
+                  <p className="text-sm text-destructive">残額を超える金額は追加できません。</p>
                 )}
               </TabsContent>
             </Tabs>
