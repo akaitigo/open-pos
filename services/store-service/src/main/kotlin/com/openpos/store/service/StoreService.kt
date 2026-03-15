@@ -1,5 +1,6 @@
 package com.openpos.store.service
 
+import com.openpos.store.cache.StoreCacheService
 import com.openpos.store.config.OrganizationIdHolder
 import com.openpos.store.config.TenantFilterService
 import com.openpos.store.entity.StoreEntity
@@ -20,6 +21,9 @@ class StoreService {
 
     @Inject
     lateinit var organizationIdHolder: OrganizationIdHolder
+
+    @Inject
+    lateinit var cacheService: StoreCacheService
 
     @Transactional
     fun create(
@@ -78,6 +82,7 @@ class StoreService {
         settings?.let { entity.settings = it }
         isActive?.let { entity.isActive = it }
         storeRepository.persist(entity)
+        cacheService.invalidateStore(id.toString())
         return entity
     }
 }

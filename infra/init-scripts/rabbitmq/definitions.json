@@ -90,6 +90,44 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {}
+    },
+    {
+      "name": "dlq.inventory.sale-completed",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "dlq.inventory.sale-voided",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "dlq.analytics.sale-completed",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "dlq.analytics.sale-voided",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "notification.stock-low",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "openpos.events.dlx",
+        "x-dead-letter-routing-key": "dlq.notification.stock-low"
+      }
     }
   ],
   "bindings": [
@@ -134,6 +172,41 @@
       "destination": "openpos.events.dlq",
       "destination_type": "queue",
       "routing_key": "#"
+    },
+    {
+      "source": "openpos.events.dlx",
+      "vhost": "/",
+      "destination": "dlq.inventory.sale-completed",
+      "destination_type": "queue",
+      "routing_key": "dlq.inventory.sale-completed"
+    },
+    {
+      "source": "openpos.events.dlx",
+      "vhost": "/",
+      "destination": "dlq.inventory.sale-voided",
+      "destination_type": "queue",
+      "routing_key": "dlq.inventory.sale-voided"
+    },
+    {
+      "source": "openpos.events.dlx",
+      "vhost": "/",
+      "destination": "dlq.analytics.sale-completed",
+      "destination_type": "queue",
+      "routing_key": "dlq.analytics.sale-completed"
+    },
+    {
+      "source": "openpos.events.dlx",
+      "vhost": "/",
+      "destination": "dlq.analytics.sale-voided",
+      "destination_type": "queue",
+      "routing_key": "dlq.analytics.sale-voided"
+    },
+    {
+      "source": "openpos.events",
+      "vhost": "/",
+      "destination": "notification.stock-low",
+      "destination_type": "queue",
+      "routing_key": "stock.low"
     }
   ]
 }

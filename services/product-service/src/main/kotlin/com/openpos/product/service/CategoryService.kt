@@ -1,5 +1,6 @@
 package com.openpos.product.service
 
+import com.openpos.product.cache.ProductCacheService
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.CategoryEntity
@@ -12,6 +13,7 @@ import java.util.UUID
 /**
  * カテゴリのビジネスロジック層。
  * CRUD と階層構造の取得を提供する。
+ * cache-aside パターンで Redis キャッシュを利用する。
  */
 @ApplicationScoped
 class CategoryService {
@@ -24,8 +26,11 @@ class CategoryService {
     @Inject
     lateinit var organizationIdHolder: OrganizationIdHolder
 
+    @Inject
+    lateinit var cacheService: ProductCacheService
+
     /**
-     * カテゴリを作成する。
+     * カテゴリを作成する。作成後にカテゴリリストキャッシュを無効化する。
      */
     @Transactional
     fun create(
@@ -50,6 +55,7 @@ class CategoryService {
                 this.displayOrder = displayOrder
             }
         categoryRepository.persist(entity)
+        cacheService.invalidateAllCategoryLists()
         return entity
     }
 
@@ -70,7 +76,7 @@ class CategoryService {
     }
 
     /**
-     * カテゴリを更新する。
+     * カテゴリを更新する。更新後にキャッシュを無効化する。
      */
     @Transactional
     fun update(
@@ -94,17 +100,19 @@ class CategoryService {
         displayOrder?.let { entity.displayOrder = it }
 
         categoryRepository.persist(entity)
+        cacheService.invalidateCategory(id.toString())
         return entity
     }
 
     /**
-     * カテゴリを削除する。
+     * カテゴリを削除する。削除後にキャッシュを無効化する。
      */
     @Transactional
     fun delete(id: UUID): Boolean {
         tenantFilterService.enableFilter()
         val entity = categoryRepository.findById(id) ?: return false
         categoryRepository.delete(entity)
+        cacheService.invalidateCategory(id.toString())
         return true
     }
 }

@@ -1,0 +1,184 @@
+package com.openpos.store.cache
+
+import io.quarkus.redis.datasource.RedisDataSource
+import io.quarkus.redis.datasource.keys.KeyCommands
+import io.quarkus.redis.datasource.value.ValueCommands
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+
+class StoreCacheServiceTest {
+    private val redisDataSource: RedisDataSource = mock()
+    private val valueCommands: ValueCommands<String, String> = mock()
+    private val keyCommands: KeyCommands<String> = mock()
+
+    private val cacheService =
+        StoreCacheService().also {
+            val field = StoreCacheService::class.java.getDeclaredField("redis")
+            field.isAccessible = true
+            field.set(it, redisDataSource)
+        }
+
+    @BeforeEach
+    fun setUp() {
+        whenever(redisDataSource.value(String::class.java)).thenReturn(valueCommands)
+        whenever(redisDataSource.key()).thenReturn(keyCommands)
+    }
+
+    @Nested
+    inner class Get {
+        @Test
+        fun `キャッシュヒット時は値を返す`() {
+            // Arrange
+            val key = "openpos:store-service:store:123"
+            whenever(valueCommands.get(key)).thenReturn("cached-store")
+
+            // Act
+            val result = cacheService.get(key)
+
+            // Assert
+            assertEquals("cached-store", result)
+        }
+
+        @Test
+        fun `キャッシュミス時はnullを返す`() {
+            // Arrange
+            val key = "openpos:store-service:store:999"
+            whenever(valueCommands.get(key)).thenReturn(null)
+
+            // Act
+            val result = cacheService.get(key)
+
+            // Assert
+            assertNull(result)
+        }
+
+        @Test
+        fun `Redis例外時はnullを返す`() {
+            // Arrange
+            val key = "openpos:store-service:store:123"
+            whenever(valueCommands.get(key)).thenThrow(RuntimeException("Connection lost"))
+
+            // Act
+            val result = cacheService.get(key)
+
+            // Assert
+            assertNull(result)
+        }
+    }
+
+    @Nested
+    inner class Set {
+        @Test
+        fun `デフォルトTTL（600秒）でsetexが呼ばれる`() {
+            // Arrange & Act
+            cacheService.set("openpos:store-service:store:123", "value")
+
+            // Assert
+            verify(valueCommands).setex("openpos:store-service:store:123", 600L, "value")
+        }
+
+        @Test
+        fun `カスタムTTLでsetexが呼ばれる`() {
+            // Arrange & Act
+            cacheService.set("openpos:store-service:store:123", "value", ttlSeconds = 120L)
+
+            // Assert
+            verify(valueCommands).setex("openpos:store-service:store:123", 120L, "value")
+        }
+
+        @Test
+        fun `Redis例外時は例外をスローせずログ出力する`() {
+            // Arrange
+            whenever(valueCommands.setex(any(), any(), any())).thenThrow(RuntimeException("Connection lost"))
+
+            // Act (should not throw)
+            cacheService.set("openpos:store-service:store:123", "value")
+        }
+    }
+
+    @Nested
+    inner class Invalidate {
+        @Test
+        fun `単一キーでdelが呼ばれる`() {
+            // Arrange & Act
+            cacheService.invalidate("openpos:store-service:store:123")
+
+            // Assert
+            verify(keyCommands).del("openpos:store-service:store:123")
+        }
+
+        @Test
+        fun `複数キーでdelが全キーで呼ばれる`() {
+            // Arrange & Act
+            cacheService.invalidate("openpos:store-service:store:1", "openpos:store-service:store:2")
+
+            // Assert
+            verify(keyCommands).del("openpos:store-service:store:1", "openpos:store-service:store:2")
+        }
+
+        @Test
+        fun `空のキーではdelが呼ばれない`() {
+            // Arrange & Act
+            cacheService.invalidate()
+
+            // Assert
+            verify(keyCommands, never()).del(any<String>())
+        }
+    }
+
+    @Nested
+    inner class KeyGeneration {
+        @Test
+        fun `organizationKeyは正しい形式のキーを生成する`() {
+            assertEquals("openpos:store-service:org:org-123", cacheService.organizationKey("org-123"))
+        }
+
+        @Test
+        fun `storeKeyは正しい形式のキーを生成する`() {
+            assertEquals("openpos:store-service:store:store-123", cacheService.storeKey("store-123"))
+        }
+
+        @Test
+        fun `terminalListKeyは正しい形式のキーを生成する`() {
+            assertEquals("openpos:store-service:terminal:list:store-456", cacheService.terminalListKey("store-456"))
+        }
+    }
+
+    @Nested
+    inner class InvalidationHelpers {
+        @Test
+        fun `invalidateOrganizationは組織キーを削除する`() {
+            // Arrange & Act
+            cacheService.invalidateOrganization("org-123")
+
+            // Assert
+            verify(keyCommands).del("openpos:store-service:org:org-123")
+        }
+
+        @Test
+        fun `invalidateStoreは店舗キーを削除する`() {
+            // Arrange & Act
+            cacheService.invalidateStore("store-123")
+
+            // Assert
+            verify(keyCommands).del("openpos:store-service:store:store-123")
+        }
+
+        @Test
+        fun `invalidateTerminalListは端末リストキーを削除する`() {
+            // Arrange & Act
+            cacheService.invalidateTerminalList("store-456")
+
+            // Assert
+            verify(keyCommands).del("openpos:store-service:terminal:list:store-456")
+        }
+    }
+}

@@ -4,6 +4,7 @@ import com.openpos.inventory.config.OrganizationIdHolder
 import com.openpos.inventory.config.TenantFilterService
 import com.openpos.inventory.entity.StockEntity
 import com.openpos.inventory.entity.StockMovementEntity
+import com.openpos.inventory.event.StockLowEventPublisher
 import com.openpos.inventory.repository.StockMovementRepository
 import com.openpos.inventory.repository.StockRepository
 import io.quarkus.panache.common.Page
@@ -21,6 +22,7 @@ import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Instant
@@ -40,6 +42,9 @@ class StockServiceTest {
     @InjectMock
     lateinit var tenantFilterService: TenantFilterService
 
+    @InjectMock
+    lateinit var stockLowEventPublisher: StockLowEventPublisher
+
     @Inject
     lateinit var organizationIdHolder: OrganizationIdHolder
 
@@ -51,6 +56,7 @@ class StockServiceTest {
     fun setUp() {
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
+        doNothing().whenever(stockLowEventPublisher).publish(any(), any(), any(), any(), any())
     }
 
     // === getStock ===
@@ -293,6 +299,130 @@ class StockServiceTest {
 
         // Assert
         assertEquals(0, result.quantity)
+    }
+
+    // === adjustStock: StockLowEvent ===
+
+    @Test
+    fun `adjustStock publishes StockLowEvent when stock drops below threshold`() {
+        // Arrange: stock at 15, threshold 10, deduct 6 -> new quantity 9 (below 10)
+        val existingStock = createStockEntity(quantity = 15)
+        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        doNothing().whenever(stockRepository).persist(any<StockEntity>())
+        doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
+
+        // Act
+        stockService.adjustStock(
+            storeId = storeId,
+            productId = productId,
+            quantityChange = -6,
+            movementType = "SALE",
+            referenceId = "txn-low",
+            note = null,
+        )
+
+        // Assert
+        verify(stockLowEventPublisher).publish(
+            organizationId = eq(orgId),
+            productId = eq(productId),
+            storeId = eq(storeId),
+            currentQuantity = eq(9),
+            threshold = eq(10),
+        )
+    }
+
+    @Test
+    fun `adjustStock does not publish StockLowEvent when stock stays above threshold`() {
+        // Arrange: stock at 20, threshold 10, deduct 5 -> new quantity 15 (above 10)
+        val existingStock = createStockEntity(quantity = 20)
+        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        doNothing().whenever(stockRepository).persist(any<StockEntity>())
+        doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
+
+        // Act
+        stockService.adjustStock(
+            storeId = storeId,
+            productId = productId,
+            quantityChange = -5,
+            movementType = "SALE",
+            referenceId = "txn-ok",
+            note = null,
+        )
+
+        // Assert
+        verify(stockLowEventPublisher, never()).publish(any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun `adjustStock does not publish StockLowEvent when stock was already below threshold`() {
+        // Arrange: stock at 5, threshold 10, deduct 2 -> new quantity 3 (was already below)
+        val existingStock = createStockEntity(quantity = 5)
+        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        doNothing().whenever(stockRepository).persist(any<StockEntity>())
+        doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
+
+        // Act
+        stockService.adjustStock(
+            storeId = storeId,
+            productId = productId,
+            quantityChange = -2,
+            movementType = "SALE",
+            referenceId = "txn-already-low",
+            note = null,
+        )
+
+        // Assert
+        verify(stockLowEventPublisher, never()).publish(any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun `adjustStock publishes StockLowEvent when stock drops exactly to threshold`() {
+        // Arrange: stock at 15, threshold 10, deduct 5 -> new quantity 10 (equal to threshold)
+        val existingStock = createStockEntity(quantity = 15)
+        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        doNothing().whenever(stockRepository).persist(any<StockEntity>())
+        doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
+
+        // Act
+        stockService.adjustStock(
+            storeId = storeId,
+            productId = productId,
+            quantityChange = -5,
+            movementType = "SALE",
+            referenceId = "txn-exact",
+            note = null,
+        )
+
+        // Assert
+        verify(stockLowEventPublisher).publish(
+            organizationId = eq(orgId),
+            productId = eq(productId),
+            storeId = eq(storeId),
+            currentQuantity = eq(10),
+            threshold = eq(10),
+        )
+    }
+
+    @Test
+    fun `adjustStock does not publish StockLowEvent when adding stock`() {
+        // Arrange: stock at 5, threshold 10, add 20 -> new quantity 25 (adding stock)
+        val existingStock = createStockEntity(quantity = 5)
+        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        doNothing().whenever(stockRepository).persist(any<StockEntity>())
+        doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
+
+        // Act
+        stockService.adjustStock(
+            storeId = storeId,
+            productId = productId,
+            quantityChange = 20,
+            movementType = "RECEIPT",
+            referenceId = "rcpt-001",
+            note = null,
+        )
+
+        // Assert
+        verify(stockLowEventPublisher, never()).publish(any(), any(), any(), any(), any())
     }
 
     // === listMovements ===

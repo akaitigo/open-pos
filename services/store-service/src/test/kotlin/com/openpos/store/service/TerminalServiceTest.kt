@@ -1,5 +1,6 @@
 package com.openpos.store.service
 
+import com.openpos.store.cache.StoreCacheService
 import com.openpos.store.config.OrganizationIdHolder
 import com.openpos.store.config.TenantFilterService
 import com.openpos.store.entity.TerminalEntity
@@ -34,6 +35,9 @@ class TerminalServiceTest {
     @InjectMock
     lateinit var tenantFilterService: TenantFilterService
 
+    @InjectMock
+    lateinit var cacheService: StoreCacheService
+
     private val orgId = UUID.randomUUID()
     private val storeId = UUID.randomUUID()
 
@@ -41,6 +45,7 @@ class TerminalServiceTest {
     fun setUp() {
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
+        doNothing().whenever(cacheService).invalidateTerminalList(any())
     }
 
     // === register ===

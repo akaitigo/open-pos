@@ -1,5 +1,6 @@
 package com.openpos.store.service
 
+import com.openpos.store.cache.StoreCacheService
 import com.openpos.store.config.OrganizationIdHolder
 import com.openpos.store.config.TenantFilterService
 import com.openpos.store.entity.TerminalEntity
@@ -21,6 +22,9 @@ class TerminalService {
     @Inject
     lateinit var organizationIdHolder: OrganizationIdHolder
 
+    @Inject
+    lateinit var cacheService: StoreCacheService
+
     @Transactional
     fun register(
         storeId: UUID,
@@ -37,6 +41,7 @@ class TerminalService {
                 this.isActive = true
             }
         terminalRepository.persist(entity)
+        cacheService.invalidateTerminalList(storeId.toString())
         return entity
     }
 
@@ -51,6 +56,7 @@ class TerminalService {
         val entity = terminalRepository.findById(terminalId) ?: return null
         entity.lastSyncAt = Instant.now()
         terminalRepository.persist(entity)
+        cacheService.invalidateTerminalList(entity.storeId.toString())
         return entity
     }
 }

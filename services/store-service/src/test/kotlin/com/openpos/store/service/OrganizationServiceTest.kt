@@ -1,5 +1,6 @@
 package com.openpos.store.service
 
+import com.openpos.store.cache.StoreCacheService
 import com.openpos.store.entity.OrganizationEntity
 import com.openpos.store.repository.OrganizationRepository
 import io.quarkus.test.InjectMock
@@ -8,6 +9,7 @@ import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -22,6 +24,14 @@ class OrganizationServiceTest {
 
     @InjectMock
     lateinit var organizationRepository: OrganizationRepository
+
+    @InjectMock
+    lateinit var cacheService: StoreCacheService
+
+    @BeforeEach
+    fun setUp() {
+        doNothing().whenever(cacheService).invalidateOrganization(any())
+    }
 
     // === create ===
 
