@@ -3,38 +3,53 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getCartItemCount, useCartStore } from '@/stores/cart-store'
 import { useAuthStore } from '@/stores/auth-store'
+import { DarkModeToggle } from '@/components/dark-mode-toggle'
 import { History, LogOut, ShoppingCart } from 'lucide-react'
 
-export function Header() {
+interface HeaderProps {
+  isTraining?: boolean
+  onToggleTraining?: () => void
+}
+
+export function Header({ isTraining, onToggleTraining }: HeaderProps) {
   const { staff, storeName, logout } = useAuthStore()
   const location = useLocation()
   const itemCount = useCartStore((state) => getCartItemCount(state.items))
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b px-3 md:px-4">
-      <div className="flex items-center gap-2 md:gap-3">
-        <Link to="/" className="text-base font-semibold md:text-lg">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
+      <div className="flex items-center gap-3">
+        <Link to="/" className="text-lg font-semibold">
           OpenPOS
         </Link>
         {storeName && (
-          <Badge variant="outline" className="hidden text-xs sm:inline-flex">
+          <Badge variant="outline" className="text-xs">
             {storeName}
           </Badge>
         )}
-      </div>
-      <div className="flex items-center gap-1 md:gap-2">
-        {staff && (
-          <span className="hidden text-sm text-muted-foreground sm:inline">{staff.name}</span>
+        {isTraining && (
+          <Badge variant="destructive" className="text-xs">
+            TRAINING
+          </Badge>
         )}
-        <Button
-          variant={location.pathname === '/cart' ? 'secondary' : 'ghost'}
-          size="sm"
-          asChild
-          className="lg:hidden"
-        >
+      </div>
+      <div className="flex items-center gap-2">
+        {staff && <span className="text-sm text-muted-foreground">{staff.name}</span>}
+        {onToggleTraining && (
+          <Button
+            variant={isTraining ? 'destructive' : 'outline'}
+            size="sm"
+            onClick={onToggleTraining}
+            aria-label="トレーニングモード切替"
+          >
+            {isTraining ? 'トレーニング中' : 'トレーニング'}
+          </Button>
+        )}
+        <DarkModeToggle />
+        <Button variant={location.pathname === '/cart' ? 'secondary' : 'ghost'} size="sm" asChild>
           <Link to="/cart" aria-label={itemCount > 0 ? `カート ${itemCount}` : 'カート'}>
             <ShoppingCart className="h-4 w-4" />
-            <span className="hidden sm:inline">カート</span>
+            カート
             {itemCount > 0 && <span className="text-xs tabular-nums">{itemCount}</span>}
           </Link>
         </Button>
@@ -45,12 +60,12 @@ export function Header() {
         >
           <Link to="/history">
             <History className="h-4 w-4" />
-            <span className="hidden sm:inline">履歴</span>
+            履歴
           </Link>
         </Button>
         <Button variant="ghost" size="sm" onClick={logout}>
           <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline">退出</span>
+          退出
         </Button>
       </div>
     </header>

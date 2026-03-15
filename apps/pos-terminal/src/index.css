@@ -111,27 +111,32 @@
   }
 }
 
-/* レシート印刷用スタイル */
-@media print {
-  body * {
-    visibility: hidden;
-  }
+/* High contrast mode (#155) */
+.high-contrast {
+  --foreground: 0 0% 0%;
+  --primary: 0 0% 0%;
+  --primary-foreground: 0 0% 100%;
+  --muted-foreground: 0 0% 20%;
+  --border: 0 0% 0%;
+}
 
-  #receipt-print-area,
-  #receipt-print-area * {
-    visibility: visible;
-  }
+.high-contrast.dark {
+  --foreground: 0 0% 100%;
+  --primary: 0 0% 100%;
+  --primary-foreground: 0 0% 0%;
+  --muted-foreground: 0 0% 80%;
+  --border: 0 0% 100%;
+}
 
-  #receipt-print-area {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 80mm;
-    max-height: none;
-    overflow: visible;
-    padding: 4mm;
-    background: white;
-    border: none;
-    border-radius: 0;
-  }
+/* Large font size mode (#155) */
+.large-font {
+  font-size: 18px;
+}
+
+.large-font .text-sm {
+  font-size: 1rem;
+}
+
+.large-font .text-xs {
+  font-size: 0.875rem;
 }

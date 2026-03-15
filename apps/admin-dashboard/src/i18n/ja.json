@@ -1,0 +1,55 @@
+{
+  "app": {
+    "name": "OpenPOS",
+    "subtitle": "管理ダッシュボード"
+  },
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "products": "商品管理",
+    "categories": "カテゴリ管理",
+    "stores": "店舗管理",
+    "staff": "スタッフ管理",
+    "customers": "顧客管理",
+    "shifts": "シフト管理",
+    "notifications": "通知",
+    "settings": "設定",
+    "menu": "メニュー"
+  },
+  "common": {
+    "error": "エラー",
+    "loading": "読み込み中...",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "create": "作成",
+    "confirm": "確認",
+    "close": "閉じる",
+    "search": "検索...",
+    "darkMode": "ダークモード",
+    "lightMode": "ライトモード"
+  },
+  "customers": {
+    "title": "顧客管理",
+    "addCustomer": "顧客を追加",
+    "name": "氏名",
+    "email": "メールアドレス",
+    "phone": "電話番号",
+    "points": "ポイント"
+  },
+  "shifts": {
+    "title": "シフト管理",
+    "addShift": "シフトを追加",
+    "date": "日付",
+    "startTime": "開始時刻",
+    "endTime": "終了時刻",
+    "staff": "スタッフ",
+    "note": "備考"
+  },
+  "notifications": {
+    "title": "通知",
+    "markRead": "既読にする",
+    "markAllRead": "すべて既読",
+    "noNotifications": "通知はありません"
+  }
+}
