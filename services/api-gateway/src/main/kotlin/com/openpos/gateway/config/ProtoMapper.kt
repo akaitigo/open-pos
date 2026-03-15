@@ -325,6 +325,68 @@ fun PurchaseOrderItem.toMap(): Map<String, Any?> =
         "unitCost" to unitCost,
     )
 
+// === ドロワー・精算 ===
+
+fun openpos.pos.v1.Drawer.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "storeId" to storeId,
+        "terminalId" to terminalId,
+        "openingAmount" to openingAmount,
+        "currentAmount" to currentAmount,
+        "isOpen" to isOpen,
+        "openedAt" to openedAt.ifEmpty { null },
+        "closedAt" to closedAt.ifEmpty { null },
+    )
+
+fun openpos.pos.v1.Settlement.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "storeId" to storeId,
+        "terminalId" to terminalId,
+        "staffId" to staffId,
+        "cashExpected" to cashExpected,
+        "cashActual" to cashActual,
+        "difference" to difference,
+        "settledAt" to settledAt,
+        "createdAt" to createdAt,
+    )
+
+// === 売上分析 ===
+
+fun openpos.analytics.v1.DailySales.toMap(): Map<String, Any?> =
+    mapOf(
+        "date" to date,
+        "storeId" to storeId,
+        "grossAmount" to grossAmount,
+        "netAmount" to netAmount,
+        "taxAmount" to taxAmount,
+        "discountAmount" to discountAmount,
+        "transactionCount" to transactionCount,
+        "cashAmount" to cashAmount,
+        "cardAmount" to cardAmount,
+        "qrAmount" to qrAmount,
+    )
+
+fun openpos.analytics.v1.SalesSummary.toMap(): Map<String, Any?> =
+    mapOf(
+        "totalGross" to totalGross,
+        "totalNet" to totalNet,
+        "totalTax" to totalTax,
+        "totalDiscount" to totalDiscount,
+        "totalTransactions" to totalTransactions,
+        "averageTransaction" to averageTransaction,
+    )
+
+fun openpos.analytics.v1.HourlySales.toMap(): Map<String, Any?> =
+    mapOf(
+        "hour" to hour,
+        "amount" to amount,
+        "transactionCount" to transactionCount,
+    )
+
 // === ページネーション ===
 
 fun PaginationResponse.toMap(): Map<String, Any> =

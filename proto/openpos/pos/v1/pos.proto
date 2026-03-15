@@ -33,6 +33,18 @@ service PosService {
   rpc GetReceipt(GetReceiptRequest) returns (GetReceiptResponse);
   // オフライン取引を同期する（端末オンライン復帰時に一括送信）
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
+
+  // ドロワー（つり銭準備金）を開く
+  rpc OpenDrawer(OpenDrawerRequest) returns (OpenDrawerResponse);
+  // ドロワーを閉じる
+  rpc CloseDrawer(CloseDrawerRequest) returns (CloseDrawerResponse);
+  // ドロワーの状態を取得する
+  rpc GetDrawerStatus(GetDrawerStatusRequest) returns (GetDrawerStatusResponse);
+
+  // 精算（レジ締め）を作成する
+  rpc CreateSettlement(CreateSettlementRequest) returns (CreateSettlementResponse);
+  // 精算を取得する
+  rpc GetSettlement(GetSettlementRequest) returns (GetSettlementResponse);
 }
 
 // 取引種別
@@ -450,4 +462,132 @@ message SyncResult {
   string transaction_id = 3;
   // 失敗時: エラー内容（例: "DUPLICATE_CLIENT_ID", "PRODUCT_NOT_FOUND"）
   string error = 4;
+}
+
+// === ドロワー（つり銭準備金） ===
+
+// ドロワー状態
+// 端末ごとのつり銭準備金を管理します
+// 金額フィールドはすべて銭単位（10000 = 100円）です
+message Drawer {
+  // ドロワーID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 店舗ID
+  string store_id = 3;
+  // 端末ID
+  string terminal_id = 4;
+  // 開局時のつり銭準備金（銭単位）
+  int64 opening_amount = 5;
+  // 現在の現金残高（銭単位）
+  int64 current_amount = 6;
+  // ドロワーが開いているか
+  bool is_open = 7;
+  // 開局日時（ISO 8601 形式）
+  string opened_at = 8;
+  // 閉局日時（ISO 8601 形式、閉局時に設定）
+  string closed_at = 9;
+}
+
+// ドロワー開局リクエスト
+message OpenDrawerRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 端末ID（必須）
+  string terminal_id = 2;
+  // つり銭準備金（銭単位、必須）
+  int64 opening_amount = 3;
+}
+
+// ドロワー開局レスポンス
+message OpenDrawerResponse {
+  // 開局されたドロワー
+  Drawer drawer = 1;
+}
+
+// ドロワー閉局リクエスト
+message CloseDrawerRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 端末ID（必須）
+  string terminal_id = 2;
+}
+
+// ドロワー閉局レスポンス
+message CloseDrawerResponse {
+  // 閉局されたドロワー
+  Drawer drawer = 1;
+}
+
+// ドロワー状態取得リクエスト
+message GetDrawerStatusRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 端末ID（必須）
+  string terminal_id = 2;
+}
+
+// ドロワー状態取得レスポンス
+message GetDrawerStatusResponse {
+  // ドロワー状態
+  Drawer drawer = 1;
+}
+
+// === 精算（レジ締め） ===
+
+// 精算
+// レジ締め時の現金差異を記録します
+// 金額フィールドはすべて銭単位（10000 = 100円）です
+message Settlement {
+  // 精算ID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 店舗ID
+  string store_id = 3;
+  // 端末ID
+  string terminal_id = 4;
+  // 精算担当スタッフID
+  string staff_id = 5;
+  // システム計算の現金期待値（銭単位）
+  int64 cash_expected = 6;
+  // 実際の現金残高（銭単位）
+  int64 cash_actual = 7;
+  // 差異（actual - expected、銭単位、マイナス=不足）
+  int64 difference = 8;
+  // 精算日時（ISO 8601 形式）
+  string settled_at = 9;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 10;
+}
+
+// 精算作成リクエスト
+message CreateSettlementRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 端末ID（必須）
+  string terminal_id = 2;
+  // 精算担当スタッフID（必須）
+  string staff_id = 3;
+  // 実際の現金残高（銭単位、必須）
+  int64 cash_actual = 4;
+}
+
+// 精算作成レスポンス
+message CreateSettlementResponse {
+  // 作成された精算
+  Settlement settlement = 1;
+}
+
+// 精算取得リクエスト
+message GetSettlementRequest {
+  // 精算ID（UUID）
+  string id = 1;
+}
+
+// 精算取得レスポンス
+message GetSettlementResponse {
+  // 精算情報
+  Settlement settlement = 1;
 }
