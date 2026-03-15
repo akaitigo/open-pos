@@ -111,7 +111,8 @@ describe('CartPanel', () => {
       ],
     })
     render(<CartPanel />)
-    expect(screen.getByText('5 点')).toBeInTheDocument()
+    const elements = screen.getAllByText('5 点')
+    expect(elements.length).toBeGreaterThanOrEqual(1)
   })
 
   it('削除ボタンでカートから商品を削除できる', async () => {

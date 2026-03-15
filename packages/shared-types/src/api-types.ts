@@ -1,8 +1,11 @@
 import { z } from 'zod'
-import { PaginationResponseSchema } from './pagination'
+import { createPaginatedResponseSchema } from './pagination'
 import { ProductSchema, CategorySchema, TaxRateSchema } from './product'
-import { StockSchema } from './inventory'
 import { StoreSchema, StaffSchema } from './store'
+
+// Re-export for backward compatibility
+export { createPaginatedResponseSchema } from './pagination'
+export type { PaginatedResponse } from './pagination'
 
 /** API エラーレスポンススキーマ */
 export const ApiErrorResponseSchema = z.object({
@@ -13,25 +16,11 @@ export const ApiErrorResponseSchema = z.object({
 
 export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>
 
-/** ページネーション付きレスポンススキーマを生成する */
-export function createPaginatedResponseSchema<T extends z.ZodTypeAny>(itemSchema: T) {
-  return z.object({
-    data: z.array(itemSchema),
-    pagination: PaginationResponseSchema,
-  })
-}
-
-/** ページネーション付きレスポンスの型 */
-export type PaginatedResponse<T> = {
-  data: T[]
-  pagination: z.infer<typeof PaginationResponseSchema>
-}
-
 // --- ページネーション付きレスポンススキーマ ---
+// NOTE: PaginatedStocksSchema is exported from ./inventory to avoid circular dependency
 
 export const PaginatedProductsSchema = createPaginatedResponseSchema(ProductSchema)
 export const PaginatedCategoriesSchema = createPaginatedResponseSchema(CategorySchema)
 export const PaginatedStoresSchema = createPaginatedResponseSchema(StoreSchema)
 export const PaginatedStaffSchema = createPaginatedResponseSchema(StaffSchema)
 export const PaginatedTaxRatesSchema = createPaginatedResponseSchema(TaxRateSchema)
-export const PaginatedStocksSchema = createPaginatedResponseSchema(StockSchema)

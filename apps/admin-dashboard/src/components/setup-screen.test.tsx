@@ -18,14 +18,20 @@ describe('SetupScreen', () => {
   it('seed コマンドの説明を表示する', () => {
     render(<SetupScreen />)
     expect(
-      screen.getByText((_, element) => element?.textContent?.includes('make local-demo') ?? false),
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' && (element?.textContent?.includes('make local-demo') ?? false),
+      ),
     ).toBeInTheDocument()
   })
 
   it('demo-config.json の説明を表示する', () => {
     render(<SetupScreen />)
     expect(
-      screen.getByText((_, element) => element?.textContent?.includes('demo-config.json') ?? false),
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' && (element?.textContent?.includes('demo-config.json') ?? false),
+      ),
     ).toBeInTheDocument()
   })
 })

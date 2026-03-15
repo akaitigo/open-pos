@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { createPaginatedResponseSchema } from './api-types'
+import { createPaginatedResponseSchema } from './pagination'
 
 export const StockSchema = z.object({
   id: z.string().uuid(),
@@ -53,5 +53,6 @@ export const PurchaseOrderSchema = z.object({
 
 export type PurchaseOrder = z.infer<typeof PurchaseOrderSchema>
 
+export const PaginatedStocksSchema = createPaginatedResponseSchema(StockSchema)
 export const PaginatedStockMovementsSchema = createPaginatedResponseSchema(StockMovementSchema)
 export const PaginatedPurchaseOrdersSchema = createPaginatedResponseSchema(PurchaseOrderSchema)

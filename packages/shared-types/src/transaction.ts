@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { createPaginatedResponseSchema } from './api-types'
+import { createPaginatedResponseSchema } from './pagination'
 
 // --- トランザクション明細 ---
 export const TransactionItemSchema = z.object({
@@ -52,32 +52,34 @@ export const AppliedDiscountSchema = z.object({
 export type AppliedDiscount = z.infer<typeof AppliedDiscountSchema>
 
 // --- トランザクション ---
-export const TransactionSchema = z.object({
-  id: z.string().uuid(),
-  organizationId: z.string().uuid(),
-  storeId: z.string().uuid(),
-  terminalId: z.string().uuid(),
-  staffId: z.string().uuid(),
-  transactionNumber: z.string(),
-  type: z.string(),
-  status: z.string(),
-  items: z.array(TransactionItemSchema),
-  payments: z.array(PaymentSchema),
-  appliedDiscounts: z.array(AppliedDiscountSchema).optional(),
-  discounts: z.array(AppliedDiscountSchema).optional(),
-  taxSummaries: z.array(TaxSummarySchema),
-  subtotal: z.number().int(),
-  discountTotal: z.number().int(),
-  taxTotal: z.number().int(),
-  total: z.number().int(),
-  clientId: z.string().nullable().optional(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  completedAt: z.string().nullable().optional(),
-}).transform(({ discounts, appliedDiscounts, ...transaction }) => ({
-  ...transaction,
-  appliedDiscounts: appliedDiscounts ?? discounts ?? [],
-}))
+export const TransactionSchema = z
+  .object({
+    id: z.string().uuid(),
+    organizationId: z.string().uuid(),
+    storeId: z.string().uuid(),
+    terminalId: z.string().uuid(),
+    staffId: z.string().uuid(),
+    transactionNumber: z.string(),
+    type: z.string(),
+    status: z.string(),
+    items: z.array(TransactionItemSchema),
+    payments: z.array(PaymentSchema),
+    appliedDiscounts: z.array(AppliedDiscountSchema).optional(),
+    discounts: z.array(AppliedDiscountSchema).optional(),
+    taxSummaries: z.array(TaxSummarySchema),
+    subtotal: z.number().int(),
+    discountTotal: z.number().int(),
+    taxTotal: z.number().int(),
+    total: z.number().int(),
+    clientId: z.string().nullable().optional(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    completedAt: z.string().nullable().optional(),
+  })
+  .transform(({ discounts, appliedDiscounts, ...transaction }) => ({
+    ...transaction,
+    appliedDiscounts: appliedDiscounts ?? discounts ?? [],
+  }))
 
 export type Transaction = z.infer<typeof TransactionSchema>
 

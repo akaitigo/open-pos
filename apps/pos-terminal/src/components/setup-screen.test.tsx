@@ -12,7 +12,9 @@ describe('SetupScreen', () => {
     render(<SetupScreen />)
     expect(
       screen.getByText(
-        (_, element) => element?.textContent?.includes('デモ設定が未構成です') ?? false,
+        (_, element) =>
+          element?.tagName === 'P' &&
+          (element?.textContent?.includes('デモ設定が未構成です') ?? false),
       ),
     ).toBeInTheDocument()
   })
@@ -20,14 +22,20 @@ describe('SetupScreen', () => {
   it('seed コマンドの実行手順を表示する', () => {
     render(<SetupScreen />)
     expect(
-      screen.getByText((_, element) => element?.textContent?.includes('make local-demo') ?? false),
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' && (element?.textContent?.includes('make local-demo') ?? false),
+      ),
     ).toBeInTheDocument()
   })
 
   it('demo-config.json のパスを表示する', () => {
     render(<SetupScreen />)
     expect(
-      screen.getByText((_, element) => element?.textContent?.includes('demo-config.json') ?? false),
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' && (element?.textContent?.includes('demo-config.json') ?? false),
+      ),
     ).toBeInTheDocument()
   })
 })
