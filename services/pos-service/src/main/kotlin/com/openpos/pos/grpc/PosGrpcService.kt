@@ -317,11 +317,22 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             )
         val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
 
+        // N+1 防止: 全取引の関連エンティティを一括取得
+        val relations = transactionService.batchLoadRelations(transactions.map { it.id })
+
         responseObserver.onNext(
             ListTransactionsResponse
                 .newBuilder()
-                .addAllTransactions(transactions.map { it.toFullProto() })
-                .setPagination(
+                .addAllTransactions(
+                    transactions.map { tx ->
+                        tx.toProtoWith(
+                            items = relations.items[tx.id].orEmpty(),
+                            payments = relations.payments[tx.id].orEmpty(),
+                            discounts = relations.discounts[tx.id].orEmpty(),
+                            taxSummaries = relations.taxSummaries[tx.id].orEmpty(),
+                        )
+                    },
+                ).setPagination(
                     PaginationResponse
                         .newBuilder()
                         .setPage(page + 1)
@@ -442,13 +453,30 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
 
     // === Mapper Extensions ===
 
+    /**
+     * 取引エンティティを Proto に変換する（関連エンティティを個別にクエリ）。
+     * 単一取引の取得時に使用する。一覧取得では toProtoWith を使うこと。
+     */
     private fun TransactionEntity.toFullProto(): Transaction {
         val items = transactionService.getTransactionItems(id)
         val payments = transactionService.getTransactionPayments(id)
         val discounts = transactionService.getTransactionDiscounts(id)
         val taxSummaries = transactionService.getTransactionTaxSummaries(id)
 
-        return Transaction
+        return toProtoWith(items, payments, discounts, taxSummaries)
+    }
+
+    /**
+     * 事前取得済みの関連エンティティを使って Proto に変換する（N+1 防止）。
+     * 一覧取得で batchLoadRelations と組み合わせて使用する。
+     */
+    private fun TransactionEntity.toProtoWith(
+        items: List<TransactionItemEntity>,
+        payments: List<PaymentEntity>,
+        discounts: List<TransactionDiscountEntity>,
+        taxSummaries: List<TaxSummaryEntity>,
+    ): Transaction =
+        Transaction
             .newBuilder()
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())
@@ -471,7 +499,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             .setUpdatedAt(updatedAt.toString())
             .setCompletedAt(completedAt?.toString().orEmpty())
             .build()
-    }
 
     private fun TransactionItemEntity.toProto(): TransactionItem =
         TransactionItem

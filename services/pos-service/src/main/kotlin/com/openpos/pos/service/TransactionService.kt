@@ -341,124 +341,29 @@ class TransactionService {
         return Pair(transactions, totalCount)
     }
 
-    // === Offline Sync ===
+    // === Batch Query (N+1 防止) ===
 
     /**
-     * オフライン取引を同期する。
-     * clientId で冪等性を保証し、既に同期済みの取引はそのまま返す。
-     * 商品マスタへのリクエストを回避し、端末キャッシュのスナップショットを使用する。
+     * 複数取引の関連エンティティを一括取得する（N+1 クエリ防止）。
+     * ListTransactions で取引一覧を返す際に、個別の取引ごとにクエリする代わりに
+     * IN 句で一括取得して Map にグループ化する。
      */
-    @Transactional
-    fun syncOfflineTransaction(input: OfflineTransactionInput): TransactionEntity {
-        val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
+    data class TransactionRelations(
+        val items: Map<UUID, List<TransactionItemEntity>>,
+        val payments: Map<UUID, List<PaymentEntity>>,
+        val discounts: Map<UUID, List<TransactionDiscountEntity>>,
+        val taxSummaries: Map<UUID, List<TaxSummaryEntity>>,
+    )
 
-        // 冪等性チェック: clientId で重複排除
-        val existing = transactionRepository.findByClientId(input.clientId)
-        if (existing != null) return existing
-
-        require(input.items.isNotEmpty()) { "At least one item is required" }
-        require(input.payments.isNotEmpty()) { "At least one payment is required" }
-
-        val tx =
-            TransactionEntity().apply {
-                this.organizationId = orgId
-                this.storeId = input.storeId
-                this.terminalId = input.terminalId
-                this.staffId = input.staffId
-                this.transactionNumber = generateTransactionNumber()
-                this.type = "SALE"
-                this.status = "DRAFT"
-                this.clientId = input.clientId
-            }
-        transactionRepository.persist(tx)
-
-        // 明細登録（端末キャッシュのスナップショットを使用）
-        for (itemInput in input.items) {
-            val taxResult =
-                taxCalculationService.calculateItemTax(
-                    itemInput.unitPrice,
-                    itemInput.quantity,
-                    itemInput.taxRate,
-                )
-            val item =
-                TransactionItemEntity().apply {
-                    this.organizationId = orgId
-                    this.transactionId = tx.id
-                    this.productId = itemInput.productId
-                    this.productName = itemInput.productName
-                    this.unitPrice = itemInput.unitPrice
-                    this.quantity = itemInput.quantity
-                    this.taxRateName = itemInput.taxRateName
-                    this.taxRate = itemInput.taxRate
-                    this.isReducedTax = itemInput.isReducedTax
-                    this.subtotal = taxResult.subtotal
-                    this.taxAmount = taxResult.taxAmount
-                    this.total = taxResult.total
-                }
-            itemRepository.persist(item)
+    fun batchLoadRelations(transactionIds: List<UUID>): TransactionRelations {
+        if (transactionIds.isEmpty()) {
+            return TransactionRelations(emptyMap(), emptyMap(), emptyMap(), emptyMap())
         }
-
-        // 合計計算
-        val items = itemRepository.findByTransactionId(tx.id)
-        tx.subtotal = items.sumOf { it.subtotal }
-        tx.taxTotal = items.sumOf { it.taxAmount }
-        tx.discountTotal = 0
-        tx.total = tx.subtotal + tx.taxTotal
-
-        // 支払検証
-        val paymentTotal = input.payments.sumOf { it.amount }
-        require(paymentTotal >= tx.total) { "Payment total ($paymentTotal) is less than transaction total (${tx.total})" }
-
-        // 支払登録
-        for (paymentInput in input.payments) {
-            val payment =
-                PaymentEntity().apply {
-                    this.organizationId = orgId
-                    this.transactionId = tx.id
-                    this.method = paymentInput.method
-                    this.amount = paymentInput.amount
-                    if (paymentInput.method == "CASH") {
-                        this.received = paymentInput.received ?: paymentInput.amount
-                        this.change = (paymentInput.received ?: paymentInput.amount) - paymentInput.amount
-                    }
-                    this.reference = paymentInput.reference
-                }
-            paymentRepository.persist(payment)
-        }
-
-        // 税率別集計
-        val taxableItems =
-            items.map {
-                TaxableItem(
-                    taxRateName = it.taxRateName,
-                    taxRate = it.taxRate,
-                    isReducedTax = it.isReducedTax,
-                    subtotal = it.subtotal,
-                )
-            }
-        val summaries = taxCalculationService.aggregateTaxSummaries(taxableItems)
-        for (summary in summaries) {
-            val entity =
-                TaxSummaryEntity().apply {
-                    this.organizationId = orgId
-                    this.transactionId = tx.id
-                    this.taxRateName = summary.taxRateName
-                    this.taxRate = summary.taxRate
-                    this.isReduced = summary.isReduced
-                    this.taxableAmount = summary.taxableAmount
-                    this.taxAmount = summary.taxAmount
-                }
-            taxSummaryRepository.persist(entity)
-        }
-
-        // 確定
-        tx.status = "COMPLETED"
-        tx.completedAt = Instant.now()
-        transactionRepository.persist(tx)
-
-        publishSaleCompletedEvent(tx, items)
-
-        return tx
+        val items = itemRepository.findByTransactionIds(transactionIds).groupBy { it.transactionId }
+        val payments = paymentRepository.findByTransactionIds(transactionIds).groupBy { it.transactionId }
+        val discounts = discountRepository.findByTransactionIds(transactionIds).groupBy { it.transactionId }
+        val taxSummaries = taxSummaryRepository.findByTransactionIds(transactionIds).groupBy { it.transactionId }
+        return TransactionRelations(items, payments, discounts, taxSummaries)
     }
 
     // === Internal Helpers ===
@@ -542,23 +447,4 @@ data class PaymentInput(
     val amount: Long,
     val received: Long?,
     val reference: String?,
-)
-
-data class OfflineTransactionInput(
-    val clientId: String,
-    val storeId: UUID,
-    val terminalId: UUID,
-    val staffId: UUID,
-    val items: List<OfflineItemInput>,
-    val payments: List<PaymentInput>,
-)
-
-data class OfflineItemInput(
-    val productId: UUID,
-    val productName: String,
-    val unitPrice: Long,
-    val quantity: Int,
-    val taxRateName: String,
-    val taxRate: String,
-    val isReducedTax: Boolean,
 )

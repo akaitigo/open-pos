@@ -105,21 +105,6 @@ services:
       - openpos-net
     restart: unless-stopped
 
-  hydra-clients:
-    image: oryd/hydra:v2.2
-    container_name: openpos-hydra-clients
-    environment:
-      HYDRA_ADMIN_URL: http://hydra:4445
-    volumes:
-      - ./init-scripts/hydra:/scripts
-    entrypoint: ['/bin/sh', '/scripts/create-clients.sh']
-    depends_on:
-      hydra:
-        condition: service_healthy
-    networks:
-      - openpos-net
-    restart: 'no'
-
   # === Backend Services ===
   api-gateway:
     build:
@@ -352,34 +337,34 @@ services:
     networks:
       - openpos-net
 
-  # === Observability ===
-  prometheus:
-    image: prom/prometheus:v3.2.0
-    container_name: openpos-prometheus
+  # === Dev Tools (--profile dev で起動) ===
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: openpos-pgadmin
+    profiles: [dev]
     ports:
-      - '19090:9090'
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - openpos-prometheus:/prometheus
+      - '15050:80'
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@openpos.local
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - openpos-net
 
-  grafana:
-    image: grafana/grafana:11.5.0
-    container_name: openpos-grafana
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: openpos-redis-commander
+    profiles: [dev]
     ports:
-      - '13000:3000'
+      - '15051:8081'
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
-      GF_AUTH_ANONYMOUS_ENABLED: 'true'
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-    volumes:
-      - openpos-grafana:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      REDIS_HOSTS: local:redis:6379
     depends_on:
-      - prometheus
+      redis:
+        condition: service_healthy
     networks:
       - openpos-net
 
@@ -387,8 +372,6 @@ volumes:
   openpos-pgdata:
   openpos-redis:
   openpos-rabbitmq:
-  openpos-prometheus:
-  openpos-grafana:
 
 networks:
   openpos-net:

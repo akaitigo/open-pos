@@ -6,11 +6,8 @@ import {
   Store,
   Users,
   Settings,
-  Building2,
-  Monitor,
-  Tag,
-  FileDown,
-  FileText,
+  Warehouse,
+  ClipboardList,
 } from 'lucide-react'
 
 import {
@@ -26,23 +23,14 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 
-const mainNavItems = [
+const navItems = [
   { title: 'ダッシュボード', url: '/', icon: LayoutDashboard },
   { title: '商品管理', url: '/products', icon: Package },
   { title: 'カテゴリ管理', url: '/categories', icon: FolderTree },
+  { title: '在庫管理', url: '/inventory', icon: Warehouse },
+  { title: '発注管理', url: '/purchase-orders', icon: ClipboardList },
   { title: '店舗管理', url: '/stores', icon: Store },
   { title: 'スタッフ管理', url: '/staff', icon: Users },
-]
-
-const managementNavItems = [
-  { title: '端末管理', url: '/terminals', icon: Monitor },
-  { title: '割引・クーポン', url: '/discounts', icon: Tag },
-  { title: 'データエクスポート', url: '/export', icon: FileDown },
-  { title: 'レポート', url: '/reports', icon: FileText },
-]
-
-const settingsNavItems = [
-  { title: '組織設定', url: '/organization', icon: Building2 },
   { title: '設定', url: '/settings', icon: Settings },
 ]
 
@@ -65,62 +53,12 @@ export function AppSidebar() {
           <SidebarGroupLabel>メニュー</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => (
+              {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
                       end={item.url === '/'}
-                      className={({ isActive }) => (isActive ? 'data-[active=true]' : '')}
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <item.icon className={isActive ? 'text-sidebar-primary' : ''} />
-                          <span>{item.title}</span>
-                        </>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>管理</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {managementNavItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) => (isActive ? 'data-[active=true]' : '')}
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <item.icon className={isActive ? 'text-sidebar-primary' : ''} />
-                          <span>{item.title}</span>
-                        </>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>システム</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {settingsNavItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
-                    <NavLink
-                      to={item.url}
                       className={({ isActive }) => (isActive ? 'data-[active=true]' : '')}
                     >
                       {({ isActive }) => (

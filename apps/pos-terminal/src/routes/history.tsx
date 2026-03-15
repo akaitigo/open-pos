@@ -1,36 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
-import { formatMoney, PaginatedTransactionsSchema, ReceiptSchema } from '@shared-types/openpos'
-import type { Transaction, PaginatedResponse } from '@shared-types/openpos'
+import {
+  formatMoney,
+  FinalizeTransactionResponseSchema,
+  PaginatedTransactionsSchema,
+  ReceiptSchema,
+  TransactionSchema,
+  StockSchema,
+} from '@shared-types/openpos'
+import type { Transaction, TransactionItem, PaginatedResponse } from '@shared-types/openpos'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ReceiptDialog } from '@/components/receipt-dialog'
-
-function getStatusBadge(status: string) {
-  if (status === 'COMPLETED') {
-    return (
-      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">完了</span>
-    )
-  }
-  if (status === 'VOIDED') {
-    return <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800">取消</span>
-  }
-  return (
-    <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">下書き</span>
-  )
-}
+import { toast } from '@/hooks/use-toast'
 
 export function HistoryPage() {
-  const storeId = useAuthStore((s) => s.storeId)
+  const { storeId, terminalId, staff } = useAuthStore()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
   const [receiptData, setReceiptData] = useState<string | null>(null)
   const [receiptOpen, setReceiptOpen] = useState(false)
+  const [returnDialogTx, setReturnDialogTx] = useState<Transaction | null>(null)
 
-  useEffect(() => {
+  const fetchTransactions = useCallback(() => {
     if (!storeId) return
     api
       .get<PaginatedResponse<Transaction>>('/api/transactions', PaginatedTransactionsSchema, {
@@ -42,6 +36,10 @@ export function HistoryPage() {
       })
   }, [storeId, page])
 
+  useEffect(() => {
+    fetchTransactions()
+  }, [fetchTransactions])
+
   async function handleViewReceipt(transactionId: string) {
     try {
       const receipt = await api.get(`/api/transactions/${transactionId}/receipt`, ReceiptSchema)
@@ -52,12 +50,77 @@ export function HistoryPage() {
     }
   }
 
+  async function handleReissueReceipt(transactionId: string) {
+    try {
+      const receipt = await api.get(`/api/transactions/${transactionId}/receipt`, ReceiptSchema)
+      setReceiptData(receipt.receiptData)
+      setReceiptOpen(true)
+      toast({ title: 'レシートを再発行しました' })
+    } catch {
+      toast({ title: 'レシートの取得に失敗しました', variant: 'destructive' })
+    }
+  }
+
+  async function handleReturnItem(tx: Transaction, item: TransactionItem) {
+    if (!storeId || !terminalId || !staff) return
+    try {
+      const returnTx = await api.post(
+        '/api/transactions',
+        {
+          storeId,
+          terminalId,
+          staffId: staff.id,
+          type: 'RETURN',
+        },
+        TransactionSchema,
+      )
+
+      await api.post(
+        `/api/transactions/${returnTx.id}/items`,
+        { productId: item.productId, quantity: item.quantity },
+        TransactionSchema,
+      )
+
+      await api.post(
+        `/api/transactions/${returnTx.id}/finalize`,
+        {
+          payments: [{ method: 'CASH', amount: item.total, received: 0 }],
+        },
+        TransactionSchema.or(FinalizeTransactionResponseSchema),
+      )
+
+      // Adjust inventory (add stock back)
+      try {
+        await api.post(
+          '/api/inventory/stocks/adjust',
+          {
+            storeId,
+            productId: item.productId,
+            quantityChange: item.quantity,
+            movementType: 'RETURN',
+            referenceId: returnTx.id,
+            note: `返品: ${item.productName}`,
+          },
+          StockSchema,
+        )
+      } catch {
+        // inventory adjust failure is not critical
+      }
+
+      toast({ title: `${item.productName} の返品処理が完了しました` })
+      setReturnDialogTx(null)
+      fetchTransactions()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '返品処理に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
       <h2 className="text-lg font-semibold">取引履歴</h2>
 
-      {/* デスクトップ: テーブル表示 */}
-      <div className="hidden overflow-auto rounded-lg border md:block">
+      <div className="overflow-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50">
             <tr>
@@ -74,13 +137,45 @@ export function HistoryPage() {
                 <td className="p-3 font-mono text-xs">{tx.transactionNumber}</td>
                 <td className="p-3 text-xs">{new Date(tx.createdAt).toLocaleString('ja-JP')}</td>
                 <td className="p-3 text-right font-medium">{formatMoney(tx.total)}</td>
-                <td className="p-3">{getStatusBadge(tx.status)}</td>
                 <td className="p-3">
-                  {tx.status === 'COMPLETED' && (
-                    <Button variant="ghost" size="sm" onClick={() => handleViewReceipt(tx.id)}>
-                      レシート
-                    </Button>
-                  )}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs ${
+                      tx.status === 'COMPLETED'
+                        ? 'bg-green-100 text-green-800'
+                        : tx.status === 'VOIDED'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                    }`}
+                  >
+                    {tx.status === 'COMPLETED'
+                      ? '完了'
+                      : tx.status === 'VOIDED'
+                        ? '取消'
+                        : '下書き'}
+                  </span>
+                </td>
+                <td className="p-3">
+                  <div className="flex gap-1">
+                    {tx.status === 'COMPLETED' && (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={() => handleViewReceipt(tx.id)}>
+                          レシート
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleReissueReceipt(tx.id)}
+                        >
+                          再発行
+                        </Button>
+                        {tx.type !== 'RETURN' && (
+                          <Button variant="ghost" size="sm" onClick={() => setReturnDialogTx(tx)}>
+                            返品
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -93,34 +188,6 @@ export function HistoryPage() {
             )}
           </tbody>
         </table>
-      </div>
-
-      {/* モバイル: カード表示 */}
-      <div className="space-y-3 md:hidden">
-        {transactions.map((tx) => (
-          <Card key={tx.id} className="p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="space-y-1">
-                <p className="font-mono text-xs text-muted-foreground">{tx.transactionNumber}</p>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(tx.createdAt).toLocaleString('ja-JP')}
-                </p>
-              </div>
-              {getStatusBadge(tx.status)}
-            </div>
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-base font-semibold">{formatMoney(tx.total)}</p>
-              {tx.status === 'COMPLETED' && (
-                <Button variant="outline" size="sm" onClick={() => handleViewReceipt(tx.id)}>
-                  レシート
-                </Button>
-              )}
-            </div>
-          </Card>
-        ))}
-        {transactions.length === 0 && (
-          <div className="p-8 text-center text-muted-foreground">取引履歴がありません</div>
-        )}
       </div>
 
       {totalPages > 1 && (
@@ -155,6 +222,60 @@ export function HistoryPage() {
           setReceiptData(null)
         }}
       />
+
+      <ReturnItemDialog
+        open={returnDialogTx !== null}
+        onOpenChange={(open) => {
+          if (!open) setReturnDialogTx(null)
+        }}
+        transaction={returnDialogTx}
+        onReturnItem={handleReturnItem}
+      />
     </div>
+  )
+}
+
+function ReturnItemDialog({
+  open,
+  onOpenChange,
+  transaction,
+  onReturnItem,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  transaction: Transaction | null
+  onReturnItem: (tx: Transaction, item: TransactionItem) => void
+}) {
+  if (!transaction) return null
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[70vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>部分返品 — {transaction.transactionNumber}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">返品する商品を選択してください</p>
+        <div className="space-y-2">
+          {transaction.items.map((item) => (
+            <div key={item.id} className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">{item.productName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatMoney(item.unitPrice)} x {item.quantity} = {formatMoney(item.total)}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => onReturnItem(transaction, item)}>
+                返品
+              </Button>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            閉じる
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
