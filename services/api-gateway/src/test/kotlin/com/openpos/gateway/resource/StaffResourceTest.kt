@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.SessionTokenService
 import openpos.common.v1.PaginationResponse
 import openpos.store.v1.AuthenticateByPinResponse
 import openpos.store.v1.CreateStaffResponse
@@ -22,10 +23,12 @@ import java.util.UUID
 class StaffResourceTest {
     private val stub: StoreServiceGrpc.StoreServiceBlockingStub = mock()
     private val grpc: GrpcClientHelper = mock()
+    private val sessionTokenService: SessionTokenService = mock()
     private val resource =
         StaffResource().also { r ->
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
+            ProductResourceTest.setField(r, "sessionTokenService", sessionTokenService)
         }
 
     private val orgId = UUID.randomUUID().toString()
@@ -51,6 +54,7 @@ class StaffResourceTest {
     @BeforeEach
     fun setUp() {
         whenever(grpc.withTenant(stub)).thenReturn(stub)
+        whenever(sessionTokenService.generateToken(any(), any(), any(), any())).thenReturn("test-session-token")
     }
 
     @Nested

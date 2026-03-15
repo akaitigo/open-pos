@@ -13,8 +13,10 @@ export function useSSE({ url, enabled = true, onMessage, onError }: UseSSEOption
   const onMessageRef = useRef(onMessage)
   const onErrorRef = useRef(onError)
 
-  onMessageRef.current = onMessage
-  onErrorRef.current = onError
+  useEffect(() => {
+    onMessageRef.current = onMessage
+    onErrorRef.current = onError
+  })
 
   const disconnect = useCallback(() => {
     if (sourceRef.current) {
