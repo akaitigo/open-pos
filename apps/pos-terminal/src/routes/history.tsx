@@ -76,9 +76,24 @@ export function HistoryPage() {
                 </td>
                 <td className="p-3">
                   {tx.status === 'COMPLETED' && (
-                    <Button variant="ghost" size="sm" onClick={() => handleViewReceipt(tx.id)}>
-                      レシート
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="min-h-11 min-w-11"
+                        onClick={() => handleViewReceipt(tx.id)}
+                      >
+                        レシート
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="min-h-11 min-w-11"
+                        onClick={() => handleViewReceipt(tx.id)}
+                      >
+                        領収書発行
+                      </Button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -99,6 +114,7 @@ export function HistoryPage() {
           <Button
             variant="outline"
             size="sm"
+            className="min-h-11 min-w-11"
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
           >
@@ -110,6 +126,7 @@ export function HistoryPage() {
           <Button
             variant="outline"
             size="sm"
+            className="min-h-11 min-w-11"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >

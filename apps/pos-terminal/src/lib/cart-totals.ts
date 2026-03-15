@@ -1,6 +1,7 @@
 import type { TaxRate } from '@shared-types/openpos'
 import type { CartItem } from '@/stores/cart-store'
 import { getCartSubtotal } from '@/stores/cart-store'
+import { useDiscountStore } from '@/stores/discount-store'
 
 export interface CartTaxBreakdownEntry {
   taxRateKey: string
@@ -75,7 +76,9 @@ export function getCartTaxBreakdown(
     breakdown.set(key, current)
   }
 
-  return Array.from(breakdown.values()).sort((left, right) => Number(right.rate) - Number(left.rate))
+  return Array.from(breakdown.values()).sort(
+    (left, right) => Number(right.rate) - Number(left.rate),
+  )
 }
 
 export function formatTaxRatePercentage(rate: string): string {
@@ -85,5 +88,5 @@ export function formatTaxRatePercentage(rate: string): string {
 }
 
 export function getCartDiscountTotal(): number {
-  return 0
+  return useDiscountStore.getState().getTotalDiscount()
 }

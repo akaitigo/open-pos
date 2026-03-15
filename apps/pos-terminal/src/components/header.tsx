@@ -3,9 +3,15 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getCartItemCount, useCartStore } from '@/stores/cart-store'
 import { useAuthStore } from '@/stores/auth-store'
+import { DarkModeToggle } from '@/components/dark-mode-toggle'
 import { History, LogOut, ShoppingCart } from 'lucide-react'
 
-export function Header() {
+interface HeaderProps {
+  isTraining?: boolean
+  onToggleTraining?: () => void
+}
+
+export function Header({ isTraining, onToggleTraining }: HeaderProps) {
   const { staff, storeName, logout } = useAuthStore()
   const location = useLocation()
   const itemCount = useCartStore((state) => getCartItemCount(state.items))
@@ -21,9 +27,25 @@ export function Header() {
             {storeName}
           </Badge>
         )}
+        {isTraining && (
+          <Badge variant="destructive" className="text-xs">
+            TRAINING
+          </Badge>
+        )}
       </div>
       <div className="flex items-center gap-2">
         {staff && <span className="text-sm text-muted-foreground">{staff.name}</span>}
+        {onToggleTraining && (
+          <Button
+            variant={isTraining ? 'destructive' : 'outline'}
+            size="sm"
+            onClick={onToggleTraining}
+            aria-label="トレーニングモード切替"
+          >
+            {isTraining ? 'トレーニング中' : 'トレーニング'}
+          </Button>
+        )}
+        <DarkModeToggle />
         <Button variant={location.pathname === '/cart' ? 'secondary' : 'ghost'} size="sm" asChild>
           <Link to="/cart" aria-label={itemCount > 0 ? `カート ${itemCount}` : 'カート'}>
             <ShoppingCart className="h-4 w-4" />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { api } from '@/lib/api'
@@ -19,6 +20,7 @@ import type { Product, Category, TaxRate, PaginatedResponse } from '@shared-type
 import { ProductSchema, CategorySchema, TaxRateSchema } from '@shared-types/openpos'
 import { PaginatedProductsSchema } from '@shared-types/openpos'
 import { z } from 'zod'
+import { toast } from '@/hooks/use-toast'
 
 export function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -29,6 +31,7 @@ export function ProductsPage() {
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   const fetchProducts = useCallback(async () => {
     const result = await api.get<PaginatedResponse<Product>>(
@@ -101,7 +104,10 @@ export function ProductsPage() {
             }}
             className="max-w-sm"
           />
-          <Button onClick={handleCreate}>商品を追加</Button>
+          <div className="flex gap-2">
+            <CsvImportButton onImported={fetchProducts} />
+            <Button onClick={handleCreate}>商品を追加</Button>
+          </div>
         </div>
 
         <div className="rounded-md border">
@@ -140,7 +146,11 @@ export function ProductsPage() {
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
                           編集
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(product.id)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteTarget(product.id)}
+                        >
                           削除
                         </Button>
                       </div>
@@ -184,7 +194,105 @@ export function ProductsPage() {
           taxRates={taxRates}
           onSubmit={handleSubmit}
         />
+
+        <ConfirmDialog
+          open={deleteTarget !== null}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null)
+          }}
+          title="商品を削除"
+          onConfirm={() => {
+            if (deleteTarget) handleDelete(deleteTarget)
+            setDeleteTarget(null)
+          }}
+        />
       </div>
+    </>
+  )
+}
+
+function CsvImportButton({ onImported }: { onImported: () => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [importing, setImporting] = useState(false)
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setImporting(true)
+    try {
+      const text = await file.text()
+      const lines = text.split('\n').filter((l) => l.trim())
+      if (lines.length < 2) {
+        toast({ title: 'CSVが空です', variant: 'destructive' })
+        return
+      }
+
+      const headers = (lines[0] ?? '').split(',').map((h) => h.trim().toLowerCase())
+      const nameIdx = headers.indexOf('name')
+      const barcodeIdx = headers.indexOf('barcode')
+      const priceIdx = headers.indexOf('price')
+
+      if (nameIdx === -1 || priceIdx === -1) {
+        toast({
+          title: 'CSVに name, price 列が必要です',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      let successCount = 0
+      let errorCount = 0
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = (lines[i] ?? '').split(',').map((c) => c.trim())
+        const name = cols[nameIdx]
+        const price = Number(cols[priceIdx])
+        if (!name || !Number.isFinite(price)) {
+          errorCount++
+          continue
+        }
+        try {
+          await api.post(
+            '/api/products',
+            {
+              name,
+              price: Math.round(price * 100),
+              barcode: barcodeIdx >= 0 ? cols[barcodeIdx] || undefined : undefined,
+            },
+            ProductSchema,
+          )
+          successCount++
+        } catch {
+          errorCount++
+        }
+      }
+
+      toast({
+        title: 'CSVインポート完了',
+        description: `成功: ${successCount} 件 / エラー: ${errorCount} 件`,
+      })
+      onImported()
+    } catch {
+      toast({ title: 'CSVの読み込みに失敗しました', variant: 'destructive' })
+    } finally {
+      setImporting(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  return (
+    <>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".csv"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      <Button variant="outline" disabled={importing} onClick={() => fileRef.current?.click()}>
+        {importing ? 'インポート中...' : 'CSVインポート'}
+      </Button>
     </>
   )
 }

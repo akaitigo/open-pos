@@ -341,6 +341,31 @@ class TransactionService {
         return Pair(transactions, totalCount)
     }
 
+    // === Batch Query (N+1 防止) ===
+
+    /**
+     * 複数取引の関連エンティティを一括取得する（N+1 クエリ防止）。
+     * ListTransactions で取引一覧を返す際に、個別の取引ごとにクエリする代わりに
+     * IN 句で一括取得して Map にグループ化する。
+     */
+    data class TransactionRelations(
+        val items: Map<UUID, List<TransactionItemEntity>>,
+        val payments: Map<UUID, List<PaymentEntity>>,
+        val discounts: Map<UUID, List<TransactionDiscountEntity>>,
+        val taxSummaries: Map<UUID, List<TaxSummaryEntity>>,
+    )
+
+    fun batchLoadRelations(transactionIds: List<UUID>): TransactionRelations {
+        if (transactionIds.isEmpty()) {
+            return TransactionRelations(emptyMap(), emptyMap(), emptyMap(), emptyMap())
+        }
+        val items = itemRepository.findByTransactionIds(transactionIds).groupBy { it.transactionId }
+        val payments = paymentRepository.findByTransactionIds(transactionIds).groupBy { it.transactionId }
+        val discounts = discountRepository.findByTransactionIds(transactionIds).groupBy { it.transactionId }
+        val taxSummaries = taxSummaryRepository.findByTransactionIds(transactionIds).groupBy { it.transactionId }
+        return TransactionRelations(items, payments, discounts, taxSummaries)
+    }
+
     // === Internal Helpers ===
 
     private fun getWritableTransaction(transactionId: UUID): TransactionEntity {

@@ -5,6 +5,7 @@ import com.openpos.store.entity.OrganizationEntity
 import com.openpos.store.entity.StaffEntity
 import com.openpos.store.entity.StoreEntity
 import com.openpos.store.entity.TerminalEntity
+import com.openpos.store.service.AuditLogService
 import com.openpos.store.service.OrganizationService
 import com.openpos.store.service.StaffService
 import com.openpos.store.service.StoreService
@@ -66,6 +67,9 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
 
     @Inject
     lateinit var staffService: StaffService
+
+    @Inject
+    lateinit var auditLogService: AuditLogService
 
     @Inject
     lateinit var tenantHelper: GrpcTenantHelper
@@ -267,6 +271,13 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
                 role = request.role.toDbRole(),
                 pinHash = pinHash,
             )
+        auditLogService.log(
+            organizationId = entity.organizationId,
+            action = "CREATE",
+            entityType = "STAFF",
+            entityId = entity.id.toString(),
+            details = """{"name":"${entity.name}","role":"${entity.role}","storeId":"${entity.storeId}"}""",
+        )
         responseObserver.onNext(
             CreateStaffResponse.newBuilder().setStaff(entity.toProto()).build(),
         )
@@ -333,6 +344,13 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
                         else -> null
                     },
             ) ?: throw Status.NOT_FOUND.withDescription("Staff not found: ${request.id}").asRuntimeException()
+        auditLogService.log(
+            organizationId = entity.organizationId,
+            action = "UPDATE",
+            entityType = "STAFF",
+            entityId = entity.id.toString(),
+            details = """{"name":"${entity.name}","role":"${entity.role}"}""",
+        )
         responseObserver.onNext(
             UpdateStaffResponse.newBuilder().setStaff(entity.toProto()).build(),
         )
@@ -356,6 +374,20 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         val builder = AuthenticateByPinResponse.newBuilder().setSuccess(result.success)
         result.staff?.let { builder.setStaff(it.toProto()) }
         result.reason?.let { builder.setReason(it) }
+
+        // 監査ログ: ログイン試行を記録（PII なし）
+        result.staff?.let { staff ->
+            val action = if (result.success) "LOGIN_SUCCESS" else "LOGIN_FAILURE"
+            auditLogService.log(
+                organizationId = staff.organizationId,
+                staffId = staff.id,
+                action = action,
+                entityType = "STAFF",
+                entityId = staff.id.toString(),
+                details = """{"reason":"${result.reason ?: "OK"}"}""",
+            )
+        }
+
         responseObserver.onNext(builder.build())
         responseObserver.onCompleted()
     }

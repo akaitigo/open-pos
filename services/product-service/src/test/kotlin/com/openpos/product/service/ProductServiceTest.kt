@@ -1,5 +1,6 @@
 package com.openpos.product.service
 
+import com.openpos.product.cache.ProductCacheService
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.ProductEntity
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -36,6 +38,9 @@ class ProductServiceTest {
     @InjectMock
     lateinit var tenantFilterService: TenantFilterService
 
+    @InjectMock
+    lateinit var cacheService: ProductCacheService
+
     private val orgId = UUID.randomUUID()
     private val categoryId = UUID.randomUUID()
     private val taxRateId = UUID.randomUUID()
@@ -44,6 +49,9 @@ class ProductServiceTest {
     fun setUp() {
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
+        doNothing().whenever(cacheService).invalidateProduct(any(), anyOrNull())
+        doNothing().whenever(cacheService).invalidateCategory(any())
+        doNothing().whenever(cacheService).invalidateAllCategoryLists()
     }
 
     // === create ===

@@ -44,12 +44,25 @@ describe('DashboardPage', () => {
     expect(screen.getByText('ダッシュボード')).toBeInTheDocument()
   })
 
-  it('サマリーカードを表示する', () => {
+  it('KPIカードを表示する', () => {
+    renderWithProviders()
+    expect(screen.getByText('本日の売上')).toBeInTheDocument()
+    expect(screen.getByText('本日の取引数')).toBeInTheDocument()
+    expect(screen.getByText('客単価')).toBeInTheDocument()
+    expect(screen.getByText('昨日の売上')).toBeInTheDocument()
+  })
+
+  it('基本集計カードを表示する', () => {
     renderWithProviders()
     expect(screen.getByText('商品数')).toBeInTheDocument()
     expect(screen.getByText('店舗数')).toBeInTheDocument()
     expect(screen.getByText('スタッフ数')).toBeInTheDocument()
     expect(screen.getByText('取引数')).toBeInTheDocument()
+  })
+
+  it('日次売上チャートセクションを表示する', () => {
+    renderWithProviders()
+    expect(screen.getByText('過去7日間の売上推移')).toBeInTheDocument()
   })
 
   it('ローディング中は ... を表示する', () => {

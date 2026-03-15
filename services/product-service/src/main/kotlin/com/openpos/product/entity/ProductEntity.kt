@@ -3,6 +3,7 @@ package com.openpos.product.entity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -42,4 +43,16 @@ class ProductEntity : BaseEntity() {
 
     @Column(name = "is_active", nullable = false)
     var isActive: Boolean = true
+
+    /** 販売単位タイプ: PIECE, WEIGHT, VOLUME (#135) */
+    @Column(name = "unit_type", nullable = false, length = 20)
+    var unitType: String = "PIECE"
+
+    /** 年齢確認フラグ (#138) */
+    @Column(name = "age_restricted", nullable = false)
+    var ageRestricted: Boolean = false
+
+    /** ソフトデリート日時（null = 未削除） */
+    @Column(name = "deleted_at")
+    var deletedAt: Instant? = null
 }

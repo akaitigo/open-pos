@@ -138,13 +138,14 @@ class ProductService {
     }
 
     /**
-     * 商品を論理削除する（is_active = false に設定）。
+     * 商品をソフトデリートする（deleted_at を現在日時に設定し、is_active = false）。
      */
     @Transactional
     fun delete(id: UUID): Boolean {
         tenantFilterService.enableFilter()
         val entity = productRepository.findById(id) ?: return false
         entity.isActive = false
+        entity.deletedAt = java.time.Instant.now()
         productRepository.persist(entity)
         return true
     }

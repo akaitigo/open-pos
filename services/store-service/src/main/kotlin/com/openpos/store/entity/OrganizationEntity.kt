@@ -33,6 +33,10 @@ class OrganizationEntity {
     @Column(name = "plan", nullable = false, length = 20)
     var plan: String = "FREE"
 
+    /** 通貨コード（ISO 4217: 例 "JPY"） (#170) */
+    @Column(name = "currency", nullable = false, length = 3)
+    var currency: String = "JPY"
+
     @Column(name = "deleted_at")
     var deletedAt: Instant? = null
 

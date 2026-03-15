@@ -84,7 +84,9 @@ export function ProductsPage() {
   useEffect(() => {
     if (
       selectedParentCategory !== 'all' &&
-      !categories.some((category) => category.id === selectedParentCategory && category.parentId === null)
+      !categories.some(
+        (category) => category.id === selectedParentCategory && category.parentId === null,
+      )
     ) {
       setSelectedParentCategory('all')
     }
@@ -140,6 +142,9 @@ export function ProductsPage() {
     setPage(1)
   }
 
+  const [openPriceProduct, setOpenPriceProduct] = useState<Product | null>(null)
+  const [openPriceDialogOpen, setOpenPriceDialogOpen] = useState(false)
+
   function handleAddToCart(product: Product, stock?: Stock) {
     if (stock && stock.quantity <= 0) {
       toast({
@@ -150,8 +155,23 @@ export function ProductsPage() {
       return
     }
 
+    if (product.price === 0) {
+      setOpenPriceProduct(product)
+      setOpenPriceDialogOpen(true)
+      return
+    }
+
     useCartStore.getState().addItem(product)
     toast({ title: `${product.name} をカートに追加しました` })
+  }
+
+  function handleOpenPriceSubmit(priceInSen: number) {
+    if (!openPriceProduct) return
+    const productWithPrice: Product = { ...openPriceProduct, price: priceInSen }
+    useCartStore.getState().addItem(productWithPrice)
+    toast({ title: `${openPriceProduct.name} をカートに追加しました` })
+    setOpenPriceDialogOpen(false)
+    setOpenPriceProduct(null)
   }
 
   const topLevelCategories = getTopLevelCategories(categories)
@@ -168,10 +188,18 @@ export function ProductsPage() {
           }}
           className="min-w-[260px] flex-1"
         />
-        <Button variant="outline" onClick={() => setScannerOpen(true)}>
+        <Button
+          variant="outline"
+          className="min-h-11 min-w-11"
+          onClick={() => setScannerOpen(true)}
+        >
           スキャン
         </Button>
-        <Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}>
+        <Button
+          variant="outline"
+          className="min-h-11 min-w-11"
+          onClick={() => setReloadKey((value) => value + 1)}
+        >
           <RefreshCw className="h-4 w-4" />
           再読込
         </Button>
@@ -227,7 +255,7 @@ export function ProductsPage() {
       </div>
 
       {catalogLoading ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {Array.from({ length: 12 }).map((_, index) => (
             <Card key={index} className="space-y-3 p-3">
               <div className="aspect-square animate-pulse rounded-md bg-muted" />
@@ -252,17 +280,19 @@ export function ProductsPage() {
           商品が見つかりません
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {pagedProducts.map((product) => {
             const category = product.categoryId ? categoryById[product.categoryId] : undefined
             const stock = stocksByProductId[product.id]
             const isSoldOut = stock ? stock.quantity <= 0 : false
-            const isLowStock = stock ? stock.quantity > 0 && stock.quantity <= stock.lowStockThreshold : false
+            const isLowStock = stock
+              ? stock.quantity > 0 && stock.quantity <= stock.lowStockThreshold
+              : false
 
             return (
               <Card
                 key={product.id}
-                className={`overflow-hidden p-3 transition-colors ${
+                className={`min-h-11 min-w-11 overflow-hidden p-3 transition-colors ${
                   isSoldOut
                     ? 'cursor-not-allowed border-dashed opacity-55'
                     : 'cursor-pointer hover:border-primary/60 hover:bg-accent'
@@ -346,6 +376,13 @@ export function ProductsPage() {
         open={scannerOpen}
         onOpenChange={setScannerOpen}
         onScanned={handleBarcodeScanned}
+      />
+
+      <OpenPriceDialog
+        open={openPriceDialogOpen}
+        onOpenChange={setOpenPriceDialogOpen}
+        productName={openPriceProduct?.name ?? ''}
+        onSubmit={handleOpenPriceSubmit}
       />
     </div>
   )
@@ -471,7 +508,11 @@ function filterProducts(
   selectedChildCategory: string,
   search: string,
 ): Product[] {
-  const categoryIds = getSelectedCategoryIds(categories, selectedParentCategory, selectedChildCategory)
+  const categoryIds = getSelectedCategoryIds(
+    categories,
+    selectedParentCategory,
+    selectedChildCategory,
+  )
   const normalizedSearch = search.trim().toLowerCase()
 
   return sortProducts(
@@ -575,4 +616,65 @@ function getErrorMessage(error: unknown): string {
     return error.message
   }
   return 'ネットワークまたは API の状態を確認してください。'
+}
+
+function OpenPriceDialog({
+  open,
+  onOpenChange,
+  productName,
+  onSubmit,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  productName: string
+  onSubmit: (priceInSen: number) => void
+}) {
+  const [priceInput, setPriceInput] = useState('')
+
+  useEffect(() => {
+    if (open) {
+      setPriceInput('')
+    }
+  }, [open])
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const yen = Number(priceInput)
+    if (!Number.isFinite(yen) || yen <= 0) return
+    onSubmit(Math.round(yen * 100))
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>価格入力 — {productName}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          オープンプライス商品です。販売価格を入力してください。
+        </p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">販売価格（円）</label>
+            <Input
+              type="number"
+              min="1"
+              step="1"
+              placeholder="0"
+              value={priceInput}
+              onChange={(e) => setPriceInput(e.target.value)}
+              autoFocus
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              キャンセル
+            </Button>
+            <Button type="submit">カートに追加</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
 }

@@ -14,6 +14,7 @@ import io.grpc.Status
 import io.quarkus.grpc.GrpcService
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
+import jakarta.persistence.OptimisticLockException
 import openpos.common.v1.PaginationResponse
 import openpos.product.v1.Category
 import openpos.product.v1.Coupon
@@ -160,24 +161,30 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         responseObserver: io.grpc.stub.StreamObserver<UpdateProductResponse>,
     ) {
         tenantHelper.setupTenantContext()
-        val entity =
-            productService.update(
-                id = request.id.toUUID(),
-                name = request.name.ifBlank { null },
-                description = request.description.ifBlank { null },
-                barcode = request.barcode.ifBlank { null },
-                sku = request.sku.ifBlank { null },
-                price = request.priceOrNull(),
-                categoryId = request.categoryId.uuidOrNull(),
-                taxRateId = request.taxRateId.uuidOrNull(),
-                imageUrl = request.imageUrl.ifBlank { null },
-                displayOrder = request.displayOrderOrNull(),
-                isActive = request.isActiveOrNull(),
-            ) ?: throw Status.NOT_FOUND.withDescription("Product not found: ${request.id}").asRuntimeException()
-        responseObserver.onNext(
-            UpdateProductResponse.newBuilder().setProduct(entity.toProto()).build(),
-        )
-        responseObserver.onCompleted()
+        try {
+            val entity =
+                productService.update(
+                    id = request.id.toUUID(),
+                    name = request.name.ifBlank { null },
+                    description = request.description.ifBlank { null },
+                    barcode = request.barcode.ifBlank { null },
+                    sku = request.sku.ifBlank { null },
+                    price = request.priceOrNull(),
+                    categoryId = request.categoryId.uuidOrNull(),
+                    taxRateId = request.taxRateId.uuidOrNull(),
+                    imageUrl = request.imageUrl.ifBlank { null },
+                    displayOrder = request.displayOrderOrNull(),
+                    isActive = request.isActiveOrNull(),
+                ) ?: throw Status.NOT_FOUND.withDescription("Product not found: ${request.id}").asRuntimeException()
+            responseObserver.onNext(
+                UpdateProductResponse.newBuilder().setProduct(entity.toProto()).build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: OptimisticLockException) {
+            throw Status.ABORTED
+                .withDescription("Concurrent modification detected for product: ${request.id}")
+                .asRuntimeException()
+        }
     }
 
     override fun deleteProduct(

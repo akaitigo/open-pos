@@ -32,3 +32,10 @@ data class SaleItemPayload(
     val unitPrice: Long,
     val subtotal: Long,
 )
+
+data class StockLowPayload(
+    val productId: String,
+    val storeId: String,
+    val currentQuantity: Int,
+    val threshold: Int,
+)

@@ -144,6 +144,8 @@ export const AuthenticateByPinResponseSchema = z.object({
   success: z.boolean(),
   staff: StaffSchema.nullish(),
   reason: z.string().nullish(),
+  /** PIN 認証成功時に発行されるセッション JWT */
+  token: z.string().nullish(),
 })
 
 export type AuthenticateByPinResponse = z.infer<typeof AuthenticateByPinResponseSchema>

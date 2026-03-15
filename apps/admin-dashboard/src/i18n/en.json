@@ -1,0 +1,55 @@
+{
+  "app": {
+    "name": "OpenPOS",
+    "subtitle": "Admin Dashboard"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "products": "Products",
+    "categories": "Categories",
+    "stores": "Stores",
+    "staff": "Staff",
+    "customers": "Customers",
+    "shifts": "Shifts",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "menu": "Menu"
+  },
+  "common": {
+    "error": "Error",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "confirm": "Confirm",
+    "close": "Close",
+    "search": "Search...",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode"
+  },
+  "customers": {
+    "title": "Customer Management",
+    "addCustomer": "Add Customer",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "points": "Points"
+  },
+  "shifts": {
+    "title": "Shift Management",
+    "addShift": "Add Shift",
+    "date": "Date",
+    "startTime": "Start Time",
+    "endTime": "End Time",
+    "staff": "Staff",
+    "note": "Note"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markRead": "Mark as Read",
+    "markAllRead": "Mark All Read",
+    "noNotifications": "No notifications"
+  }
+}

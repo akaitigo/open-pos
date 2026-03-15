@@ -27,9 +27,12 @@ import openpos.product.v1.GetProductRequest
 import openpos.product.v1.ListProductsRequest
 import openpos.product.v1.ProductServiceGrpc
 import openpos.product.v1.UpdateProductRequest
+import org.eclipse.microprofile.openapi.annotations.Operation
+import org.eclipse.microprofile.openapi.annotations.tags.Tag
 
 @Path("/api/products")
 @Blocking
+@Tag(name = "Products", description = "商品管理API")
 class ProductResource {
     @Inject
     @GrpcClient("product-service")
@@ -42,6 +45,7 @@ class ProductResource {
     lateinit var cache: RedisCacheService
 
     @POST
+    @Operation(summary = "商品を作成する")
     fun create(body: CreateProductBody): Response {
         val request =
             CreateProductRequest
@@ -64,6 +68,7 @@ class ProductResource {
 
     @GET
     @Path("/{id}")
+    @Operation(summary = "IDで商品を取得する")
     fun get(
         @PathParam("id") id: String,
     ): Map<String, Any?> {
@@ -76,6 +81,7 @@ class ProductResource {
     }
 
     @GET
+    @Operation(summary = "商品一覧を取得する")
     fun list(
         @QueryParam("page") @DefaultValue("1") page: Int,
         @QueryParam("pageSize") @DefaultValue("20") pageSize: Int,
@@ -106,6 +112,7 @@ class ProductResource {
 
     @PUT
     @Path("/{id}")
+    @Operation(summary = "商品を更新する")
     fun update(
         @PathParam("id") id: String,
         body: UpdateProductBody,
@@ -133,6 +140,7 @@ class ProductResource {
 
     @DELETE
     @Path("/{id}")
+    @Operation(summary = "商品を論理削除する")
     fun delete(
         @PathParam("id") id: String,
     ): Response {
@@ -143,6 +151,7 @@ class ProductResource {
 
     @GET
     @Path("/barcode/{barcode}")
+    @Operation(summary = "バーコードで商品を取得する")
     fun getByBarcode(
         @PathParam("barcode") barcode: String,
     ): Map<String, Any?> {

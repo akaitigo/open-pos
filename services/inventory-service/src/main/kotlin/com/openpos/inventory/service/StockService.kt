@@ -4,18 +4,21 @@ import com.openpos.inventory.config.OrganizationIdHolder
 import com.openpos.inventory.config.TenantFilterService
 import com.openpos.inventory.entity.StockEntity
 import com.openpos.inventory.entity.StockMovementEntity
+import com.openpos.inventory.event.StockLowEventPublisher
 import com.openpos.inventory.repository.StockMovementRepository
 import com.openpos.inventory.repository.StockRepository
 import io.quarkus.panache.common.Page
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
+import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.time.Instant
 import java.util.UUID
 
 /**
  * 在庫のビジネスロジック層。
  * 在庫取得、一覧、調整（+移動履歴記録）、移動履歴一覧を提供する。
+ * 在庫が閾値以下になった場合に StockLowEvent を発行する。
  */
 @ApplicationScoped
 class StockService {
@@ -30,6 +33,12 @@ class StockService {
 
     @Inject
     lateinit var organizationIdHolder: OrganizationIdHolder
+
+    @Inject
+    lateinit var stockLowEventPublisher: StockLowEventPublisher
+
+    @ConfigProperty(name = "inventory.stock.low-threshold", defaultValue = "10")
+    var defaultLowStockThreshold: Int = 10
 
     /**
      * 店舗×商品の在庫を取得する。
@@ -105,6 +114,7 @@ class StockService {
             "Stock quantity cannot be negative: current=${stock.quantity}, change=$quantityChange"
         }
 
+        val previousQuantity = stock.quantity
         stock.quantity = newQuantity
         stockRepository.persist(stock)
 
@@ -119,6 +129,18 @@ class StockService {
                 this.note = note
             }
         movementRepository.persist(movement)
+
+        // 在庫が閾値以下に下がった場合に StockLowEvent を発行
+        val threshold = stock.lowStockThreshold
+        if (newQuantity <= threshold && previousQuantity > threshold) {
+            stockLowEventPublisher.publish(
+                organizationId = orgId,
+                productId = productId,
+                storeId = storeId,
+                currentQuantity = newQuantity,
+                threshold = threshold,
+            )
+        }
 
         return stock
     }

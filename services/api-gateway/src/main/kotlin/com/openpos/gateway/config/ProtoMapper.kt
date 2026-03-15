@@ -7,8 +7,10 @@ import openpos.inventory.v1.PurchaseOrderItem
 import openpos.inventory.v1.PurchaseOrderStatus
 import openpos.inventory.v1.Stock
 import openpos.inventory.v1.StockMovement
+import openpos.pos.v1.Drawer
 import openpos.pos.v1.PaymentMethod
 import openpos.pos.v1.Receipt
+import openpos.pos.v1.Settlement
 import openpos.pos.v1.TaxSummary
 import openpos.pos.v1.Transaction
 import openpos.pos.v1.TransactionDiscount
@@ -260,6 +262,38 @@ fun Receipt.toMap(): Map<String, Any?> =
         "createdAt" to createdAt,
     )
 
+// === ドロワー・精算 ===
+
+fun Drawer.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "storeId" to storeId,
+        "terminalId" to terminalId,
+        "openingAmount" to openingAmount,
+        "currentAmount" to currentAmount,
+        "isOpen" to isOpen,
+        "openedAt" to openedAt.ifEmpty { null },
+        "closedAt" to closedAt.ifEmpty { null },
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
+fun Settlement.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "storeId" to storeId,
+        "terminalId" to terminalId,
+        "staffId" to staffId,
+        "cashExpected" to cashExpected,
+        "cashActual" to cashActual,
+        "difference" to difference,
+        "settledAt" to settledAt,
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
 // === 在庫管理 ===
 
 fun Stock.toMap(): Map<String, Any?> =
@@ -323,6 +357,80 @@ fun PurchaseOrderItem.toMap(): Map<String, Any?> =
         "orderedQuantity" to orderedQuantity,
         "receivedQuantity" to receivedQuantity,
         "unitCost" to unitCost,
+    )
+
+// === 電子ジャーナル ===
+
+fun openpos.pos.v1.JournalEntry.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "type" to type,
+        "transactionId" to transactionId.ifEmpty { null },
+        "staffId" to staffId,
+        "terminalId" to terminalId,
+        "details" to details,
+        "createdAt" to createdAt,
+    )
+
+// === 分析 ===
+
+fun openpos.analytics.v1.DailySales.toMap(): Map<String, Any?> =
+    mapOf(
+        "date" to date,
+        "storeId" to storeId,
+        "grossAmount" to grossAmount,
+        "netAmount" to netAmount,
+        "taxAmount" to taxAmount,
+        "discountAmount" to discountAmount,
+        "transactionCount" to transactionCount,
+        "cashAmount" to cashAmount,
+        "cardAmount" to cardAmount,
+        "qrAmount" to qrAmount,
+    )
+
+fun openpos.analytics.v1.HourlySales.toMap(): Map<String, Any?> =
+    mapOf(
+        "hour" to hour,
+        "amount" to amount,
+        "transactionCount" to transactionCount,
+    )
+
+fun openpos.analytics.v1.AbcAnalysisItem.toMap(): Map<String, Any?> =
+    mapOf(
+        "productId" to productId,
+        "productName" to productName,
+        "revenue" to revenue,
+        "revenueRatio" to revenueRatio,
+        "cumulativeRatio" to cumulativeRatio,
+        "rank" to rank,
+    )
+
+fun openpos.analytics.v1.GrossProfitItem.toMap(): Map<String, Any?> =
+    mapOf(
+        "productId" to productId,
+        "productName" to productName,
+        "revenue" to revenue,
+        "cost" to cost,
+        "grossProfit" to grossProfit,
+        "marginRate" to marginRate,
+        "quantitySold" to quantitySold,
+    )
+
+fun openpos.analytics.v1.SalesForecastPoint.toMap(): Map<String, Any?> =
+    mapOf(
+        "date" to date,
+        "actualAmount" to actualAmount,
+        "movingAverage" to movingAverage,
+    )
+
+// === システム設定 ===
+
+fun openpos.store.v1.SystemSetting.toMap(): Map<String, Any?> =
+    mapOf(
+        "key" to key,
+        "value" to value,
+        "description" to description.ifEmpty { null },
     )
 
 // === ページネーション ===
