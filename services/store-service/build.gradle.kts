@@ -3,7 +3,6 @@ plugins {
     kotlin("plugin.allopen")
     kotlin("plugin.noarg")
     id("io.quarkus")
-    id("org.owasp.dependencycheck")
 }
 
 val quarkusPlatformGroupId: String by project
@@ -20,7 +19,8 @@ dependencies {
     implementation("io.quarkus:quarkus-redis-client")
     implementation("io.quarkus:quarkus-messaging-rabbitmq")
     implementation("io.quarkus:quarkus-smallrye-health")
-    implementation("io.quarkus:quarkus-logging-json")
+    implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
+    implementation("io.quarkus:quarkus-opentelemetry")
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("io.quarkus:quarkus-arc")
     implementation("at.favre.lib:bcrypt:0.10.2")

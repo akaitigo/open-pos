@@ -1,6 +1,5 @@
 package com.openpos.product.service
 
-import com.openpos.product.cache.ProductCacheService
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.ProductEntity
@@ -14,7 +13,6 @@ import java.util.UUID
 /**
  * 商品のビジネスロジック層。
  * CRUD、バーコード検索、フリーワード検索、ページネーションを提供する。
- * cache-aside パターンで Redis キャッシュを利用する。
  */
 @ApplicationScoped
 class ProductService {
@@ -26,9 +24,6 @@ class ProductService {
 
     @Inject
     lateinit var organizationIdHolder: OrganizationIdHolder
-
-    @Inject
-    lateinit var cacheService: ProductCacheService
 
     /**
      * 商品を作成する。
@@ -70,7 +65,6 @@ class ProductService {
 
     /**
      * IDで商品を取得する。
-     * cache-aside: キャッシュヒット時はDBアクセスをスキップ。
      */
     fun findById(id: UUID): ProductEntity? {
         tenantFilterService.enableFilter()
@@ -105,7 +99,7 @@ class ProductService {
     }
 
     /**
-     * 商品を更新する。更新後にキャッシュを無効化する。
+     * 商品を更新する。
      */
     @Transactional
     fun update(
@@ -123,7 +117,6 @@ class ProductService {
     ): ProductEntity? {
         tenantFilterService.enableFilter()
         val entity = productRepository.findById(id) ?: return null
-        val oldBarcode = entity.barcode
 
         name?.let { entity.name = it }
         description?.let { entity.description = it }
@@ -141,25 +134,19 @@ class ProductService {
         isActive?.let { entity.isActive = it }
 
         productRepository.persist(entity)
-        cacheService.invalidateProduct(id.toString(), oldBarcode)
-        if (barcode != null && barcode != oldBarcode) {
-            cacheService.invalidateProduct(id.toString(), barcode)
-        }
         return entity
     }
 
     /**
-     * 商品を論理削除する（is_active = false に設定）。
-     * 削除後にキャッシュを無効化する。
+     * 商品をソフトデリートする（deleted_at を現在日時に設定し、is_active = false）。
      */
     @Transactional
     fun delete(id: UUID): Boolean {
         tenantFilterService.enableFilter()
         val entity = productRepository.findById(id) ?: return false
-        val barcode = entity.barcode
         entity.isActive = false
+        entity.deletedAt = java.time.Instant.now()
         productRepository.persist(entity)
-        cacheService.invalidateProduct(id.toString(), barcode)
         return true
     }
 }

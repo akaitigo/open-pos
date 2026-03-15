@@ -3,6 +3,11 @@ package com.openpos.product.entity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
+import jakarta.persistence.Version
+import org.hibernate.annotations.Filter
+import org.hibernate.annotations.FilterDef
+import org.hibernate.annotations.ParamDef
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -12,6 +17,8 @@ import java.util.UUID
  */
 @Entity
 @Table(name = "products", schema = "product_schema")
+@FilterDef(name = "activeProductFilter", defaultCondition = "deleted_at IS NULL")
+@Filter(name = "activeProductFilter")
 class ProductEntity : BaseEntity() {
     @Column(name = "category_id")
     var categoryId: UUID? = null
@@ -42,4 +49,17 @@ class ProductEntity : BaseEntity() {
 
     @Column(name = "is_active", nullable = false)
     var isActive: Boolean = true
+
+    /**
+     * 論理削除日時。null の場合はアクティブな商品。
+     */
+    @Column(name = "deleted_at")
+    var deletedAt: Instant? = null
+
+    /**
+     * 楽観的ロック用バージョン番号。
+     */
+    @Version
+    @Column(name = "version", nullable = false)
+    var version: Long = 0
 }

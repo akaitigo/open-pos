@@ -352,10 +352,43 @@ services:
     networks:
       - openpos-net
 
+  # === Observability ===
+  prometheus:
+    image: prom/prometheus:v3.2.0
+    container_name: openpos-prometheus
+    ports:
+      - '19090:9090'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - openpos-prometheus:/prometheus
+    networks:
+      - openpos-net
+
+  grafana:
+    image: grafana/grafana:11.5.0
+    container_name: openpos-grafana
+    ports:
+      - '13000:3000'
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - openpos-grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    networks:
+      - openpos-net
+
 volumes:
   openpos-pgdata:
   openpos-redis:
   openpos-rabbitmq:
+  openpos-prometheus:
+  openpos-grafana:
 
 networks:
   openpos-net:

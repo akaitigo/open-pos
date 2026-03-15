@@ -1,15 +1,13 @@
 package com.openpos.pos.grpc
 
-import com.openpos.pos.entity.DrawerEntity
 import com.openpos.pos.entity.PaymentEntity
-import com.openpos.pos.entity.SettlementEntity
 import com.openpos.pos.entity.TaxSummaryEntity
 import com.openpos.pos.entity.TransactionDiscountEntity
 import com.openpos.pos.entity.TransactionEntity
 import com.openpos.pos.entity.TransactionItemEntity
-import com.openpos.pos.service.DrawerService
+import com.openpos.pos.service.OfflineItemInput
+import com.openpos.pos.service.OfflineTransactionInput
 import com.openpos.pos.service.PaymentInput
-import com.openpos.pos.service.SettlementService
 import com.openpos.pos.service.TransactionService
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -21,34 +19,25 @@ import openpos.pos.v1.AddTransactionItemRequest
 import openpos.pos.v1.AddTransactionItemResponse
 import openpos.pos.v1.ApplyDiscountRequest
 import openpos.pos.v1.ApplyDiscountResponse
-import openpos.pos.v1.CloseDrawerRequest
-import openpos.pos.v1.CloseDrawerResponse
-import openpos.pos.v1.CreateSettlementRequest
-import openpos.pos.v1.CreateSettlementResponse
 import openpos.pos.v1.CreateTransactionRequest
 import openpos.pos.v1.CreateTransactionResponse
-import openpos.pos.v1.Drawer
 import openpos.pos.v1.FinalizeTransactionRequest
 import openpos.pos.v1.FinalizeTransactionResponse
-import openpos.pos.v1.GetDrawerStatusRequest
-import openpos.pos.v1.GetDrawerStatusResponse
 import openpos.pos.v1.GetReceiptRequest
 import openpos.pos.v1.GetReceiptResponse
-import openpos.pos.v1.GetSettlementRequest
-import openpos.pos.v1.GetSettlementResponse
 import openpos.pos.v1.GetTransactionRequest
 import openpos.pos.v1.GetTransactionResponse
 import openpos.pos.v1.ListTransactionsRequest
 import openpos.pos.v1.ListTransactionsResponse
-import openpos.pos.v1.OpenDrawerRequest
-import openpos.pos.v1.OpenDrawerResponse
 import openpos.pos.v1.Payment
 import openpos.pos.v1.PaymentMethod
 import openpos.pos.v1.PosServiceGrpc
 import openpos.pos.v1.Receipt
 import openpos.pos.v1.RemoveTransactionItemRequest
 import openpos.pos.v1.RemoveTransactionItemResponse
-import openpos.pos.v1.Settlement
+import openpos.pos.v1.SyncOfflineTransactionsRequest
+import openpos.pos.v1.SyncOfflineTransactionsResponse
+import openpos.pos.v1.SyncResult
 import openpos.pos.v1.TaxSummary
 import openpos.pos.v1.Transaction
 import openpos.pos.v1.TransactionDiscount
@@ -67,12 +56,6 @@ import java.util.UUID
 class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     @Inject
     lateinit var transactionService: TransactionService
-
-    @Inject
-    lateinit var drawerService: DrawerService
-
-    @Inject
-    lateinit var settlementService: SettlementService
 
     @Inject
     lateinit var tenantHelper: GrpcTenantHelper
@@ -376,6 +359,71 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         }
     }
 
+    // === Offline Sync ===
+
+    override fun syncOfflineTransactions(
+        request: SyncOfflineTransactionsRequest,
+        responseObserver: StreamObserver<SyncOfflineTransactionsResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        val results =
+            request.transactionsList.map { offlineTx ->
+                try {
+                    val items =
+                        offlineTx.itemsList.map { item ->
+                            OfflineItemInput(
+                                productId = item.productId.toUUID(),
+                                productName = item.productName,
+                                unitPrice = item.unitPrice,
+                                quantity = item.quantity,
+                                taxRateName = item.taxRateName,
+                                taxRate = item.taxRate,
+                                isReducedTax = item.isReducedTax,
+                            )
+                        }
+                    val payments =
+                        offlineTx.paymentsList.map { p ->
+                            PaymentInput(
+                                method = p.method.toDbValue(),
+                                amount = p.amount,
+                                received = if (p.received > 0) p.received else null,
+                                reference = p.reference.ifBlank { null },
+                            )
+                        }
+                    val input =
+                        OfflineTransactionInput(
+                            clientId = offlineTx.clientId,
+                            storeId = offlineTx.storeId.toUUID(),
+                            terminalId = offlineTx.terminalId.toUUID(),
+                            staffId = offlineTx.staffId.toUUID(),
+                            items = items,
+                            payments = payments,
+                        )
+                    val tx = transactionService.syncOfflineTransaction(input)
+                    SyncResult
+                        .newBuilder()
+                        .setClientId(offlineTx.clientId)
+                        .setSuccess(true)
+                        .setTransactionId(tx.id.toString())
+                        .build()
+                } catch (e: Exception) {
+                    SyncResult
+                        .newBuilder()
+                        .setClientId(offlineTx.clientId)
+                        .setSuccess(false)
+                        .setError(e.message.orEmpty())
+                        .build()
+                }
+            }
+        responseObserver.onNext(
+            SyncOfflineTransactionsResponse
+                .newBuilder()
+                .addAllResults(results)
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
     private fun buildReceipt(tx: TransactionEntity): Receipt {
         val items = transactionService.getTransactionItems(tx.id)
         val payments = transactionService.getTransactionPayments(tx.id)
@@ -391,155 +439,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             .setCreatedAt(Instant.now().toString())
             .build()
     }
-
-    // === Drawer ===
-
-    override fun openDrawer(
-        request: OpenDrawerRequest,
-        responseObserver: StreamObserver<OpenDrawerResponse>,
-    ) {
-        tenantHelper.setupTenantContextWithoutFilter()
-        try {
-            val entity =
-                drawerService.openDrawer(
-                    storeId = request.storeId.toUUID(),
-                    terminalId = request.terminalId.toUUID(),
-                    openingAmount = request.openingAmount,
-                )
-            responseObserver.onNext(
-                OpenDrawerResponse
-                    .newBuilder()
-                    .setDrawer(entity.toProto())
-                    .build(),
-            )
-            responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
-        }
-    }
-
-    override fun closeDrawer(
-        request: CloseDrawerRequest,
-        responseObserver: StreamObserver<CloseDrawerResponse>,
-    ) {
-        tenantHelper.setupTenantContext()
-        try {
-            val entity =
-                drawerService.closeDrawer(
-                    storeId = request.storeId.toUUID(),
-                    terminalId = request.terminalId.toUUID(),
-                )
-            responseObserver.onNext(
-                CloseDrawerResponse
-                    .newBuilder()
-                    .setDrawer(entity.toProto())
-                    .build(),
-            )
-            responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
-        }
-    }
-
-    override fun getDrawerStatus(
-        request: GetDrawerStatusRequest,
-        responseObserver: StreamObserver<GetDrawerStatusResponse>,
-    ) {
-        tenantHelper.setupTenantContext()
-        try {
-            val entity =
-                drawerService.getDrawerStatus(
-                    storeId = request.storeId.toUUID(),
-                    terminalId = request.terminalId.toUUID(),
-                )
-            responseObserver.onNext(
-                GetDrawerStatusResponse
-                    .newBuilder()
-                    .setDrawer(entity.toProto())
-                    .build(),
-            )
-            responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
-        }
-    }
-
-    // === Settlement ===
-
-    override fun createSettlement(
-        request: CreateSettlementRequest,
-        responseObserver: StreamObserver<CreateSettlementResponse>,
-    ) {
-        tenantHelper.setupTenantContextWithoutFilter()
-        try {
-            val entity =
-                settlementService.createSettlement(
-                    storeId = request.storeId.toUUID(),
-                    terminalId = request.terminalId.toUUID(),
-                    staffId = request.staffId.toUUID(),
-                    cashActual = request.cashActual,
-                )
-            responseObserver.onNext(
-                CreateSettlementResponse
-                    .newBuilder()
-                    .setSettlement(entity.toProto())
-                    .build(),
-            )
-            responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
-        }
-    }
-
-    override fun getSettlement(
-        request: GetSettlementRequest,
-        responseObserver: StreamObserver<GetSettlementResponse>,
-    ) {
-        tenantHelper.setupTenantContext()
-        try {
-            val entity = settlementService.getSettlement(request.id.toUUID())
-            responseObserver.onNext(
-                GetSettlementResponse
-                    .newBuilder()
-                    .setSettlement(entity.toProto())
-                    .build(),
-            )
-            responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
-        }
-    }
-
-    // === Drawer/Settlement Mappers ===
-
-    private fun DrawerEntity.toProto(): Drawer =
-        Drawer
-            .newBuilder()
-            .setId(id.toString())
-            .setOrganizationId(organizationId.toString())
-            .setStoreId(storeId.toString())
-            .setTerminalId(terminalId.toString())
-            .setOpeningAmount(openingAmount)
-            .setCurrentAmount(currentAmount)
-            .setIsOpen(isOpen)
-            .setOpenedAt(openedAt?.toString().orEmpty())
-            .setClosedAt(closedAt?.toString().orEmpty())
-            .build()
-
-    private fun SettlementEntity.toProto(): Settlement =
-        Settlement
-            .newBuilder()
-            .setId(id.toString())
-            .setOrganizationId(organizationId.toString())
-            .setStoreId(storeId.toString())
-            .setTerminalId(terminalId.toString())
-            .setStaffId(staffId.toString())
-            .setCashExpected(cashExpected)
-            .setCashActual(cashActual)
-            .setDifference(difference)
-            .setSettledAt(settledAt.toString())
-            .setCreatedAt(createdAt.toString())
-            .build()
 
     // === Mapper Extensions ===
 
@@ -695,8 +594,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         for (payment in payments) {
             sb.appendLine("${payment.method}: ${payment.amount / 100}円")
             if (payment.method == "CASH" && (payment.change ?: 0) > 0) {
-                val changeAmount = requireNotNull(payment.change) { "change must not be null when > 0" }
-                sb.appendLine("お釣り: ${changeAmount / 100}円")
+                sb.appendLine("お釣り: ${payment.change!! / 100}円")
             }
         }
         sb.appendLine("--------------------------------")
