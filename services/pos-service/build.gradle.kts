@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.allopen")
     kotlin("plugin.noarg")
     id("io.quarkus")
+    id("org.owasp.dependencycheck")
 }
 
 val quarkusPlatformGroupId: String by project

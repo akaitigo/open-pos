@@ -96,4 +96,9 @@ export class PosPage {
   async closeReceipt(): Promise<void> {
     await this.receiptCloseButton.click()
   }
+
+  async navigateToHistory(): Promise<void> {
+    await this.page.getByRole('link', { name: '履歴' }).click()
+    await expect(this.page.getByText('取引履歴')).toBeVisible()
+  }
 }
