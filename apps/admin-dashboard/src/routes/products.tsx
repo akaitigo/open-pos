@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { api } from '@/lib/api'
@@ -30,6 +31,7 @@ export function ProductsPage() {
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   const fetchProducts = useCallback(async () => {
     const result = await api.get<PaginatedResponse<Product>>(
@@ -144,7 +146,11 @@ export function ProductsPage() {
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
                           編集
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(product.id)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteTarget(product.id)}
+                        >
                           削除
                         </Button>
                       </div>
@@ -187,6 +193,18 @@ export function ProductsPage() {
           categories={categories}
           taxRates={taxRates}
           onSubmit={handleSubmit}
+        />
+
+        <ConfirmDialog
+          open={deleteTarget !== null}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null)
+          }}
+          title="商品を削除"
+          onConfirm={() => {
+            if (deleteTarget) handleDelete(deleteTarget)
+            setDeleteTarget(null)
+          }}
         />
       </div>
     </>

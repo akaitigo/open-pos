@@ -15,14 +15,14 @@ const mockOrg = {
   updatedAt: '2026-01-01T00:00:00Z',
 }
 
-const mockApi = {
-  get: vi.fn().mockResolvedValue(mockOrg),
-  put: vi.fn().mockResolvedValue(mockOrg),
+const mockApi = vi.hoisted(() => ({
+  get: vi.fn(),
+  put: vi.fn(),
   post: vi.fn(),
   delete: vi.fn(),
   setOrganizationId: vi.fn(),
   setBaseUrl: vi.fn(),
-}
+}))
 
 vi.mock('@/lib/api', () => ({
   api: mockApi,

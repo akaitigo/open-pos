@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { DiscountsPage } from './discounts'
@@ -36,14 +37,14 @@ const mockCoupons = [
   },
 ]
 
-const mockApi = {
+const mockApi = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
   delete: vi.fn(),
   setOrganizationId: vi.fn(),
   setBaseUrl: vi.fn(),
-}
+}))
 
 vi.mock('@/lib/api', () => ({
   api: mockApi,
@@ -97,10 +98,11 @@ describe('DiscountsPage', () => {
   })
 
   it('タブを切り替えてクーポン一覧を表示する', async () => {
+    const user = userEvent.setup()
     renderPage()
     // クーポンタブをクリック
     const couponTab = screen.getByRole('tab', { name: 'クーポン' })
-    couponTab.click()
+    await user.click(couponTab)
     await waitFor(() => {
       expect(screen.getByText('WELCOME2024')).toBeInTheDocument()
     })
