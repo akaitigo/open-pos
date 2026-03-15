@@ -37,14 +37,14 @@ const mockTerminals = [
   },
 ]
 
-const mockApi = {
+const mockApi = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
   delete: vi.fn(),
   setOrganizationId: vi.fn(),
   setBaseUrl: vi.fn(),
-}
+}))
 
 vi.mock('@/lib/api', () => ({
   api: mockApi,
