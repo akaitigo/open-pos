@@ -3,6 +3,7 @@ package com.openpos.pos.entity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
+import jakarta.persistence.Version
 import java.time.Instant
 import java.util.UUID
 
@@ -47,18 +48,16 @@ class TransactionEntity : BaseEntity() {
     @Column(name = "total", nullable = false)
     var total: Long = 0
 
+    @Column(name = "table_number", length = 20)
+    var tableNumber: String? = null
+
     @Column(name = "completed_at")
     var completedAt: Instant? = null
 
-    /** 取引メモ・備考 (#137) */
-    @Column(name = "memo", columnDefinition = "text")
-    var memo: String? = null
-
-    /** トレーニングモードフラグ (#139) */
-    @Column(name = "is_training", nullable = false)
-    var isTraining: Boolean = false
-
-    /** 顧客ID (#140) */
-    @Column(name = "customer_id")
-    var customerId: UUID? = null
+    /**
+     * 楽観的ロック用バージョン番号。
+     */
+    @Version
+    @Column(name = "version", nullable = false)
+    var version: Long = 0
 }

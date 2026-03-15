@@ -6,8 +6,9 @@ import {
   Store,
   Users,
   Settings,
-  UserCircle,
-  Bell,
+  Warehouse,
+  ClipboardList,
+  ScrollText,
 } from 'lucide-react'
 
 import {
@@ -27,10 +28,11 @@ const navItems = [
   { title: 'ダッシュボード', url: '/', icon: LayoutDashboard },
   { title: '商品管理', url: '/products', icon: Package },
   { title: 'カテゴリ管理', url: '/categories', icon: FolderTree },
+  { title: '在庫管理', url: '/inventory', icon: Warehouse },
+  { title: '発注管理', url: '/purchase-orders', icon: ClipboardList },
   { title: '店舗管理', url: '/stores', icon: Store },
   { title: 'スタッフ管理', url: '/staff', icon: Users },
-  { title: '顧客管理', url: '/customers', icon: UserCircle },
-  { title: '通知', url: '/notifications', icon: Bell },
+  { title: '操作履歴', url: '/activity-logs', icon: ScrollText },
   { title: '設定', url: '/settings', icon: Settings },
 ]
 
