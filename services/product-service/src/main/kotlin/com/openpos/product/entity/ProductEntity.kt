@@ -41,6 +41,9 @@ class ProductEntity : BaseEntity() {
     @Column(name = "price", nullable = false)
     var price: Long = 0
 
+    @Column(name = "cost_price", nullable = false)
+    var costPrice: Long = 0
+
     @Column(name = "image_url")
     var imageUrl: String? = null
 

@@ -188,10 +188,18 @@ export function ProductsPage() {
           }}
           className="min-w-[260px] flex-1"
         />
-        <Button variant="outline" onClick={() => setScannerOpen(true)}>
+        <Button
+          variant="outline"
+          className="min-h-11 min-w-11"
+          onClick={() => setScannerOpen(true)}
+        >
           スキャン
         </Button>
-        <Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}>
+        <Button
+          variant="outline"
+          className="min-h-11 min-w-11"
+          onClick={() => setReloadKey((value) => value + 1)}
+        >
           <RefreshCw className="h-4 w-4" />
           再読込
         </Button>
@@ -284,7 +292,7 @@ export function ProductsPage() {
             return (
               <Card
                 key={product.id}
-                className={`overflow-hidden p-3 transition-colors ${
+                className={`min-h-11 min-w-11 overflow-hidden p-3 transition-colors ${
                   isSoldOut
                     ? 'cursor-not-allowed border-dashed opacity-55'
                     : 'cursor-pointer hover:border-primary/60 hover:bg-accent'

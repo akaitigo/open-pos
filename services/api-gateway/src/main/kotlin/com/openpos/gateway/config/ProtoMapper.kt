@@ -325,36 +325,21 @@ fun PurchaseOrderItem.toMap(): Map<String, Any?> =
         "unitCost" to unitCost,
     )
 
-// === ドロワー・精算 ===
+// === 電子ジャーナル ===
 
-fun openpos.pos.v1.Drawer.toMap(): Map<String, Any?> =
+fun openpos.pos.v1.JournalEntry.toMap(): Map<String, Any?> =
     mapOf(
         "id" to id,
         "organizationId" to organizationId,
-        "storeId" to storeId,
-        "terminalId" to terminalId,
-        "openingAmount" to openingAmount,
-        "currentAmount" to currentAmount,
-        "isOpen" to isOpen,
-        "openedAt" to openedAt.ifEmpty { null },
-        "closedAt" to closedAt.ifEmpty { null },
-    )
-
-fun openpos.pos.v1.Settlement.toMap(): Map<String, Any?> =
-    mapOf(
-        "id" to id,
-        "organizationId" to organizationId,
-        "storeId" to storeId,
-        "terminalId" to terminalId,
+        "type" to type,
+        "transactionId" to transactionId.ifEmpty { null },
         "staffId" to staffId,
-        "cashExpected" to cashExpected,
-        "cashActual" to cashActual,
-        "difference" to difference,
-        "settledAt" to settledAt,
+        "terminalId" to terminalId,
+        "details" to details,
         "createdAt" to createdAt,
     )
 
-// === 売上分析 ===
+// === 分析 ===
 
 fun openpos.analytics.v1.DailySales.toMap(): Map<String, Any?> =
     mapOf(
@@ -370,21 +355,41 @@ fun openpos.analytics.v1.DailySales.toMap(): Map<String, Any?> =
         "qrAmount" to qrAmount,
     )
 
-fun openpos.analytics.v1.SalesSummary.toMap(): Map<String, Any?> =
+fun openpos.analytics.v1.AbcAnalysisItem.toMap(): Map<String, Any?> =
     mapOf(
-        "totalGross" to totalGross,
-        "totalNet" to totalNet,
-        "totalTax" to totalTax,
-        "totalDiscount" to totalDiscount,
-        "totalTransactions" to totalTransactions,
-        "averageTransaction" to averageTransaction,
+        "productId" to productId,
+        "productName" to productName,
+        "revenue" to revenue,
+        "revenueRatio" to revenueRatio,
+        "cumulativeRatio" to cumulativeRatio,
+        "rank" to rank,
     )
 
-fun openpos.analytics.v1.HourlySales.toMap(): Map<String, Any?> =
+fun openpos.analytics.v1.GrossProfitItem.toMap(): Map<String, Any?> =
     mapOf(
-        "hour" to hour,
-        "amount" to amount,
-        "transactionCount" to transactionCount,
+        "productId" to productId,
+        "productName" to productName,
+        "revenue" to revenue,
+        "cost" to cost,
+        "grossProfit" to grossProfit,
+        "marginRate" to marginRate,
+        "quantitySold" to quantitySold,
+    )
+
+fun openpos.analytics.v1.SalesForecastPoint.toMap(): Map<String, Any?> =
+    mapOf(
+        "date" to date,
+        "actualAmount" to actualAmount,
+        "movingAverage" to movingAverage,
+    )
+
+// === システム設定 ===
+
+fun openpos.store.v1.SystemSetting.toMap(): Map<String, Any?> =
+    mapOf(
+        "key" to key,
+        "value" to value,
+        "description" to description.ifEmpty { null },
     )
 
 // === ページネーション ===

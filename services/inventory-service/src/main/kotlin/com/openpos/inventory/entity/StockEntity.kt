@@ -26,6 +26,12 @@ class StockEntity : BaseEntity() {
     @Column(name = "low_stock_threshold", nullable = false)
     var lowStockThreshold: Int = 10
 
+    @Column(name = "reorder_point", nullable = false)
+    var reorderPoint: Int = 0
+
+    @Column(name = "reorder_quantity", nullable = false)
+    var reorderQuantity: Int = 0
+
     /**
      * 楽観的ロック用バージョン番号。
      */

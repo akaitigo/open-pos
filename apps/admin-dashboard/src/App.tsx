@@ -21,6 +21,12 @@ const InventoryPage = lazy(() =>
 const PurchaseOrdersPage = lazy(() =>
   import('@/routes/purchase-orders').then((m) => ({ default: m.PurchaseOrdersPage })),
 )
+const ActivityLogsPage = lazy(() =>
+  import('@/routes/activity-logs').then((m) => ({ default: m.ActivityLogsPage })),
+)
+const OnboardingPage = lazy(() =>
+  import('@/routes/onboarding').then((m) => ({ default: m.OnboardingPage })),
+)
 
 function RouteLoading() {
   return (
@@ -89,6 +95,22 @@ export function App() {
             element={
               <Suspense fallback={<RouteLoading />}>
                 <PurchaseOrdersPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="activity-logs"
+            element={
+              <Suspense fallback={<RouteLoading />}>
+                <ActivityLogsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="onboarding"
+            element={
+              <Suspense fallback={<RouteLoading />}>
+                <OnboardingPage />
               </Suspense>
             }
           />

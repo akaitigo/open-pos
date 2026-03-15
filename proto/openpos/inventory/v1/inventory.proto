@@ -27,6 +27,14 @@ service InventoryService {
   rpc ListPurchaseOrders(ListPurchaseOrdersRequest) returns (ListPurchaseOrdersResponse);
   // 発注ステータスを更新する（入荷確認時に RECEIVED にする）
   rpc UpdatePurchaseOrderStatus(UpdatePurchaseOrderStatusRequest) returns (UpdatePurchaseOrderStatusResponse);
+  // 棚卸しを開始する
+  rpc StartStocktake(StartStocktakeRequest) returns (StartStocktakeResponse);
+  // 棚卸し項目を記録する
+  rpc RecordStocktakeItem(RecordStocktakeItemRequest) returns (RecordStocktakeItemResponse);
+  // 棚卸しを完了する（差異を在庫に反映）
+  rpc CompleteStocktake(CompleteStocktakeRequest) returns (CompleteStocktakeResponse);
+  // 棚卸しを取得する
+  rpc GetStocktake(GetStocktakeRequest) returns (GetStocktakeResponse);
 }
 
 // 在庫移動種別
@@ -304,4 +312,102 @@ message ReceivedItemInput {
   string product_id = 1;
   // 実際の入荷数量（発注数量と異なる場合も記録）
   int32 received_quantity = 2;
+}
+
+// === 棚卸し（在庫実査） ===
+
+// 棚卸しステータス
+enum StocktakeStatus {
+  // 未指定
+  STOCKTAKE_STATUS_UNSPECIFIED = 0;
+  // 実施中
+  STOCKTAKE_STATUS_IN_PROGRESS = 1;
+  // 完了
+  STOCKTAKE_STATUS_COMPLETED = 2;
+  // キャンセル
+  STOCKTAKE_STATUS_CANCELLED = 3;
+}
+
+// 棚卸し
+message Stocktake {
+  // 棚卸しID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 店舗ID
+  string store_id = 3;
+  // ステータス
+  StocktakeStatus status = 4;
+  // 開始日時
+  string started_at = 5;
+  // 完了日時
+  string completed_at = 6;
+  // 棚卸し項目
+  repeated StocktakeItem items = 7;
+}
+
+// 棚卸し項目
+message StocktakeItem {
+  // 項目ID（UUID）
+  string id = 1;
+  // 商品ID
+  string product_id = 2;
+  // システム上の在庫数
+  int32 expected_quantity = 3;
+  // 実査数量
+  int32 actual_quantity = 4;
+  // 差異（actual - expected）
+  int32 difference = 5;
+}
+
+// 棚卸し開始リクエスト
+message StartStocktakeRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+}
+
+// 棚卸し開始レスポンス
+message StartStocktakeResponse {
+  // 作成された棚卸し
+  Stocktake stocktake = 1;
+}
+
+// 棚卸し項目記録リクエスト
+message RecordStocktakeItemRequest {
+  // 棚卸しID（必須）
+  string stocktake_id = 1;
+  // 商品ID（必須）
+  string product_id = 2;
+  // 実査数量（必須）
+  int32 actual_quantity = 3;
+}
+
+// 棚卸し項目記録レスポンス
+message RecordStocktakeItemResponse {
+  // 更新された棚卸し
+  Stocktake stocktake = 1;
+}
+
+// 棚卸し完了リクエスト
+message CompleteStocktakeRequest {
+  // 棚卸しID（必須）
+  string stocktake_id = 1;
+}
+
+// 棚卸し完了レスポンス
+message CompleteStocktakeResponse {
+  // 完了した棚卸し
+  Stocktake stocktake = 1;
+}
+
+// 棚卸し取得リクエスト
+message GetStocktakeRequest {
+  // 棚卸しID（必須）
+  string id = 1;
+}
+
+// 棚卸し取得レスポンス
+message GetStocktakeResponse {
+  // 棚卸し情報
+  Stocktake stocktake = 1;
 }

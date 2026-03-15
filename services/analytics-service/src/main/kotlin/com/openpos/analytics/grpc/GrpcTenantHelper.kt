@@ -8,10 +8,6 @@ import io.grpc.StatusRuntimeException
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 
-/**
- * gRPC コンテキストから OrganizationIdHolder へテナントIDを転送するヘルパー。
- * 各 gRPC メソッドの先頭で呼び出す。
- */
 @ApplicationScoped
 class GrpcTenantHelper {
     @Inject
@@ -20,10 +16,6 @@ class GrpcTenantHelper {
     @Inject
     lateinit var tenantFilterService: TenantFilterService
 
-    /**
-     * gRPC Context から organizationId を取得し、
-     * OrganizationIdHolder に設定してフィルターを有効化する。
-     */
     fun setupTenantContext() {
         val orgId =
             OrganizationIdInterceptor.ORGANIZATION_ID_CTX_KEY.get()

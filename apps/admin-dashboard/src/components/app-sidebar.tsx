@@ -8,6 +8,7 @@ import {
   Settings,
   Warehouse,
   ClipboardList,
+  ScrollText,
 } from 'lucide-react'
 
 import {
@@ -31,6 +32,7 @@ const navItems = [
   { title: '発注管理', url: '/purchase-orders', icon: ClipboardList },
   { title: '店舗管理', url: '/stores', icon: Store },
   { title: 'スタッフ管理', url: '/staff', icon: Users },
+  { title: '操作履歴', url: '/activity-logs', icon: ScrollText },
   { title: '設定', url: '/settings', icon: Settings },
 ]
 

@@ -1,30 +1,20 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
-import {
-  formatMoney,
-  FinalizeTransactionResponseSchema,
-  PaginatedTransactionsSchema,
-  ReceiptSchema,
-  TransactionSchema,
-  StockSchema,
-} from '@shared-types/openpos'
-import type { Transaction, TransactionItem, PaginatedResponse } from '@shared-types/openpos'
+import { formatMoney, PaginatedTransactionsSchema, ReceiptSchema } from '@shared-types/openpos'
+import type { Transaction, PaginatedResponse } from '@shared-types/openpos'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ReceiptDialog } from '@/components/receipt-dialog'
-import { toast } from '@/hooks/use-toast'
 
 export function HistoryPage() {
-  const { storeId, terminalId, staff } = useAuthStore()
+  const storeId = useAuthStore((s) => s.storeId)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
   const [receiptData, setReceiptData] = useState<string | null>(null)
   const [receiptOpen, setReceiptOpen] = useState(false)
-  const [returnDialogTx, setReturnDialogTx] = useState<Transaction | null>(null)
 
-  const fetchTransactions = useCallback(() => {
+  useEffect(() => {
     if (!storeId) return
     api
       .get<PaginatedResponse<Transaction>>('/api/transactions', PaginatedTransactionsSchema, {
@@ -36,10 +26,6 @@ export function HistoryPage() {
       })
   }, [storeId, page])
 
-  useEffect(() => {
-    fetchTransactions()
-  }, [fetchTransactions])
-
   async function handleViewReceipt(transactionId: string) {
     try {
       const receipt = await api.get(`/api/transactions/${transactionId}/receipt`, ReceiptSchema)
@@ -47,72 +33,6 @@ export function HistoryPage() {
       setReceiptOpen(true)
     } catch {
       // receipt not available
-    }
-  }
-
-  async function handleReissueReceipt(transactionId: string) {
-    try {
-      const receipt = await api.get(`/api/transactions/${transactionId}/receipt`, ReceiptSchema)
-      setReceiptData(receipt.receiptData)
-      setReceiptOpen(true)
-      toast({ title: 'レシートを再発行しました' })
-    } catch {
-      toast({ title: 'レシートの取得に失敗しました', variant: 'destructive' })
-    }
-  }
-
-  async function handleReturnItem(tx: Transaction, item: TransactionItem) {
-    if (!storeId || !terminalId || !staff) return
-    try {
-      const returnTx = await api.post(
-        '/api/transactions',
-        {
-          storeId,
-          terminalId,
-          staffId: staff.id,
-          type: 'RETURN',
-        },
-        TransactionSchema,
-      )
-
-      await api.post(
-        `/api/transactions/${returnTx.id}/items`,
-        { productId: item.productId, quantity: item.quantity },
-        TransactionSchema,
-      )
-
-      await api.post(
-        `/api/transactions/${returnTx.id}/finalize`,
-        {
-          payments: [{ method: 'CASH', amount: item.total, received: 0 }],
-        },
-        TransactionSchema.or(FinalizeTransactionResponseSchema),
-      )
-
-      // Adjust inventory (add stock back)
-      try {
-        await api.post(
-          '/api/inventory/stocks/adjust',
-          {
-            storeId,
-            productId: item.productId,
-            quantityChange: item.quantity,
-            movementType: 'RETURN',
-            referenceId: returnTx.id,
-            note: `返品: ${item.productName}`,
-          },
-          StockSchema,
-        )
-      } catch {
-        // inventory adjust failure is not critical
-      }
-
-      toast({ title: `${item.productName} の返品処理が完了しました` })
-      setReturnDialogTx(null)
-      fetchTransactions()
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '返品処理に失敗しました'
-      toast({ title: 'エラー', description: message, variant: 'destructive' })
     }
   }
 
@@ -155,27 +75,26 @@ export function HistoryPage() {
                   </span>
                 </td>
                 <td className="p-3">
-                  <div className="flex gap-1">
-                    {tx.status === 'COMPLETED' && (
-                      <>
-                        <Button variant="ghost" size="sm" onClick={() => handleViewReceipt(tx.id)}>
-                          レシート
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleReissueReceipt(tx.id)}
-                        >
-                          再発行
-                        </Button>
-                        {tx.type !== 'RETURN' && (
-                          <Button variant="ghost" size="sm" onClick={() => setReturnDialogTx(tx)}>
-                            返品
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </div>
+                  {tx.status === 'COMPLETED' && (
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="min-h-11 min-w-11"
+                        onClick={() => handleViewReceipt(tx.id)}
+                      >
+                        レシート
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="min-h-11 min-w-11"
+                        onClick={() => handleViewReceipt(tx.id)}
+                      >
+                        領収書発行
+                      </Button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -195,6 +114,7 @@ export function HistoryPage() {
           <Button
             variant="outline"
             size="sm"
+            className="min-h-11 min-w-11"
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
           >
@@ -206,6 +126,7 @@ export function HistoryPage() {
           <Button
             variant="outline"
             size="sm"
+            className="min-h-11 min-w-11"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
@@ -222,60 +143,6 @@ export function HistoryPage() {
           setReceiptData(null)
         }}
       />
-
-      <ReturnItemDialog
-        open={returnDialogTx !== null}
-        onOpenChange={(open) => {
-          if (!open) setReturnDialogTx(null)
-        }}
-        transaction={returnDialogTx}
-        onReturnItem={handleReturnItem}
-      />
     </div>
-  )
-}
-
-function ReturnItemDialog({
-  open,
-  onOpenChange,
-  transaction,
-  onReturnItem,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  transaction: Transaction | null
-  onReturnItem: (tx: Transaction, item: TransactionItem) => void
-}) {
-  if (!transaction) return null
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[70vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>部分返品 — {transaction.transactionNumber}</DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">返品する商品を選択してください</p>
-        <div className="space-y-2">
-          {transaction.items.map((item) => (
-            <div key={item.id} className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">{item.productName}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatMoney(item.unitPrice)} x {item.quantity} = {formatMoney(item.total)}
-                </p>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => onReturnItem(transaction, item)}>
-                返品
-              </Button>
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            閉じる
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
   )
 }

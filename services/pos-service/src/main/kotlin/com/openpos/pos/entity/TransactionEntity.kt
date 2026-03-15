@@ -48,6 +48,9 @@ class TransactionEntity : BaseEntity() {
     @Column(name = "total", nullable = false)
     var total: Long = 0
 
+    @Column(name = "table_number", length = 20)
+    var tableNumber: String? = null
+
     @Column(name = "completed_at")
     var completedAt: Instant? = null
 

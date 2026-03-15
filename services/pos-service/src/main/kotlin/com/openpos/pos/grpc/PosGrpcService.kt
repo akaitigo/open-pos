@@ -1,12 +1,12 @@
 package com.openpos.pos.grpc
 
+import com.openpos.pos.entity.JournalEntryEntity
 import com.openpos.pos.entity.PaymentEntity
 import com.openpos.pos.entity.TaxSummaryEntity
 import com.openpos.pos.entity.TransactionDiscountEntity
 import com.openpos.pos.entity.TransactionEntity
 import com.openpos.pos.entity.TransactionItemEntity
-import com.openpos.pos.service.OfflineItemInput
-import com.openpos.pos.service.OfflineTransactionInput
+import com.openpos.pos.service.JournalService
 import com.openpos.pos.service.PaymentInput
 import com.openpos.pos.service.TransactionService
 import io.grpc.Status
@@ -23,10 +23,15 @@ import openpos.pos.v1.CreateTransactionRequest
 import openpos.pos.v1.CreateTransactionResponse
 import openpos.pos.v1.FinalizeTransactionRequest
 import openpos.pos.v1.FinalizeTransactionResponse
+import openpos.pos.v1.GetInvoiceReceiptRequest
+import openpos.pos.v1.GetInvoiceReceiptResponse
 import openpos.pos.v1.GetReceiptRequest
 import openpos.pos.v1.GetReceiptResponse
 import openpos.pos.v1.GetTransactionRequest
 import openpos.pos.v1.GetTransactionResponse
+import openpos.pos.v1.JournalEntry
+import openpos.pos.v1.ListJournalEntriesRequest
+import openpos.pos.v1.ListJournalEntriesResponse
 import openpos.pos.v1.ListTransactionsRequest
 import openpos.pos.v1.ListTransactionsResponse
 import openpos.pos.v1.Payment
@@ -35,9 +40,6 @@ import openpos.pos.v1.PosServiceGrpc
 import openpos.pos.v1.Receipt
 import openpos.pos.v1.RemoveTransactionItemRequest
 import openpos.pos.v1.RemoveTransactionItemResponse
-import openpos.pos.v1.SyncOfflineTransactionsRequest
-import openpos.pos.v1.SyncOfflineTransactionsResponse
-import openpos.pos.v1.SyncResult
 import openpos.pos.v1.TaxSummary
 import openpos.pos.v1.Transaction
 import openpos.pos.v1.TransactionDiscount
@@ -56,6 +58,9 @@ import java.util.UUID
 class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     @Inject
     lateinit var transactionService: TransactionService
+
+    @Inject
+    lateinit var journalService: JournalService
 
     @Inject
     lateinit var tenantHelper: GrpcTenantHelper
@@ -317,22 +322,11 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             )
         val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
 
-        // N+1 防止: 全取引の関連エンティティを一括取得
-        val relations = transactionService.batchLoadRelations(transactions.map { it.id })
-
         responseObserver.onNext(
             ListTransactionsResponse
                 .newBuilder()
-                .addAllTransactions(
-                    transactions.map { tx ->
-                        tx.toProtoWith(
-                            items = relations.items[tx.id].orEmpty(),
-                            payments = relations.payments[tx.id].orEmpty(),
-                            discounts = relations.discounts[tx.id].orEmpty(),
-                            taxSummaries = relations.taxSummaries[tx.id].orEmpty(),
-                        )
-                    },
-                ).setPagination(
+                .addAllTransactions(transactions.map { it.toFullProto() })
+                .setPagination(
                     PaginationResponse
                         .newBuilder()
                         .setPage(page + 1)
@@ -370,70 +364,140 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         }
     }
 
-    // === Offline Sync ===
+    // === Journal Entries (#209) ===
 
-    override fun syncOfflineTransactions(
-        request: SyncOfflineTransactionsRequest,
-        responseObserver: StreamObserver<SyncOfflineTransactionsResponse>,
+    override fun listJournalEntries(
+        request: ListJournalEntriesRequest,
+        responseObserver: StreamObserver<ListJournalEntriesResponse>,
     ) {
-        tenantHelper.setupTenantContextWithoutFilter()
-        val results =
-            request.transactionsList.map { offlineTx ->
-                try {
-                    val items =
-                        offlineTx.itemsList.map { item ->
-                            OfflineItemInput(
-                                productId = item.productId.toUUID(),
-                                productName = item.productName,
-                                unitPrice = item.unitPrice,
-                                quantity = item.quantity,
-                                taxRateName = item.taxRateName,
-                                taxRate = item.taxRate,
-                                isReducedTax = item.isReducedTax,
-                            )
-                        }
-                    val payments =
-                        offlineTx.paymentsList.map { p ->
-                            PaymentInput(
-                                method = p.method.toDbValue(),
-                                amount = p.amount,
-                                received = if (p.received > 0) p.received else null,
-                                reference = p.reference.ifBlank { null },
-                            )
-                        }
-                    val input =
-                        OfflineTransactionInput(
-                            clientId = offlineTx.clientId,
-                            storeId = offlineTx.storeId.toUUID(),
-                            terminalId = offlineTx.terminalId.toUUID(),
-                            staffId = offlineTx.staffId.toUUID(),
-                            items = items,
-                            payments = payments,
-                        )
-                    val tx = transactionService.syncOfflineTransaction(input)
-                    SyncResult
-                        .newBuilder()
-                        .setClientId(offlineTx.clientId)
-                        .setSuccess(true)
-                        .setTransactionId(tx.id.toString())
-                        .build()
-                } catch (e: Exception) {
-                    SyncResult
-                        .newBuilder()
-                        .setClientId(offlineTx.clientId)
-                        .setSuccess(false)
-                        .setError(e.message.orEmpty())
-                        .build()
-                }
+        tenantHelper.setupTenantContext()
+        val page = if (request.hasPagination()) request.pagination.page - 1 else 0
+        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+
+        val typeFilter = request.type.ifBlank { null }
+        val startDate =
+            if (request.hasDateRange() && request.dateRange.start.isNotBlank()) {
+                Instant.parse(request.dateRange.start)
+            } else {
+                null
             }
+        val endDate =
+            if (request.hasDateRange() && request.dateRange.end.isNotBlank()) {
+                Instant.parse(request.dateRange.end)
+            } else {
+                null
+            }
+
+        val (entries, totalCount) = journalService.listEntries(typeFilter, startDate, endDate, page, pageSize)
+        val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
+
         responseObserver.onNext(
-            SyncOfflineTransactionsResponse
+            ListJournalEntriesResponse
                 .newBuilder()
-                .addAllResults(results)
-                .build(),
+                .addAllEntries(entries.map { it.toProto() })
+                .setPagination(
+                    PaginationResponse
+                        .newBuilder()
+                        .setPage(page + 1)
+                        .setPageSize(pageSize)
+                        .setTotalCount(totalCount)
+                        .setTotalPages(totalPages)
+                        .build(),
+                ).build(),
         )
         responseObserver.onCompleted()
     }
+
+    // === Invoice Receipt (#194) ===
+
+    override fun getInvoiceReceipt(
+        request: GetInvoiceReceiptRequest,
+        responseObserver: StreamObserver<GetInvoiceReceiptResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val tx = transactionService.getTransaction(request.transactionId.toUUID())
+            require(tx.status == "COMPLETED") {
+                "Invoice receipt is only available for COMPLETED transactions"
+            }
+
+            val items = transactionService.getTransactionItems(tx.id)
+            val payments = transactionService.getTransactionPayments(tx.id)
+            val taxSummaries = transactionService.getTransactionTaxSummaries(tx.id)
+
+            val receiptData = buildInvoiceReceiptData(tx, items, payments, taxSummaries)
+            responseObserver.onNext(
+                GetInvoiceReceiptResponse
+                    .newBuilder()
+                    .setReceiptData(receiptData)
+                    .setReceiptType("INVOICE")
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: IllegalArgumentException) {
+            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        }
+    }
+
+    private fun buildInvoiceReceiptData(
+        tx: TransactionEntity,
+        items: List<TransactionItemEntity>,
+        payments: List<PaymentEntity>,
+        taxSummaries: List<TaxSummaryEntity>,
+    ): String {
+        val sb = StringBuilder()
+        sb.appendLine("================================")
+        sb.appendLine("        領 収 書")
+        sb.appendLine("  （適格簡易請求書）")
+        sb.appendLine("================================")
+        sb.appendLine("取引番号: ${tx.transactionNumber}")
+        sb.appendLine("日時: ${tx.completedAt}")
+        sb.appendLine("登録番号: T0000000000000")
+        sb.appendLine("--------------------------------")
+        for (item in items) {
+            val reducedMark = if (item.isReducedTax) " ※" else ""
+            sb.appendLine("${item.productName}$reducedMark")
+            sb.appendLine("  ${item.unitPrice / 100}円 x ${item.quantity}  ${item.total / 100}円")
+        }
+        sb.appendLine("--------------------------------")
+        sb.appendLine("小計:     ${tx.subtotal / 100}円")
+        sb.appendLine("消費税:   ${tx.taxTotal / 100}円")
+        if (tx.discountTotal > 0) {
+            sb.appendLine("割引:    -${tx.discountTotal / 100}円")
+        }
+        sb.appendLine("合計:     ${tx.total / 100}円")
+        sb.appendLine("--------------------------------")
+        for (payment in payments) {
+            sb.appendLine("${payment.method}: ${payment.amount / 100}円")
+        }
+        sb.appendLine("--------------------------------")
+        sb.appendLine("【税率別内訳（税込）】")
+        for (summary in taxSummaries) {
+            val reducedMark = if (summary.isReduced) "※" else ""
+            sb.appendLine("$reducedMark${summary.taxRateName}")
+            sb.appendLine("  対象: ${summary.taxableAmount / 100}円  税: ${summary.taxAmount / 100}円")
+        }
+        if (taxSummaries.any { it.isReduced }) {
+            sb.appendLine("※は軽減税率(8%)対象商品")
+        }
+        sb.appendLine("================================")
+        sb.appendLine("上記正に領収いたしました")
+        sb.appendLine("================================")
+        return sb.toString()
+    }
+
+    private fun JournalEntryEntity.toProto(): JournalEntry =
+        JournalEntry
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setType(type)
+            .setTransactionId(transactionId?.toString().orEmpty())
+            .setStaffId(staffId.toString())
+            .setTerminalId(terminalId.toString())
+            .setDetails(details)
+            .setCreatedAt(createdAt.toString())
+            .build()
 
     private fun buildReceipt(tx: TransactionEntity): Receipt {
         val items = transactionService.getTransactionItems(tx.id)
@@ -453,30 +517,13 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
 
     // === Mapper Extensions ===
 
-    /**
-     * 取引エンティティを Proto に変換する（関連エンティティを個別にクエリ）。
-     * 単一取引の取得時に使用する。一覧取得では toProtoWith を使うこと。
-     */
     private fun TransactionEntity.toFullProto(): Transaction {
         val items = transactionService.getTransactionItems(id)
         val payments = transactionService.getTransactionPayments(id)
         val discounts = transactionService.getTransactionDiscounts(id)
         val taxSummaries = transactionService.getTransactionTaxSummaries(id)
 
-        return toProtoWith(items, payments, discounts, taxSummaries)
-    }
-
-    /**
-     * 事前取得済みの関連エンティティを使って Proto に変換する（N+1 防止）。
-     * 一覧取得で batchLoadRelations と組み合わせて使用する。
-     */
-    private fun TransactionEntity.toProtoWith(
-        items: List<TransactionItemEntity>,
-        payments: List<PaymentEntity>,
-        discounts: List<TransactionDiscountEntity>,
-        taxSummaries: List<TaxSummaryEntity>,
-    ): Transaction =
-        Transaction
+        return Transaction
             .newBuilder()
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())
@@ -499,6 +546,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             .setUpdatedAt(updatedAt.toString())
             .setCompletedAt(completedAt?.toString().orEmpty())
             .build()
+    }
 
     private fun TransactionItemEntity.toProto(): TransactionItem =
         TransactionItem
