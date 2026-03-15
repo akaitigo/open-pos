@@ -53,14 +53,16 @@ export function OnboardingPage() {
   const currentIndex = STEPS.findIndex((s) => s.key === currentStep)
 
   function goNext() {
-    if (currentIndex < STEPS.length - 1) {
-      setCurrentStep(STEPS[currentIndex + 1].key)
+    const next = STEPS[currentIndex + 1]
+    if (currentIndex < STEPS.length - 1 && next) {
+      setCurrentStep(next.key)
     }
   }
 
   function goBack() {
-    if (currentIndex > 0) {
-      setCurrentStep(STEPS[currentIndex - 1].key)
+    const prev = STEPS[currentIndex - 1]
+    if (currentIndex > 0 && prev) {
+      setCurrentStep(prev.key)
     }
   }
 
@@ -112,7 +114,7 @@ export function OnboardingPage() {
       {/* ステップコンテンツ */}
       <Card>
         <CardHeader>
-          <CardTitle>{STEPS[currentIndex].label}</CardTitle>
+          <CardTitle>{STEPS[currentIndex]?.label}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {currentStep === 'ORG_INFO' && (

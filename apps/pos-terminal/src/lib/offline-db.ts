@@ -115,7 +115,8 @@ export async function getCachedProductByBarcode(
 export async function saveOfflineTransaction(
   tx: Omit<OfflineTransaction, 'localId'>,
 ): Promise<number> {
-  return offlineDb.offlineTransactions.add(tx as OfflineTransaction)
+  const id = await offlineDb.offlineTransactions.add(tx as OfflineTransaction)
+  return id ?? 0
 }
 
 /**

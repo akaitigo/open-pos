@@ -15,7 +15,7 @@ interface KioskModeProps {
 }
 
 export function KioskMode({ products, onCheckout, onExit }: KioskModeProps) {
-  const { items, addItem, removeItem, clearCart } = useCartStore()
+  const { items, addItem, clearCart } = useCartStore()
   const subtotal = getCartSubtotal(items)
   const itemCount = getCartItemCount(items)
   const [step, setStep] = useState<'SELECT' | 'CONFIRM' | 'DONE'>('SELECT')

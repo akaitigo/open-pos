@@ -13,6 +13,7 @@ import openpos.analytics.v1.AnalyticsServiceGrpc
 import openpos.analytics.v1.GetAbcAnalysisRequest
 import openpos.analytics.v1.GetDailySalesRequest
 import openpos.analytics.v1.GetGrossProfitReportRequest
+import openpos.analytics.v1.GetHourlySalesRequest
 import openpos.analytics.v1.GetSalesForecastRequest
 import openpos.analytics.v1.GetSalesSummaryRequest
 import openpos.common.v1.DateRange
@@ -77,6 +78,22 @@ class AnalyticsResource {
             "totalTransactions" to summary.totalTransactions,
             "averageTransaction" to summary.averageTransaction,
         )
+    }
+
+    @GET
+    @Path("/hourly-sales")
+    fun getHourlySales(
+        @QueryParam("storeId") storeId: String,
+        @QueryParam("date") date: String,
+    ): List<Map<String, Any?>> {
+        val request =
+            GetHourlySalesRequest
+                .newBuilder()
+                .setStoreId(storeId)
+                .setDate(date)
+                .build()
+        val response = grpc.withTenant(stub).getHourlySales(request)
+        return response.hourlySalesList.map { it.toMap() }
     }
 
     @GET

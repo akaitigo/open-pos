@@ -152,7 +152,7 @@ class TransactionResourceTest {
 
             // Assert
             @Suppress("UNCHECKED_CAST")
-            val data = result["data"] as List<*>
+            val data = result["data"] as kotlin.collections.List<*>
             assertEquals(1, data.size)
         }
 
@@ -187,7 +187,7 @@ class TransactionResourceTest {
 
             // Assert
             @Suppress("UNCHECKED_CAST")
-            val data = result["data"] as List<*>
+            val data = result["data"] as kotlin.collections.List<*>
             assertEquals(0, data.size)
         }
     }

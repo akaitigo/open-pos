@@ -24,11 +24,12 @@ class StockTransferServiceTest {
 
     @BeforeEach
     fun setUp() {
-        service = StockTransferService().apply {
-            this.stockTransferRepository = this@StockTransferServiceTest.stockTransferRepository
-            this.tenantFilterService = this@StockTransferServiceTest.tenantFilterService
-            this.organizationIdHolder = this@StockTransferServiceTest.organizationIdHolder
-        }
+        service =
+            StockTransferService().apply {
+                this.stockTransferRepository = this@StockTransferServiceTest.stockTransferRepository
+                this.tenantFilterService = this@StockTransferServiceTest.tenantFilterService
+                this.organizationIdHolder = this@StockTransferServiceTest.organizationIdHolder
+            }
         whenever(organizationIdHolder.organizationId).thenReturn(orgId)
     }
 
@@ -54,20 +55,22 @@ class StockTransferServiceTest {
     fun `updateStatus changes status`() {
         // Arrange
         val transferId = UUID.randomUUID()
-        val entity = StockTransferEntity().apply {
-            id = transferId
-            organizationId = orgId
-            fromStoreId = UUID.randomUUID()
-            toStoreId = UUID.randomUUID()
-            items = "[]"
-            status = "PENDING"
-        }
+        val entity =
+            StockTransferEntity().apply {
+                id = transferId
+                organizationId = orgId
+                fromStoreId = UUID.randomUUID()
+                toStoreId = UUID.randomUUID()
+                items = "[]"
+                status = "PENDING"
+            }
         whenever(stockTransferRepository.findById(transferId)).thenReturn(entity)
 
         // Act
         val result = service.updateStatus(transferId, "IN_TRANSIT")
 
         // Assert
-        assertEquals("IN_TRANSIT", result.status)
+        assertNotNull(result)
+        assertEquals("IN_TRANSIT", result?.status)
     }
 }

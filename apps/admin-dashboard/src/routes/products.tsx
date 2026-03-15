@@ -210,11 +210,10 @@ function CsvImportButton({ onImported }: { onImported: () => void }) {
         return
       }
 
-      const headers = lines[0].split(',').map((h) => h.trim().toLowerCase())
+      const headers = (lines[0] ?? '').split(',').map((h) => h.trim().toLowerCase())
       const nameIdx = headers.indexOf('name')
       const barcodeIdx = headers.indexOf('barcode')
       const priceIdx = headers.indexOf('price')
-      const categoryIdx = headers.indexOf('category')
 
       if (nameIdx === -1 || priceIdx === -1) {
         toast({
@@ -228,7 +227,7 @@ function CsvImportButton({ onImported }: { onImported: () => void }) {
       let errorCount = 0
 
       for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',').map((c) => c.trim())
+        const cols = (lines[i] ?? '').split(',').map((c) => c.trim())
         const name = cols[nameIdx]
         const price = Number(cols[priceIdx])
         if (!name || !Number.isFinite(price)) {

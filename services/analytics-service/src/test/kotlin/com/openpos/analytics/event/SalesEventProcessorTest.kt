@@ -72,7 +72,7 @@ class SalesEventProcessorTest {
             // Assert
             verify(dailySalesRepository).persist(
                 argThat<DailySalesEntity> {
-                    totalSales == 25000L && transactionCount == 1
+                    grossAmount == 25000L && transactionCount == 1
                 },
             )
             verify(productSalesRepository).persist(
@@ -100,10 +100,10 @@ class SalesEventProcessorTest {
                     id = UUID.randomUUID()
                     organizationId = orgId
                     this.storeId = this@SalesEventProcessorTest.storeId
-                    saleDate = LocalDate.of(2026, 3, 6)
-                    totalSales = 10000
+                    date = LocalDate.of(2026, 3, 6)
+                    grossAmount = 10000
                     transactionCount = 1
-                    netSales = 10000
+                    netAmount = 10000
                 }
             whenever(dailySalesRepository.findByStoreAndDate(any(), any())).thenReturn(existingDaily)
             whenever(productSalesRepository.findByStoreProductAndDate(any(), any(), any())).thenReturn(null)
@@ -128,7 +128,7 @@ class SalesEventProcessorTest {
             // Assert
             verify(dailySalesRepository).persist(
                 argThat<DailySalesEntity> {
-                    totalSales == 20000L && transactionCount == 2
+                    grossAmount == 20000L && transactionCount == 2
                 },
             )
         }
@@ -144,11 +144,10 @@ class SalesEventProcessorTest {
                     id = UUID.randomUUID()
                     organizationId = orgId
                     this.storeId = this@SalesEventProcessorTest.storeId
-                    saleDate = LocalDate.now(java.time.ZoneId.of("Asia/Tokyo"))
-                    totalSales = 25000
+                    date = LocalDate.now(java.time.ZoneId.of("Asia/Tokyo"))
+                    grossAmount = 25000
                     transactionCount = 2
-                    voidedCount = 0
-                    netSales = 25000
+                    netAmount = 25000
                 }
             whenever(dailySalesRepository.findByStoreAndDate(any(), any())).thenReturn(existingDaily)
 
@@ -158,10 +157,9 @@ class SalesEventProcessorTest {
                     organizationId = orgId
                     this.storeId = this@SalesEventProcessorTest.storeId
                     productId = productId1
-                    saleDate = LocalDate.now(java.time.ZoneId.of("Asia/Tokyo"))
+                    date = LocalDate.now(java.time.ZoneId.of("Asia/Tokyo"))
                     quantitySold = 5
                     totalAmount = 50000
-                    averagePrice = 10000
                     transactionCount = 3
                 }
             whenever(productSalesRepository.findByStoreProductAndDate(any(), eq(productId1), any())).thenReturn(existingProduct)
@@ -188,7 +186,7 @@ class SalesEventProcessorTest {
             // Assert
             verify(dailySalesRepository).persist(
                 argThat<DailySalesEntity> {
-                    totalSales == 5000L && voidedCount == 1
+                    grossAmount == 5000L
                 },
             )
             verify(productSalesRepository).persist(
@@ -206,11 +204,10 @@ class SalesEventProcessorTest {
                     id = UUID.randomUUID()
                     organizationId = orgId
                     this.storeId = this@SalesEventProcessorTest.storeId
-                    saleDate = LocalDate.now(java.time.ZoneId.of("Asia/Tokyo"))
-                    totalSales = 5000
+                    date = LocalDate.now(java.time.ZoneId.of("Asia/Tokyo"))
+                    grossAmount = 5000
                     transactionCount = 1
-                    voidedCount = 0
-                    netSales = 5000
+                    netAmount = 5000
                 }
             whenever(dailySalesRepository.findByStoreAndDate(any(), any())).thenReturn(existingDaily)
             whenever(productSalesRepository.findByStoreProductAndDate(any(), any(), any())).thenReturn(null)
@@ -234,7 +231,7 @@ class SalesEventProcessorTest {
             // Assert
             verify(dailySalesRepository).persist(
                 argThat<DailySalesEntity> {
-                    totalSales == 0L && voidedCount == 1
+                    grossAmount == 0L
                 },
             )
         }

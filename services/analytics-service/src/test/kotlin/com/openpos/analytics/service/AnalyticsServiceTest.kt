@@ -73,8 +73,8 @@ class AnalyticsServiceTest {
 
             // Assert
             assertEquals(2, result.size)
-            assertEquals(50000L, result[0].totalSales)
-            assertEquals(80000L, result[1].totalSales)
+            assertEquals(50000L, result[0].grossAmount)
+            assertEquals(80000L, result[1].grossAmount)
             verify(tenantFilterService).enableFilter()
         }
 
@@ -247,12 +247,10 @@ class AnalyticsServiceTest {
             id = UUID.randomUUID()
             organizationId = orgId
             storeId = this@AnalyticsServiceTest.storeId
-            saleDate = date
-            this.totalSales = totalSales
+            this.date = date
+            grossAmount = totalSales
             transactionCount = txnCount
-            netSales = totalSales
-            voidedCount = 0
-            returnedCount = 0
+            netAmount = totalSales
         }
 
     private fun createProductSalesEntity(
@@ -267,10 +265,9 @@ class AnalyticsServiceTest {
             storeId = this@AnalyticsServiceTest.storeId
             this.productId = productId
             productName = name
-            saleDate = startDate
+            date = startDate
             quantitySold = qty
             totalAmount = amount
-            averagePrice = if (qty > 0) amount / qty else 0
             transactionCount = qty
         }
 

@@ -29,8 +29,9 @@ export function TerminalsPage() {
       params: { page: 1, pageSize: 100 },
     })
     setStores(result.data)
-    if (result.data.length > 0 && !selectedStoreId) {
-      setSelectedStoreId(result.data[0].id)
+    const firstStore = result.data[0]
+    if (result.data.length > 0 && !selectedStoreId && firstStore) {
+      setSelectedStoreId(firstStore.id)
     }
   }, [selectedStoreId])
 

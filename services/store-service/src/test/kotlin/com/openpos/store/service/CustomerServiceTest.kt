@@ -3,6 +3,7 @@ package com.openpos.store.service
 import com.openpos.store.config.OrganizationIdHolder
 import com.openpos.store.config.TenantFilterService
 import com.openpos.store.entity.CustomerEntity
+import com.openpos.store.entity.PointTransactionEntity
 import com.openpos.store.repository.CustomerRepository
 import com.openpos.store.repository.PointTransactionRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -70,7 +71,7 @@ class CustomerServiceTest {
         // Assert
         assertEquals(5L, earned)
         assertEquals(105, customer.points)
-        verify(pointTransactionRepository).persist(any())
+        verify(pointTransactionRepository).persist(any<PointTransactionEntity>())
     }
 
     @Test
@@ -133,6 +134,6 @@ class CustomerServiceTest {
         // Assert
         assertTrue(result)
         assertEquals(50, customer.points)
-        verify(pointTransactionRepository).persist(any())
+        verify(pointTransactionRepository).persist(any<PointTransactionEntity>())
     }
 }

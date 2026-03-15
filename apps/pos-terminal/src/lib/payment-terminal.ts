@@ -81,7 +81,7 @@ export class DummyPaymentTerminal implements PaymentTerminal {
     return true
   }
 
-  async pay(amount: number): Promise<PaymentTerminalResult> {
+  async pay(_amount: number): Promise<PaymentTerminalResult> {
     return {
       success: true,
       transactionId: `DUMMY-${Date.now()}`,

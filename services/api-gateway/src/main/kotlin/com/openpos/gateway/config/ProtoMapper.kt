@@ -389,6 +389,13 @@ fun openpos.analytics.v1.DailySales.toMap(): Map<String, Any?> =
         "qrAmount" to qrAmount,
     )
 
+fun openpos.analytics.v1.HourlySales.toMap(): Map<String, Any?> =
+    mapOf(
+        "hour" to hour,
+        "amount" to amount,
+        "transactionCount" to transactionCount,
+    )
+
 fun openpos.analytics.v1.AbcAnalysisItem.toMap(): Map<String, Any?> =
     mapOf(
         "productId" to productId,

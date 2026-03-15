@@ -26,7 +26,7 @@ export async function generateCodeChallenge(verifier: string): Promise<string> {
 function base64UrlEncode(buffer: Uint8Array): string {
   let binary = ''
   for (let i = 0; i < buffer.length; i++) {
-    binary += String.fromCharCode(buffer[i])
+    binary += String.fromCharCode(buffer[i] ?? 0)
   }
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }

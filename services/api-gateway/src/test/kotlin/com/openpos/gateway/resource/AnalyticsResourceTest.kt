@@ -59,10 +59,12 @@ class AnalyticsResourceTest {
             val result = resource.getDailySales(storeId, "2026-01-15", "2026-01-15")
 
             // Assert
-            assertEquals(1, result.size)
-            assertEquals("2026-01-15", result[0]["date"])
-            assertEquals(1000000L, result[0]["grossAmount"])
-            assertEquals(50, result[0]["transactionCount"])
+            @Suppress("UNCHECKED_CAST")
+            val data = result["data"] as List<Map<String, Any?>>
+            assertEquals(1, data.size)
+            assertEquals("2026-01-15", data[0]["date"])
+            assertEquals(1000000L, data[0]["grossAmount"])
+            assertEquals(50, data[0]["transactionCount"])
         }
     }
 
