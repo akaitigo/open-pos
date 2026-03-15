@@ -16,6 +16,7 @@ dependencies {
     implementation("io.quarkus:quarkus-rest-jackson")
     implementation("io.quarkus:quarkus-grpc")
     implementation("io.quarkus:quarkus-smallrye-jwt")
+    implementation("io.quarkus:quarkus-smallrye-jwt-build")
     implementation("io.quarkus:quarkus-redis-client")
     implementation("io.quarkus:quarkus-smallrye-health")
     implementation("io.quarkus:quarkus-logging-json")

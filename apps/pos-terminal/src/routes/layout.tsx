@@ -6,9 +6,11 @@ import { SetupScreen } from '@/components/setup-screen'
 import { Toaster } from '@/components/ui/toast'
 import { hasPosRuntimeConfig } from '@/lib/runtime-config'
 import { useAuthStore } from '@/stores/auth-store'
+import { useSessionTimeout } from '@/hooks/use-session-timeout'
 
 export function Layout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  useSessionTimeout()
   const location = useLocation()
   const showSidebar = location.pathname !== '/cart'
 

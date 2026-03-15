@@ -1,5 +1,6 @@
 package com.openpos.store.entity
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
@@ -29,6 +30,7 @@ class StaffEntity : BaseEntity() {
     @Column(name = "role", nullable = false, length = 20)
     var role: String = "CASHIER"
 
+    @JsonIgnore
     @Column(name = "pin_hash", length = 255)
     var pinHash: String? = null
 

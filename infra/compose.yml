@@ -105,6 +105,21 @@ services:
       - openpos-net
     restart: unless-stopped
 
+  hydra-clients:
+    image: oryd/hydra:v2.2
+    container_name: openpos-hydra-clients
+    environment:
+      HYDRA_ADMIN_URL: http://hydra:4445
+    volumes:
+      - ./init-scripts/hydra:/scripts
+    entrypoint: ['/bin/sh', '/scripts/create-clients.sh']
+    depends_on:
+      hydra:
+        condition: service_healthy
+    networks:
+      - openpos-net
+    restart: 'no'
+
   # === Backend Services ===
   api-gateway:
     build:
