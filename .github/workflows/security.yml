@@ -121,7 +121,7 @@ jobs:
             -f infra/docker/Dockerfile.service .
       - name: Install Trivy
         env:
-          TRIVY_VERSION: '0.58.2'
+          TRIVY_VERSION: '0.69.3'
         run: |
           set -euo pipefail
           curl -fsSLo trivy.tar.gz "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
