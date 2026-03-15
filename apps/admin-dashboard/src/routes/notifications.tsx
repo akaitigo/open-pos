@@ -30,15 +30,17 @@ export function NotificationsPage() {
         const response = await api.get('/api/notifications', NotificationsResponseSchema, {
           params: { page: 1, pageSize: 50 },
         })
-        if (\!cancelled) setNotifications(response.data)
+        if (!cancelled) setNotifications(response.data)
       } catch {
         // ignore
       } finally {
-        if (\!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     void load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (
@@ -74,7 +76,7 @@ export function NotificationsPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{notification.title}</p>
-                        {\!notification.isRead && (
+                        {!notification.isRead && (
                           <Badge variant="default" className="text-xs">
                             未読
                           </Badge>

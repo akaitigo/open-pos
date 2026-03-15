@@ -5,7 +5,7 @@ interface TrainingModeBannerProps {
 }
 
 export function TrainingModeBanner({ isTraining }: TrainingModeBannerProps) {
-  if (\!isTraining) return null
+  if (!isTraining) return null
 
   return (
     <div

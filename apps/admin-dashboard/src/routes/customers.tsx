@@ -40,15 +40,17 @@ export function CustomersPage() {
         const response = await api.get('/api/customers', CustomersResponseSchema, {
           params: { page: 1, pageSize: 50, ...(search ? { search } : {}) },
         })
-        if (\!cancelled) setCustomers(response.data)
+        if (!cancelled) setCustomers(response.data)
       } catch {
         // ignore
       } finally {
-        if (\!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     void load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [search])
 
   return (

@@ -23,7 +23,7 @@ function applyTheme(theme: Theme): void {
   document.documentElement.classList.toggle('dark', theme === 'dark')
 }
 
-if (typeof window \!== 'undefined') {
+if (typeof window !== 'undefined') {
   applyTheme(getSnapshot())
 }
 

@@ -38,8 +38,7 @@ class ServiceReadinessCheck : HealthCheck {
         }
         try {
             redis
-                .execute()
-                .pong()
+                .execute("PING")
                 .await()
                 .indefinitely()
             builder.withData("redis", "ok")

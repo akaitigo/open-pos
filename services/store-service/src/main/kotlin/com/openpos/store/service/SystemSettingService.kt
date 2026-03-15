@@ -30,7 +30,7 @@ class SystemSettingService {
 
     fun listAll(): List<SystemSettingEntity> {
         tenantFilterService.enableFilter()
-        return settingRepository.listAll()
+        return settingRepository.listAllSorted()
     }
 
     @Transactional

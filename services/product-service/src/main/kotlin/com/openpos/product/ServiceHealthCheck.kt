@@ -40,8 +40,7 @@ class ServiceReadinessCheck : HealthCheck {
         try {
             // Redis connectivity check
             redis
-                .execute()
-                .pong()
+                .execute("PING")
                 .await()
                 .indefinitely()
             builder.withData("redis", "ok")

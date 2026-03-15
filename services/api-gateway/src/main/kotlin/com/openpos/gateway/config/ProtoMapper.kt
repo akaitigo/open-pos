@@ -7,8 +7,10 @@ import openpos.inventory.v1.PurchaseOrderItem
 import openpos.inventory.v1.PurchaseOrderStatus
 import openpos.inventory.v1.Stock
 import openpos.inventory.v1.StockMovement
+import openpos.pos.v1.Drawer
 import openpos.pos.v1.PaymentMethod
 import openpos.pos.v1.Receipt
+import openpos.pos.v1.Settlement
 import openpos.pos.v1.TaxSummary
 import openpos.pos.v1.Transaction
 import openpos.pos.v1.TransactionDiscount
@@ -258,6 +260,38 @@ fun Receipt.toMap(): Map<String, Any?> =
         "receiptData" to receiptData,
         "pdfUrl" to pdfUrl.ifEmpty { null },
         "createdAt" to createdAt,
+    )
+
+// === ドロワー・精算 ===
+
+fun Drawer.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "storeId" to storeId,
+        "terminalId" to terminalId,
+        "openingAmount" to openingAmount,
+        "currentAmount" to currentAmount,
+        "isOpen" to isOpen,
+        "openedAt" to openedAt.ifEmpty { null },
+        "closedAt" to closedAt.ifEmpty { null },
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
+fun Settlement.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "storeId" to storeId,
+        "terminalId" to terminalId,
+        "staffId" to staffId,
+        "cashExpected" to cashExpected,
+        "cashActual" to cashActual,
+        "difference" to difference,
+        "settledAt" to settledAt,
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
     )
 
 // === 在庫管理 ===

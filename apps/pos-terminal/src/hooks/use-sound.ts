@@ -4,7 +4,10 @@ const STORAGE_KEY = 'openpos-sound-enabled'
 
 type SoundType = 'scan' | 'add-to-cart' | 'payment-complete' | 'error'
 
-const SOUND_CONFIG: Record<SoundType, { frequency: number; duration: number; type: OscillatorType }> = {
+const SOUND_CONFIG: Record<
+  SoundType,
+  { frequency: number; duration: number; type: OscillatorType }
+> = {
   scan: { frequency: 1200, duration: 100, type: 'square' },
   'add-to-cart': { frequency: 800, duration: 80, type: 'sine' },
   'payment-complete': { frequency: 600, duration: 200, type: 'sine' },
@@ -12,17 +15,17 @@ const SOUND_CONFIG: Record<SoundType, { frequency: number; duration: number; typ
 }
 
 function isSoundEnabled(): boolean {
-  return localStorage.getItem(STORAGE_KEY) \!== 'false'
+  return localStorage.getItem(STORAGE_KEY) !== 'false'
 }
 
 export function useSound() {
   const audioContextRef = useRef<AudioContext | null>(null)
 
   const play = useCallback((sound: SoundType) => {
-    if (\!isSoundEnabled()) return
+    if (!isSoundEnabled()) return
 
     try {
-      if (\!audioContextRef.current) {
+      if (!audioContextRef.current) {
         audioContextRef.current = new AudioContext()
       }
       const ctx = audioContextRef.current
@@ -59,7 +62,7 @@ export function useSound() {
 
   const toggleSound = useCallback(() => {
     const current = isSoundEnabled()
-    localStorage.setItem(STORAGE_KEY, String(\!current))
+    localStorage.setItem(STORAGE_KEY, String(!current))
   }, [])
 
   return { play, toggleSound, isSoundEnabled: isSoundEnabled() }

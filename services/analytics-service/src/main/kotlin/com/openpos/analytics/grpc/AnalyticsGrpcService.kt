@@ -59,7 +59,7 @@ class AnalyticsGrpcService : AnalyticsServiceGrpc.AnalyticsServiceImplBase() {
         tenantHelper.setupTenantContext()
         val storeId = request.storeId.toUUID()
         val (startDate, endDate) = request.dateRange.toDates()
-        val entities = dailySalesRepository.findByStoreAndDateRange(storeId, startDate, endDate)
+        val entities = dailySalesRepository.listByStoreAndDateRange(storeId, startDate, endDate)
         responseObserver.onNext(
             GetDailySalesResponse
                 .newBuilder()
@@ -179,14 +179,14 @@ class AnalyticsGrpcService : AnalyticsServiceGrpc.AnalyticsServiceImplBase() {
         tenantHelper.setupTenantContext()
         val storeId = request.storeId.toUUID()
         val (startDate, endDate) = request.dateRange.toDates()
-        val dailySales = dailySalesRepository.findByStoreAndDateRange(storeId, startDate, endDate)
+        val dailySales = dailySalesRepository.listByStoreAndDateRange(storeId, startDate, endDate)
 
         val totalGross = dailySales.sumOf { it.grossAmount }
         val totalNet = dailySales.sumOf { it.netAmount }
         val totalTax = dailySales.sumOf { it.taxAmount }
         val totalDiscount = dailySales.sumOf { it.discountAmount }
         val totalTx = dailySales.sumOf { it.transactionCount }
-        val avgTx = if (totalTx > 0) totalGross / totalTx else 0L
+        val avgTx = if (totalTx > 0) totalGross / totalTx.toLong() else 0L
 
         responseObserver.onNext(
             GetSalesSummaryResponse

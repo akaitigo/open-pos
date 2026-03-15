@@ -20,13 +20,13 @@ export const useAccessibilityStore = create<AccessibilityState>((set, get) => ({
   highContrast: false,
   largeFontSize: false,
   toggleHighContrast: () => {
-    const next = \!get().highContrast
+    const next = !get().highContrast
     localStorage.setItem('openpos-high-contrast', String(next))
     applyHighContrast(next)
     set({ highContrast: next })
   },
   toggleLargeFontSize: () => {
-    const next = \!get().largeFontSize
+    const next = !get().largeFontSize
     localStorage.setItem('openpos-large-font', String(next))
     applyLargeFontSize(next)
     set({ largeFontSize: next })

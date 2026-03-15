@@ -27,7 +27,7 @@ export function WeightInputDialog({
   const [weight, setWeight] = useState('')
 
   const parsedWeight = Number.parseFloat(weight)
-  const isValid = \!Number.isNaN(parsedWeight) && parsedWeight > 0
+  const isValid = !Number.isNaN(parsedWeight) && parsedWeight > 0
 
   function handleConfirm() {
     if (isValid) {
@@ -42,7 +42,7 @@ export function WeightInputDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => \!isOpen && handleCancel()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCancel()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -73,7 +73,7 @@ export function WeightInputDialog({
           <Button variant="outline" onClick={handleCancel}>
             キャンセル
           </Button>
-          <Button onClick={handleConfirm} disabled={\!isValid}>
+          <Button onClick={handleConfirm} disabled={!isValid}>
             確定
           </Button>
         </DialogFooter>

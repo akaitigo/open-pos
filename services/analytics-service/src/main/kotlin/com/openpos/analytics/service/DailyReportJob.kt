@@ -36,7 +36,7 @@ class DailyReportJob {
             return
         }
 
-        val totalSales = sales.sumOf { it.totalSales }
+        val totalSales = sales.sumOf { it.grossAmount }
         val totalTransactions = sales.sumOf { it.transactionCount }
         val storeCount = sales.size
 
@@ -48,7 +48,7 @@ class DailyReportJob {
                 appendLine("店舗数: $storeCount")
                 appendLine()
                 for (sale in sales) {
-                    appendLine("  店舗: ${sale.storeId} / 売上: ${sale.totalSales} / 取引数: ${sale.transactionCount}")
+                    appendLine("  店舗: ${sale.storeId} / 売上: ${sale.grossAmount} / 取引数: ${sale.transactionCount}")
                 }
             }
 

@@ -9,7 +9,7 @@ import java.util.UUID
 class SystemSettingRepository : PanacheRepositoryBase<SystemSettingEntity, UUID> {
     fun findByKey(key: String): SystemSettingEntity? = find("key = ?1", key).firstResult()
 
-    fun listAll(): List<SystemSettingEntity> =
+    fun listAllSorted(): List<SystemSettingEntity> =
         listAll(
             io.quarkus.panache.common.Sort
                 .ascending("key"),

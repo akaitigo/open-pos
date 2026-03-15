@@ -55,12 +55,12 @@ class AnalyticsService {
         tenantFilterService.enableFilter()
         val dailyList = dailySalesRepository.listByStoreAndDateRange(storeId, startDate, endDate)
 
-        val totalGross = dailyList.sumOf { it.totalSales }
+        val totalGross = dailyList.sumOf { it.grossAmount }
         val totalTax = dailyList.sumOf { it.taxAmount }
         val totalDiscount = dailyList.sumOf { it.discountAmount }
         val totalNet = totalGross - totalTax - totalDiscount
         val totalTransactions = dailyList.sumOf { it.transactionCount }
-        val averageTransaction = if (totalTransactions > 0) totalGross / totalTransactions else 0L
+        val averageTransaction = if (totalTransactions > 0) totalGross / totalTransactions.toLong() else 0L
 
         return SalesSummaryResult(
             totalGross = totalGross,

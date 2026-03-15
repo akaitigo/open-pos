@@ -103,11 +103,11 @@ class SalesEventProcessor {
                 ?: DailySalesEntity().apply {
                     this.organizationId = organizationId
                     this.storeId = storeId
-                    this.saleDate = saleDate
+                    this.date = saleDate
                 }
-        daily.totalSales += totalAmount
+        daily.grossAmount += totalAmount
         daily.transactionCount += 1
-        daily.netSales = daily.totalSales - daily.taxAmount - daily.discountAmount
+        daily.netAmount = daily.grossAmount - daily.taxAmount - daily.discountAmount
         dailySalesRepository.persist(daily)
     }
 
@@ -126,15 +126,12 @@ class SalesEventProcessor {
                     this.organizationId = organizationId
                     this.storeId = storeId
                     this.productId = productId
-                    this.saleDate = saleDate
+                    this.date = saleDate
                     this.productName = "Product-$productId"
                 }
         productSales.quantitySold += quantity
         productSales.totalAmount += subtotal
         productSales.transactionCount += 1
-        if (productSales.quantitySold > 0) {
-            productSales.averagePrice = productSales.totalAmount / productSales.quantitySold
-        }
         productSalesRepository.persist(productSales)
     }
 
@@ -169,11 +166,11 @@ class SalesEventProcessor {
                 ?: DailySalesEntity().apply {
                     this.organizationId = organizationId
                     this.storeId = storeId
-                    this.saleDate = saleDate
+                    this.date = saleDate
                 }
-        daily.totalSales = maxOf(0, daily.totalSales - totalAmount)
-        daily.voidedCount += 1
-        daily.netSales = daily.totalSales - daily.taxAmount - daily.discountAmount
+        daily.grossAmount = maxOf(0, daily.grossAmount - totalAmount)
+        daily.transactionCount = maxOf(0, daily.transactionCount - 1)
+        daily.netAmount = daily.grossAmount - daily.taxAmount - daily.discountAmount
         dailySalesRepository.persist(daily)
     }
 
@@ -190,11 +187,6 @@ class SalesEventProcessor {
                 ?: return
         productSales.quantitySold = maxOf(0, productSales.quantitySold - quantity)
         productSales.totalAmount = maxOf(0, productSales.totalAmount - subtotal)
-        if (productSales.quantitySold > 0) {
-            productSales.averagePrice = productSales.totalAmount / productSales.quantitySold
-        } else {
-            productSales.averagePrice = 0
-        }
         productSalesRepository.persist(productSales)
     }
 

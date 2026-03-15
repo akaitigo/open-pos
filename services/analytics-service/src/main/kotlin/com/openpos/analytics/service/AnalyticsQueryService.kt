@@ -147,7 +147,7 @@ class AnalyticsQueryService {
         windowDays: Int,
     ): List<ForecastPoint> {
         tenantFilterService.enableFilter()
-        val dailySales = dailySalesRepository.findByStoreAndDateRange(storeId, startDate, endDate)
+        val dailySales = dailySalesRepository.listByStoreAndDateRange(storeId, startDate, endDate)
 
         val salesByDate = dailySales.associateBy { it.date }
         val allDates = generateSequence(startDate) { it.plusDays(1) }.takeWhile { !it.isAfter(endDate) }.toList()

@@ -18,8 +18,8 @@ class DailySalesRepository : PanacheRepositoryBase<DailySalesEntity, UUID> {
      */
     fun findByStoreAndDate(
         storeId: UUID,
-        saleDate: LocalDate,
-    ): DailySalesEntity? = find("storeId = ?1 AND saleDate = ?2", storeId, saleDate).firstResult()
+        date: LocalDate,
+    ): DailySalesEntity? = find("storeId = ?1 AND date = ?2", storeId, date).firstResult()
 
     /**
      * 店舗の日付範囲で日次売上を取得する（日付昇順）。
@@ -30,8 +30,8 @@ class DailySalesRepository : PanacheRepositoryBase<DailySalesEntity, UUID> {
         endDate: LocalDate,
     ): List<DailySalesEntity> =
         find(
-            "storeId = ?1 AND saleDate >= ?2 AND saleDate <= ?3",
-            Sort.ascending("saleDate"),
+            "storeId = ?1 AND date >= ?2 AND date <= ?3",
+            Sort.ascending("date"),
             storeId,
             startDate,
             endDate,
@@ -40,7 +40,7 @@ class DailySalesRepository : PanacheRepositoryBase<DailySalesEntity, UUID> {
     /**
      * 特定日の全店舗の日次売上を取得する。
      */
-    fun findBySaleDate(saleDate: LocalDate): List<DailySalesEntity> = list("saleDate = ?1", saleDate)
+    fun findBySaleDate(date: LocalDate): List<DailySalesEntity> = list("date = ?1", date)
 
     /**
      * 日付範囲で全店舗の日次売上を取得する（日付昇順）。
@@ -50,8 +50,8 @@ class DailySalesRepository : PanacheRepositoryBase<DailySalesEntity, UUID> {
         endDate: LocalDate,
     ): List<DailySalesEntity> =
         find(
-            "saleDate >= ?1 AND saleDate <= ?2",
-            Sort.ascending("saleDate"),
+            "date >= ?1 AND date <= ?2",
+            Sort.ascending("date"),
             startDate,
             endDate,
         ).list()

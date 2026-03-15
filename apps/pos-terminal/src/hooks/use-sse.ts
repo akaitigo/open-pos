@@ -25,7 +25,7 @@ export function useSSE({ url, enabled = true, onMessage, onError }: UseSSEOption
   }, [])
 
   useEffect(() => {
-    if (\!enabled) {
+    if (!enabled) {
       disconnect()
       return
     }

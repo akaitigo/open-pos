@@ -10,7 +10,7 @@ function getNestedValue(obj: Record<string, unknown>, path: string): string | un
   const keys = path.split('.')
   let current: unknown = obj
   for (const key of keys) {
-    if (current == null || typeof current \!== 'object') return undefined
+    if (current == null || typeof current !== 'object') return undefined
     current = (current as Record<string, unknown>)[key]
   }
   return typeof current === 'string' ? current : undefined
@@ -18,9 +18,9 @@ function getNestedValue(obj: Record<string, unknown>, path: string): string | un
 
 /** テンプレート変数を置換 */
 function interpolate(template: string, vars?: Record<string, string | number>): string {
-  if (\!vars) return template
+  if (!vars) return template
   return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) =>
-    vars[key] \!= null ? String(vars[key]) : `{{${key}}}`,
+    vars[key] != null ? String(vars[key]) : `{{${key}}}`,
   )
 }
 

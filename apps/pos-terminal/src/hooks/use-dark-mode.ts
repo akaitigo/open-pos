@@ -24,7 +24,7 @@ function applyTheme(theme: Theme): void {
 }
 
 // Apply on load
-if (typeof window \!== 'undefined') {
+if (typeof window !== 'undefined') {
   applyTheme(getSnapshot())
 }
 
