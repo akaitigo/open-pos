@@ -19,7 +19,16 @@ vi.mock('@/hooks/use-dark-mode', () => ({
 
 const mockApi = vi.mocked(api)
 
-const mockLog = {
+const mockLog: {
+  id: string
+  staffId: string
+  action: string
+  entityType: string
+  entityId: string | null
+  details: string
+  ipAddress: string
+  createdAt: string
+} = {
   id: 'log-1',
   staffId: 'staff-1',
   action: 'CREATE',

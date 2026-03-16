@@ -15,7 +15,16 @@ vi.mock('@/lib/api', () => ({
 
 const mockApi = vi.mocked(api)
 
-const mockCustomer = {
+const mockCustomer: {
+  id: string
+  organizationId: string
+  name: string
+  email: string | null
+  phone: string | null
+  points: number
+  createdAt: string
+  updatedAt: string
+} = {
   id: '11111111-1111-1111-1111-111111111111',
   organizationId: 'org-1',
   name: '田中太郎',

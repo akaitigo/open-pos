@@ -18,9 +18,11 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
@@ -61,7 +63,11 @@ class PurchaseOrderServiceTest {
     @Test
     fun `create persists order and items`() {
         // Arrange
-        doNothing().whenever(purchaseOrderRepository).persist(any<PurchaseOrderEntity>())
+        doAnswer { invocation ->
+            val entity = invocation.arguments[0] as PurchaseOrderEntity
+            entity.id = UUID.randomUUID()
+            null
+        }.whenever(purchaseOrderRepository).persist(any<PurchaseOrderEntity>())
         doNothing().whenever(itemRepository).persist(any<PurchaseOrderItemEntity>())
 
         val items =
@@ -91,7 +97,11 @@ class PurchaseOrderServiceTest {
     @Test
     fun `create sets status to DRAFT`() {
         // Arrange
-        doNothing().whenever(purchaseOrderRepository).persist(any<PurchaseOrderEntity>())
+        doAnswer { invocation ->
+            val entity = invocation.arguments[0] as PurchaseOrderEntity
+            entity.id = UUID.randomUUID()
+            null
+        }.whenever(purchaseOrderRepository).persist(any<PurchaseOrderEntity>())
         doNothing().whenever(itemRepository).persist(any<PurchaseOrderItemEntity>())
 
         val items =
@@ -151,7 +161,11 @@ class PurchaseOrderServiceTest {
     @Test
     fun `create persists correct number of items`() {
         // Arrange
-        doNothing().whenever(purchaseOrderRepository).persist(any<PurchaseOrderEntity>())
+        doAnswer { invocation ->
+            val entity = invocation.arguments[0] as PurchaseOrderEntity
+            entity.id = UUID.randomUUID()
+            null
+        }.whenever(purchaseOrderRepository).persist(any<PurchaseOrderEntity>())
         doNothing().whenever(itemRepository).persist(any<PurchaseOrderItemEntity>())
 
         val items =
@@ -169,7 +183,7 @@ class PurchaseOrderServiceTest {
         )
 
         // Assert - verify persist called for each item
-        verify(itemRepository).persist(any<PurchaseOrderItemEntity>())
+        verify(itemRepository, times(2)).persist(any<PurchaseOrderItemEntity>())
     }
 
     // === findById ===

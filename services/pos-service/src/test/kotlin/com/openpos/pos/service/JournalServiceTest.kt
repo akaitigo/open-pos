@@ -279,9 +279,9 @@ class JournalServiceTest {
             this.id = UUID.randomUUID()
             this.organizationId = orgId
             this.type = type
-            this.transactionId = transactionId
-            this.staffId = staffId
-            this.terminalId = terminalId
+            this.transactionId = this@JournalServiceTest.transactionId
+            this.staffId = this@JournalServiceTest.staffId
+            this.terminalId = this@JournalServiceTest.terminalId
             this.details = "{}"
         }
 }
