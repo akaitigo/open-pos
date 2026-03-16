@@ -4,23 +4,35 @@
 # The Quarkus gRPC/protobuf codegen path is more reliable on a glibc-based JDK image than Alpine.
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
+
+# --- Layer 1: Gradle wrapper & build config (rarely changes) ---
 COPY gradle gradle
 COPY gradlew .
+COPY gradle.properties .
 COPY settings.gradle.kts .
 COPY build.gradle.kts .
-COPY gradle.properties .
-COPY proto proto
+
 ARG SERVICE_NAME
-COPY services/${SERVICE_NAME} services/${SERVICE_NAME}
-# Create stub build.gradle.kts for other services so Gradle multi-project config succeeds
-RUN for dir in api-gateway pos-service product-service inventory-service analytics-service store-service; do \
-      if [ "$dir" != "${SERVICE_NAME}" ] && [ ! -d "services/$dir" ]; then \
-        mkdir -p "services/$dir" && \
-        echo 'plugins { kotlin("jvm") }' > "services/$dir/build.gradle.kts"; \
-      fi; \
-    done
+
+# Copy only the target service's build config for dependency resolution
+COPY services/${SERVICE_NAME}/build.gradle.kts services/${SERVICE_NAME}/build.gradle.kts
+
+# Rewrite settings.gradle.kts to include only the target service.
+# This eliminates the need for stub build files and avoids dependency
+# resolution failures caused by incomplete stub configurations.
+RUN sed -i '/^include(/,/^)/c\include("services:'"${SERVICE_NAME}"'")' settings.gradle.kts
+
+# --- Layer 2: Download dependencies (cached unless build config changes) ---
 RUN --mount=type=cache,target=/root/.gradle \
     chmod +x gradlew && \
+    ./gradlew --no-daemon :services:${SERVICE_NAME}:dependencies -q || true
+
+# --- Layer 3: Proto definitions & source code ---
+COPY proto proto
+COPY services/${SERVICE_NAME}/src services/${SERVICE_NAME}/src
+
+# --- Layer 4: Build uber-jar ---
+RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew --no-daemon :services:${SERVICE_NAME}:quarkusBuild -Dquarkus.package.jar.type=uber-jar
 
 FROM eclipse-temurin:21-jre
