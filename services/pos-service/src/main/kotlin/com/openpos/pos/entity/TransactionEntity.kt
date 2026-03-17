@@ -4,6 +4,8 @@ import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
 import jakarta.persistence.Version
+import org.hibernate.annotations.SQLDelete
+import org.hibernate.annotations.Where
 import java.time.Instant
 import java.util.UUID
 
@@ -11,9 +13,12 @@ import java.util.UUID
  * 取引エンティティ。
  * POS端末での販売・返品・取消の取引情報を保持する。
  * 金額は全て銭単位（BIGINT: 10000 = 100円）で保持し、浮動小数点は使用しない。
+ * 監査ログ完全性のため論理削除を採用（物理削除禁止）。
  */
 @Entity
 @Table(name = "transactions", schema = "pos_schema")
+@SQLDelete(sql = "UPDATE pos_schema.transactions SET deleted = true WHERE id = ?")
+@Where(clause = "deleted = false")
 class TransactionEntity : BaseEntity() {
     @Column(name = "store_id", nullable = false)
     lateinit var storeId: UUID
@@ -53,6 +58,13 @@ class TransactionEntity : BaseEntity() {
 
     @Column(name = "completed_at")
     var completedAt: Instant? = null
+
+    /**
+     * 論理削除フラグ。
+     * 監査ログの完全性を保つため、取引レコードは物理削除せず論理削除する。
+     */
+    @Column(name = "deleted", nullable = false)
+    var deleted: Boolean = false
 
     /**
      * 楽観的ロック用バージョン番号。

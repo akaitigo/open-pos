@@ -5,6 +5,9 @@ import io.quarkus.hibernate.orm.panache.kotlin.PanacheRepositoryBase
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
+import jakarta.persistence.EntityManager
+import jakarta.persistence.LockModeType
 import java.util.UUID
 
 /**
@@ -13,6 +16,9 @@ import java.util.UUID
  */
 @ApplicationScoped
 class StockRepository : PanacheRepositoryBase<StockEntity, UUID> {
+    @Inject
+    lateinit var entityManager: EntityManager
+
     /**
      * 店舗×商品で在庫を検索する。
      */
@@ -20,6 +26,26 @@ class StockRepository : PanacheRepositoryBase<StockEntity, UUID> {
         storeId: UUID,
         productId: UUID,
     ): StockEntity? = find("storeId = ?1 AND productId = ?2", storeId, productId).firstResult()
+
+    /**
+     * 店舗×商品で在庫を悲観的ロック（SELECT FOR UPDATE）付きで検索する。
+     * 在庫調整時の Race Condition を防止する。
+     */
+    fun findByStoreAndProductForUpdate(
+        storeId: UUID,
+        productId: UUID,
+    ): StockEntity? {
+        val results =
+            entityManager
+                .createQuery(
+                    "SELECT s FROM StockEntity s WHERE s.storeId = :storeId AND s.productId = :productId",
+                    StockEntity::class.java,
+                ).setParameter("storeId", storeId)
+                .setParameter("productId", productId)
+                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                .resultList
+        return results.firstOrNull()
+    }
 
     /**
      * 店舗の在庫一覧を取得する（ページネーション対応）。
