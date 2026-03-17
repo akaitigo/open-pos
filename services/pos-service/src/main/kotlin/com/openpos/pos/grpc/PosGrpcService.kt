@@ -63,6 +63,9 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     lateinit var journalService: JournalService
 
     @Inject
+    lateinit var productServiceClient: ProductServiceClient
+
+    @Inject
     lateinit var tenantHelper: GrpcTenantHelper
 
     // === Create ===
@@ -177,14 +180,61 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         try {
+            val transactionId = request.transactionId.toUUID()
+            val couponCode = request.couponCode.ifBlank { null }
+            val discountId = request.discountId.uuidOrNull()
+
+            val resolvedName: String
+            val resolvedType: String
+            val resolvedValue: String
+            val resolvedAmount: Long
+            val resolvedDiscountId: UUID?
+
+            if (couponCode != null) {
+                // クーポンコード経由: product-service に問い合わせて割引情報を取得
+                val tx = transactionService.getTransaction(transactionId)
+                val couponResult = productServiceClient.validateCoupon(couponCode, tx.organizationId)
+                if (!couponResult.isValid) {
+                    throw IllegalArgumentException(
+                        "Coupon is not valid: ${couponResult.reason}",
+                    )
+                }
+                resolvedDiscountId = couponResult.discountId
+                resolvedName = couponResult.discountName
+                resolvedType = couponResult.discountType
+                resolvedValue = couponResult.discountValue
+                resolvedAmount =
+                    computeDiscountAmount(
+                        couponResult.discountType,
+                        couponResult.discountValue,
+                        transactionId,
+                    )
+            } else if (discountId != null) {
+                // discount_id 直接指定: product-service から割引マスタ取得
+                val tx = transactionService.getTransaction(transactionId)
+                val discountInfo = productServiceClient.getDiscount(discountId, tx.organizationId)
+                resolvedDiscountId = discountId
+                resolvedName = discountInfo.name
+                resolvedType = discountInfo.discountType
+                resolvedValue = discountInfo.value
+                resolvedAmount =
+                    computeDiscountAmount(
+                        discountInfo.discountType,
+                        discountInfo.value,
+                        transactionId,
+                    )
+            } else {
+                throw IllegalArgumentException("Either coupon_code or discount_id must be specified")
+            }
+
             val entity =
                 transactionService.applyDiscount(
-                    transactionId = request.transactionId.toUUID(),
-                    discountId = request.discountId.uuidOrNull(),
-                    name = "Discount",
-                    discountType = "FIXED_AMOUNT",
-                    value = "0",
-                    amount = 0,
+                    transactionId = transactionId,
+                    discountId = resolvedDiscountId,
+                    name = resolvedName,
+                    discountType = resolvedType,
+                    value = resolvedValue,
+                    amount = resolvedAmount,
                     transactionItemId = request.transactionItemId.uuidOrNull(),
                 )
             responseObserver.onNext(
@@ -198,6 +248,32 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
         }
     }
+
+    /**
+     * 割引タイプと値から実際の割引金額（銭単位）を計算する。
+     * PERCENTAGE の場合は取引小計に対するパーセンテージ、
+     * FIXED_AMOUNT の場合はそのまま値を返す。
+     */
+    private fun computeDiscountAmount(
+        discountType: String,
+        discountValue: String,
+        transactionId: UUID,
+    ): Long =
+        when (discountType) {
+            "PERCENTAGE" -> {
+                val tx = transactionService.getTransaction(transactionId)
+                val percentage = discountValue.toBigDecimal()
+                (tx.subtotal.toBigDecimal() * percentage / 100.toBigDecimal()).toLong()
+            }
+
+            "FIXED_AMOUNT" -> {
+                discountValue.toLong()
+            }
+
+            else -> {
+                0L
+            }
+        }
 
     // === Finalize ===
 

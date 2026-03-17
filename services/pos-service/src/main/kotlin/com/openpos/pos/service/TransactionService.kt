@@ -23,7 +23,7 @@ import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
 
 @ApplicationScoped
@@ -390,7 +390,7 @@ class TransactionService {
     }
 
     private fun generateTransactionNumber(): String {
-        val date = LocalDate.now(ZoneId.of("Asia/Tokyo"))
+        val date = LocalDate.now(ZoneOffset.UTC)
         val seq = (System.nanoTime() % 1_000_000).toString().padStart(6, '0')
         return "T-$date-$seq"
     }
@@ -437,6 +437,7 @@ class TransactionService {
                             subtotal = item.subtotal,
                         )
                     },
+                originalTransactedAt = (tx.completedAt ?: tx.createdAt).toString(),
             )
         eventPublisher.publish("sale.voided", tx.organizationId, event)
     }
