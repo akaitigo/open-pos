@@ -26,24 +26,53 @@ spec:
           envFrom:
             - configMapRef:
                 name: store-service-config
-            - secretRef:
-                name: openpos-secrets
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: openpos-secrets
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: openpos-secrets
+                  key: DB_PASSWORD
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: openpos-secrets
+                  key: DB_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: openpos-secrets
+                  key: REDIS_URL
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: openpos-secrets
+                  key: RABBITMQ_USER
+            - name: RABBITMQ_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: openpos-secrets
+                  key: RABBITMQ_PASS
           startupProbe:
             httpGet:
-              path: /health
+              path: /q/health/live
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 12
           readinessProbe:
             httpGet:
-              path: /health
+              path: /q/health/ready
               port: 8080
             initialDelaySeconds: 15
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /health
+              path: /q/health/live
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 15
