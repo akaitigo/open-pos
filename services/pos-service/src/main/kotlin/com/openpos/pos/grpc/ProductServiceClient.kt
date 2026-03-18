@@ -166,6 +166,51 @@ class ProductServiceClient {
         )
     }
 
+    /**
+     * 複数商品のスナップショットを一括取得する（N+1 クエリ防止）。
+     * 税率一覧は 1 回だけ取得し、商品ごとの個別取得をまとめて実行する。
+     */
+    fun getProductSnapshots(
+        productIds: List<UUID>,
+        organizationId: UUID,
+    ): Map<UUID, ProductSnapshot> {
+        if (productIds.isEmpty()) return emptyMap()
+
+        val stub =
+            ProductServiceGrpc
+                .newBlockingStub(channel)
+                .withInterceptors(TenantHeaderInterceptor(organizationId))
+
+        // 税率一覧を 1 回だけ取得
+        val taxRatesResponse = stub.listTaxRates(ListTaxRatesRequest.getDefaultInstance())
+        val taxRatesById = taxRatesResponse.taxRatesList.associateBy { it.id }
+
+        // 各商品を取得してスナップショットを構築
+        return productIds
+            .distinct()
+            .mapNotNull { productId ->
+                try {
+                    val productResponse =
+                        stub.getProduct(
+                            GetProductRequest.newBuilder().setId(productId.toString()).build(),
+                        )
+                    val product = productResponse.product
+                    val matchedTaxRate = taxRatesById[product.taxRateId] ?: return@mapNotNull null
+
+                    productId to
+                        ProductSnapshot(
+                            name = product.name,
+                            price = product.price,
+                            taxRateName = matchedTaxRate.name,
+                            taxRate = matchedTaxRate.rate,
+                            isReduced = matchedTaxRate.isReduced,
+                        )
+                } catch (_: StatusRuntimeException) {
+                    null
+                }
+            }.toMap()
+    }
+
     private fun DiscountType.toDbValue(): String =
         when (this) {
             DiscountType.DISCOUNT_TYPE_PERCENTAGE -> "PERCENTAGE"

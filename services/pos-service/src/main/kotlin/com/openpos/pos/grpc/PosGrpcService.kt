@@ -123,8 +123,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                     .build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
@@ -147,8 +147,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                     .build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
@@ -170,8 +170,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                     .build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
@@ -247,8 +247,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                     .build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.INVALID_ARGUMENT.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
@@ -309,8 +309,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                     .build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
@@ -334,8 +334,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                     .build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
@@ -355,8 +355,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                     .build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
@@ -438,8 +438,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                     .build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
@@ -513,8 +513,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                     .build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
