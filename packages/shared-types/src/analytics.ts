@@ -16,6 +16,13 @@ export const DailySalesSchema = z.object({
 
 export type DailySales = z.infer<typeof DailySalesSchema>
 
+/** 日次売上ラップレスポンススキーマ（BE は {data: [...]} で返す） */
+export const DailySalesResponseSchema = z.object({
+  data: z.array(DailySalesSchema),
+})
+
+export type DailySalesResponse = z.infer<typeof DailySalesResponseSchema>
+
 /** 売上サマリースキーマ（金額は銭単位: 10000 = 100円） */
 export const SalesSummarySchema = z.object({
   totalGross: z.number(),

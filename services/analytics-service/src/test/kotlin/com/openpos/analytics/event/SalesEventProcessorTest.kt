@@ -19,6 +19,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 
 @QuarkusTest
@@ -137,14 +138,15 @@ class SalesEventProcessorTest {
     @Nested
     inner class ProcessSaleVoided {
         @Test
-        fun `decrements daily sales and increments voided count`() {
+        fun `decrements daily sales using original transaction date`() {
             // Arrange
+            val originalDate = LocalDate.of(2026, 3, 6)
             val existingDaily =
                 DailySalesEntity().apply {
                     id = UUID.randomUUID()
                     organizationId = orgId
                     this.storeId = this@SalesEventProcessorTest.storeId
-                    date = LocalDate.now(java.time.ZoneId.of("Asia/Tokyo"))
+                    date = originalDate
                     grossAmount = 25000
                     transactionCount = 2
                     netAmount = 25000
@@ -157,7 +159,7 @@ class SalesEventProcessorTest {
                     organizationId = orgId
                     this.storeId = this@SalesEventProcessorTest.storeId
                     productId = productId1
-                    date = LocalDate.now(java.time.ZoneId.of("Asia/Tokyo"))
+                    date = originalDate
                     quantitySold = 5
                     totalAmount = 50000
                     transactionCount = 3
@@ -178,12 +180,14 @@ class SalesEventProcessorTest {
                         listOf(
                             SaleItemPayload(productId1.toString(), 2, 10000, 20000),
                         ),
+                    originalTransactedAt = "2026-03-06T10:00:00Z",
                 )
 
             // Act
             salesEventProcessor.processSaleVoided(orgId, payload)
 
-            // Assert
+            // Assert — rollback targets original date, not today
+            verify(dailySalesRepository).findByStoreAndDate(storeId, originalDate)
             verify(dailySalesRepository).persist(
                 argThat<DailySalesEntity> {
                     grossAmount == 5000L
@@ -199,12 +203,13 @@ class SalesEventProcessorTest {
         @Test
         fun `does not go below zero on rollback`() {
             // Arrange
+            val originalDate = LocalDate.of(2026, 3, 5)
             val existingDaily =
                 DailySalesEntity().apply {
                     id = UUID.randomUUID()
                     organizationId = orgId
                     this.storeId = this@SalesEventProcessorTest.storeId
-                    date = LocalDate.now(java.time.ZoneId.of("Asia/Tokyo"))
+                    date = originalDate
                     grossAmount = 5000
                     transactionCount = 1
                     netAmount = 5000
@@ -223,6 +228,7 @@ class SalesEventProcessorTest {
                         listOf(
                             SaleItemPayload(productId1.toString(), 10, 10000, 100000),
                         ),
+                    originalTransactedAt = "2026-03-05T15:30:00Z",
                 )
 
             // Act
