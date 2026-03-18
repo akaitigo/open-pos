@@ -4,6 +4,7 @@ import com.openpos.inventory.entity.StockEntity
 import com.openpos.inventory.entity.StockMovementEntity
 import com.openpos.inventory.entity.StocktakeEntity
 import com.openpos.inventory.entity.StocktakeItemEntity
+import com.openpos.inventory.service.InsufficientStockException
 import com.openpos.inventory.service.StockService
 import com.openpos.inventory.service.StocktakeService
 import io.grpc.Status
@@ -116,6 +117,10 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
                     referenceId = request.referenceId.ifBlank { null },
                     note = request.note.ifBlank { null },
                 )
+            } catch (e: InsufficientStockException) {
+                throw Status.FAILED_PRECONDITION
+                    .withDescription(e.message)
+                    .asRuntimeException()
             } catch (e: IllegalArgumentException) {
                 throw Status.FAILED_PRECONDITION
                     .withDescription(e.message)
