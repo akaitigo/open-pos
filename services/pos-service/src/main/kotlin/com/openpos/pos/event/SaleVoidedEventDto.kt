@@ -5,4 +5,5 @@ data class SaleVoidedEventDto(
     val voidTransactionId: String,
     val storeId: String,
     val items: List<SaleItemDto>,
+    val originalTransactedAt: String,
 )
