@@ -58,6 +58,18 @@ class RedisCacheServiceTest {
             // Assert
             assertNull(result)
         }
+
+        @Test
+        fun `Redis例外時はnullを返す`() {
+            // Arrange
+            whenever(valueCommands.get("openpos:product:123")).thenThrow(RuntimeException("Connection refused"))
+
+            // Act
+            val result = redisCacheService.get("openpos:product:123")
+
+            // Assert
+            assertNull(result)
+        }
     }
 
     @Nested
@@ -78,6 +90,16 @@ class RedisCacheServiceTest {
 
             // Assert
             verify(valueCommands).setex("openpos:product:123", 600L, "value")
+        }
+
+        @Test
+        fun `Redis例外時は例外をスローせずログ出力する`() {
+            // Arrange
+            whenever(valueCommands.setex(eq("openpos:product:123"), eq(3600L), eq("value")))
+                .thenThrow(RuntimeException("Connection refused"))
+
+            // Act & Assert (no exception thrown)
+            redisCacheService.set("openpos:product:123", "value")
         }
     }
 
