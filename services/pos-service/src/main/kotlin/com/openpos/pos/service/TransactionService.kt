@@ -197,6 +197,46 @@ class TransactionService {
     ): TransactionEntity {
         val tx = getWritableTransaction(transactionId)
 
+        // バリデーション: 負の割引額を拒否
+        require(amount >= 0) { "Discount amount must not be negative: $amount" }
+
+        // 割引種別ごとのバリデーション
+        when (discountType) {
+            "PERCENTAGE" -> {
+                // パーセンテージは 0〜100（文字列 "0"〜"100"）の範囲
+                val pct =
+                    value.toBigDecimalOrNull()
+                        ?: throw IllegalArgumentException("Invalid percentage value: $value")
+                require(pct >= java.math.BigDecimal.ZERO && pct <= java.math.BigDecimal("100")) {
+                    "Percentage discount must be between 0 and 100, got: $value"
+                }
+            }
+
+            "FIXED_AMOUNT" -> {
+                // 固定額割引: 対象金額を超えてはならない
+                val targetSubtotal =
+                    if (transactionItemId != null) {
+                        val item =
+                            itemRepository.findById(transactionItemId)
+                                ?: throw IllegalArgumentException("Transaction item not found: $transactionItemId")
+                        require(item.transactionId == transactionId) {
+                            "Item does not belong to this transaction"
+                        }
+                        item.subtotal
+                    } else {
+                        val items = itemRepository.findByTransactionId(transactionId)
+                        items.sumOf { it.subtotal }
+                    }
+                require(amount <= targetSubtotal) {
+                    "Discount amount ($amount) exceeds subtotal ($targetSubtotal)"
+                }
+            }
+
+            else -> {
+                throw IllegalArgumentException("Unknown discount type: $discountType")
+            }
+        }
+
         val discount =
             TransactionDiscountEntity().apply {
                 this.organizationId = tx.organizationId
@@ -234,6 +274,10 @@ class TransactionService {
 
         val paymentTotal = payments.sumOf { it.amount }
         require(paymentTotal >= tx.total) { "Payment total ($paymentTotal) is less than transaction total (${tx.total})" }
+
+        // オーバーペイ分（複数決済での余剰金額）を現金お釣りとして返金
+        val overpayAmount = paymentTotal - tx.total
+        tx.changeAmount = overpayAmount
 
         for (input in payments) {
             val payment =

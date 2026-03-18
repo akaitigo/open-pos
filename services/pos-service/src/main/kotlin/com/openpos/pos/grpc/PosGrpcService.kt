@@ -68,6 +68,9 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     @Inject
     lateinit var tenantHelper: GrpcTenantHelper
 
+    @Inject
+    lateinit var storeServiceClient: StoreServiceClient
+
     // === Create ===
 
     override fun createTransaction(
@@ -245,7 +248,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             )
             responseObserver.onCompleted()
         } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+            throw Status.INVALID_ARGUMENT.withDescription(e.message).asRuntimeException()
         }
     }
 
@@ -521,6 +524,13 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         payments: List<PaymentEntity>,
         taxSummaries: List<TaxSummaryEntity>,
     ): String {
+        // 組織のインボイス登録番号を store-service から取得
+        val invoiceNumber =
+            storeServiceClient.getInvoiceNumber(tx.organizationId)
+                ?: throw IllegalArgumentException(
+                    "Invoice registration number is not configured for organization: ${tx.organizationId}",
+                )
+
         val sb = StringBuilder()
         sb.appendLine("================================")
         sb.appendLine("        領 収 書")
@@ -528,7 +538,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         sb.appendLine("================================")
         sb.appendLine("取引番号: ${tx.transactionNumber}")
         sb.appendLine("日時: ${tx.completedAt}")
-        sb.appendLine("登録番号: T0000000000000")
+        sb.appendLine("登録番号: $invoiceNumber")
         sb.appendLine("--------------------------------")
         for (item in items) {
             val reducedMark = if (item.isReducedTax) " ※" else ""
@@ -618,6 +628,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             .setTaxTotal(taxTotal)
             .setDiscountTotal(discountTotal)
             .setTotal(total)
+            .setChangeAmount(changeAmount)
             .setCreatedAt(createdAt.toString())
             .setUpdatedAt(updatedAt.toString())
             .setCompletedAt(completedAt?.toString().orEmpty())
@@ -744,8 +755,9 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         sb.appendLine("--------------------------------")
         for (payment in payments) {
             sb.appendLine("${payment.method}: ${payment.amount / 100}円")
-            if (payment.method == "CASH" && (payment.change ?: 0) > 0) {
-                sb.appendLine("お釣り: ${payment.change!! / 100}円")
+            val changeVal = payment.change ?: 0
+            if (payment.method == "CASH" && changeVal > 0) {
+                sb.appendLine("お釣り: ${changeVal / 100}円")
             }
         }
         sb.appendLine("--------------------------------")
