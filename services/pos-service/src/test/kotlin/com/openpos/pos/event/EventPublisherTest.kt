@@ -1,39 +1,47 @@
 package com.openpos.pos.event
 
-import com.openpos.pos.entity.OutboxEventEntity
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.openpos.pos.repository.OutboxRepository
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
-import jakarta.transaction.Transactional
 import org.eclipse.microprofile.reactive.messaging.Emitter
+import org.eclipse.microprofile.reactive.messaging.Message
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
-@QuarkusTest
 class EventPublisherTest {
-    @Inject
-    lateinit var eventPublisher: EventPublisher
+    private val emitter: Emitter<String> = mock()
+    private val objectMapper = ObjectMapper()
+    private val outboxRepository: OutboxRepository = mock()
 
-    @Inject
-    lateinit var outboxRepository: OutboxRepository
-
-    @InjectMock
-    lateinit var emitter: Emitter<String>
+    private lateinit var eventPublisher: EventPublisher
 
     private val orgId = UUID.randomUUID()
 
     @BeforeEach
-    @Transactional
     fun setUp() {
-        outboxRepository.deleteAll()
+        eventPublisher =
+            EventPublisher().also { publisher ->
+                val emitterField = EventPublisher::class.java.getDeclaredField("emitter")
+                emitterField.isAccessible = true
+                emitterField.set(publisher, emitter)
+
+                val mapperField = EventPublisher::class.java.getDeclaredField("objectMapper")
+                mapperField.isAccessible = true
+                mapperField.set(publisher, objectMapper)
+
+                val repoField = EventPublisher::class.java.getDeclaredField("outboxRepository")
+                repoField.isAccessible = true
+                repoField.set(publisher, outboxRepository)
+            }
     }
 
     @Test
@@ -43,10 +51,8 @@ class EventPublisherTest {
 
         // Assert
         assertTrue(eventId.toString().isNotBlank())
-        verify(emitter).send(any<org.eclipse.microprofile.reactive.messaging.Message<String>>())
-
-        val pendingEvents = outboxRepository.findPendingEvents(10)
-        assertEquals(0, pendingEvents.size)
+        verify(emitter).send(any<Message<String>>())
+        verify(outboxRepository, never()).persist(any<com.openpos.pos.entity.OutboxEventEntity>())
     }
 
     @Test
@@ -54,7 +60,7 @@ class EventPublisherTest {
         // Arrange
         doThrow(RuntimeException("RabbitMQ connection refused"))
             .whenever(emitter)
-            .send(any<org.eclipse.microprofile.reactive.messaging.Message<String>>())
+            .send(any<Message<String>>())
 
         // Act
         val eventId = eventPublisher.publish("sale.completed", orgId, mapOf("key" to "value"))
@@ -62,9 +68,10 @@ class EventPublisherTest {
         // Assert
         assertTrue(eventId.toString().isNotBlank())
 
-        val pendingEvents = outboxRepository.findPendingEvents(10)
-        assertEquals(1, pendingEvents.size)
-        val savedEvent = pendingEvents[0]
+        val captor = argumentCaptor<com.openpos.pos.entity.OutboxEventEntity>()
+        verify(outboxRepository).persist(captor.capture())
+
+        val savedEvent = captor.firstValue
         assertEquals("sale.completed", savedEvent.eventType)
         assertEquals("PENDING", savedEvent.status)
         assertEquals(0, savedEvent.retryCount)
@@ -76,17 +83,17 @@ class EventPublisherTest {
         // Arrange
         doThrow(RuntimeException("RabbitMQ connection refused"))
             .whenever(emitter)
-            .send(any<org.eclipse.microprofile.reactive.messaging.Message<String>>())
+            .send(any<Message<String>>())
 
         // Act
         eventPublisher.publish("sale.completed", orgId, mapOf("tx" to "1"))
         eventPublisher.publish("sale.voided", orgId, mapOf("tx" to "2"))
 
         // Assert
-        val pendingEvents = outboxRepository.findPendingEvents(10)
-        assertEquals(2, pendingEvents.size)
+        val captor = argumentCaptor<com.openpos.pos.entity.OutboxEventEntity>()
+        verify(outboxRepository, org.mockito.kotlin.times(2)).persist(captor.capture())
 
-        val eventTypes = pendingEvents.map { it.eventType }.toSet()
+        val eventTypes = captor.allValues.map { it.eventType }.toSet()
         assertTrue(eventTypes.contains("sale.completed"))
         assertTrue(eventTypes.contains("sale.voided"))
     }
