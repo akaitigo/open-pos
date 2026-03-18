@@ -1,11 +1,30 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { MemoryRouter } from 'react-router'
 import { Layout } from './layout'
 import { resetRuntimeConfigForTests } from '@/lib/runtime-config'
 import { useAuthStore } from '@/stores/auth-store'
 
+const mockSetupAutoSync = vi.fn()
+const mockCleanup = vi.fn()
+
+vi.mock('@/lib/sync-manager', () => ({
+  setupAutoSync: () => {
+    mockSetupAutoSync()
+    return mockCleanup
+  },
+}))
+
+let mockIsOnline = true
+vi.mock('@/hooks/use-online-status', () => ({
+  useOnlineStatus: () => mockIsOnline,
+}))
+
 beforeEach(() => {
+  mockSetupAutoSync.mockClear()
+  mockCleanup.mockClear()
+  mockIsOnline = true
+
   resetRuntimeConfigForTests({
     apiUrl: 'http://localhost:8080',
     organizationId: '00000000-0000-0000-0000-000000000000',
@@ -116,6 +135,99 @@ describe('Layout', () => {
     expect(screen.getByText('カートは空です')).toBeInTheDocument()
   })
 
+  it('マウント時に setupAutoSync が呼び出される', () => {
+    useAuthStore.setState({
+      isAuthenticated: true,
+      staff: {
+        id: '00000000-0000-0000-0000-000000000001',
+        organizationId: '00000000-0000-0000-0000-000000000000',
+        storeId: '00000000-0000-0000-0000-000000000001',
+        name: 'テストスタッフ',
+        email: null,
+        role: 'CASHIER',
+        isActive: true,
+        failedPinAttempts: 0,
+        isLocked: false,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      storeId: '00000000-0000-0000-0000-000000000001',
+      storeName: 'テスト店舗',
+      terminalId: '00000000-0000-0000-0000-000000000001',
+    })
+
+    render(
+      <MemoryRouter>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    expect(mockSetupAutoSync).toHaveBeenCalledTimes(1)
+  })
+
+  it('オフライン時にオフラインバナーが表示される', () => {
+    mockIsOnline = false
+    useAuthStore.setState({
+      isAuthenticated: true,
+      staff: {
+        id: '00000000-0000-0000-0000-000000000001',
+        organizationId: '00000000-0000-0000-0000-000000000000',
+        storeId: '00000000-0000-0000-0000-000000000001',
+        name: 'テストスタッフ',
+        email: null,
+        role: 'CASHIER',
+        isActive: true,
+        failedPinAttempts: 0,
+        isLocked: false,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      storeId: '00000000-0000-0000-0000-000000000001',
+      storeName: 'テスト店舗',
+      terminalId: '00000000-0000-0000-0000-000000000001',
+    })
+
+    render(
+      <MemoryRouter>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByTestId('offline-banner')).toBeInTheDocument()
+    expect(screen.getByText(/オフラインモード/)).toBeInTheDocument()
+  })
+
+  it('オンライン時にオフラインバナーが表示されない', () => {
+    mockIsOnline = true
+    useAuthStore.setState({
+      isAuthenticated: true,
+      staff: {
+        id: '00000000-0000-0000-0000-000000000001',
+        organizationId: '00000000-0000-0000-0000-000000000000',
+        storeId: '00000000-0000-0000-0000-000000000001',
+        name: 'テストスタッフ',
+        email: null,
+        role: 'CASHIER',
+        isActive: true,
+        failedPinAttempts: 0,
+        isLocked: false,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      storeId: '00000000-0000-0000-0000-000000000001',
+      storeName: 'テスト店舗',
+      terminalId: '00000000-0000-0000-0000-000000000001',
+    })
+
+    render(
+      <MemoryRouter>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByTestId('offline-banner')).not.toBeInTheDocument()
+  })
+
   it('terminal 設定が未構成ならセットアップ案内を表示する', () => {
     resetRuntimeConfigForTests({
       apiUrl: 'http://localhost:8080',
@@ -137,6 +249,8 @@ describe('Layout', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('organization、store、terminal のデモ設定が未構成です。')).toBeInTheDocument()
+    expect(
+      screen.getByText('organization、store、terminal のデモ設定が未構成です。'),
+    ).toBeInTheDocument()
   })
 })
