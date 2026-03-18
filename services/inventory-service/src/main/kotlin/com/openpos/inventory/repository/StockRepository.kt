@@ -5,8 +5,6 @@ import io.quarkus.hibernate.orm.panache.kotlin.PanacheRepositoryBase
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.inject.Inject
-import jakarta.persistence.EntityManager
 import jakarta.persistence.LockModeType
 import java.util.UUID
 
@@ -16,9 +14,6 @@ import java.util.UUID
  */
 @ApplicationScoped
 class StockRepository : PanacheRepositoryBase<StockEntity, UUID> {
-    @Inject
-    lateinit var entityManager: EntityManager
-
     /**
      * 店舗×商品で在庫を検索する。
      */
@@ -36,7 +31,7 @@ class StockRepository : PanacheRepositoryBase<StockEntity, UUID> {
         productId: UUID,
     ): StockEntity? {
         val results =
-            entityManager
+            getEntityManager()
                 .createQuery(
                     "SELECT s FROM StockEntity s WHERE s.storeId = :storeId AND s.productId = :productId",
                     StockEntity::class.java,
