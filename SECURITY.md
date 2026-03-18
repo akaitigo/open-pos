@@ -4,7 +4,8 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| 1.0.x   | :white_check_mark: |
+| 0.1.x   | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -37,6 +38,6 @@ This is currently the only supported private reporting channel for security issu
 
 ## Current Security Status
 
-> **Warning**: open-pos is in early development (v0.1.x). Authentication and authorization are not yet implemented on REST API endpoints. **Do not deploy to production or expose to the public internet.**
+Authentication and authorization are implemented via ORY Hydra v2.2 (OIDC/PKCE) with role-based access control (Owner / Manager / Cashier). REST API endpoints enforce JWT validation and tenant isolation through the api-gateway.
 
 See [README.md](README.md) for the current development status.
