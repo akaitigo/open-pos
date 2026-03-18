@@ -79,4 +79,71 @@ describe('cart totals', () => {
       },
     ])
   })
+
+
+  it('calculates tax on group subtotal matching BE (not per-item sum)', () => {
+    const oddItems: CartItem[] = [
+      {
+        product: {
+          id: 'prod-a',
+          organizationId: 'org-1',
+          name: 'A',
+          price: 37,
+          taxRateId: 'tax-std',
+          displayOrder: 0,
+          isActive: true,
+          createdAt: '',
+          updatedAt: '',
+        },
+        quantity: 1,
+      },
+      {
+        product: {
+          id: 'prod-b',
+          organizationId: 'org-1',
+          name: 'B',
+          price: 37,
+          taxRateId: 'tax-std',
+          displayOrder: 0,
+          isActive: true,
+          createdAt: '',
+          updatedAt: '',
+        },
+        quantity: 1,
+      },
+      {
+        product: {
+          id: 'prod-c',
+          organizationId: 'org-1',
+          name: 'C',
+          price: 37,
+          taxRateId: 'tax-std',
+          displayOrder: 0,
+          isActive: true,
+          createdAt: '',
+          updatedAt: '',
+        },
+        quantity: 1,
+      },
+    ]
+
+    const taxRates = [
+      {
+        id: 'tax-std',
+        organizationId: 'org-1',
+        name: '標準税率10%',
+        rate: '0.10',
+        isReduced: false,
+        isDefault: true,
+        createdAt: '',
+        updatedAt: '',
+      },
+    ]
+
+    const breakdown = getCartTaxBreakdown(oddItems, taxRates)
+    expect(breakdown[0]!.taxableAmount).toBe(111)
+    expect(breakdown[0]!.taxAmount).toBe(11)
+
+    expect(getCartEstimatedTax(oddItems, taxRates)).toBe(11)
+  })
 })
