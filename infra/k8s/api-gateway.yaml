@@ -25,24 +25,38 @@ spec:
           envFrom:
             - configMapRef:
                 name: api-gateway-config
-            - secretRef:
-                name: openpos-secrets
+          env:
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: openpos-secrets
+                  key: REDIS_URL
+            - name: HYDRA_JWKS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: openpos-secrets
+                  key: HYDRA_JWKS_URL
+            - name: HYDRA_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: openpos-secrets
+                  key: HYDRA_ISSUER
           startupProbe:
             httpGet:
-              path: /health
+              path: /q/health/live
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 12
           readinessProbe:
             httpGet:
-              path: /health
+              path: /q/health/ready
               port: 8080
             initialDelaySeconds: 15
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /health
+              path: /q/health/live
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 15
