@@ -117,14 +117,8 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
                     referenceId = request.referenceId.ifBlank { null },
                     note = request.note.ifBlank { null },
                 )
-            } catch (e: InsufficientStockException) {
-                throw Status.FAILED_PRECONDITION
-                    .withDescription(e.message)
-                    .asRuntimeException()
-            } catch (e: IllegalArgumentException) {
-                throw Status.FAILED_PRECONDITION
-                    .withDescription(e.message)
-                    .asRuntimeException()
+            } catch (e: Exception) {
+                throw mapToGrpcException(e)
             }
         responseObserver.onNext(
             AdjustStockResponse.newBuilder().setStock(entity.toProto()).build(),
@@ -210,8 +204,8 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
                 RecordStocktakeItemResponse.newBuilder().setStocktake(entity.toProtoWithItems()).build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
@@ -226,8 +220,8 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
                 CompleteStocktakeResponse.newBuilder().setStocktake(entity.toProtoWithItems()).build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
@@ -245,8 +239,8 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
                     .build(),
             )
             responseObserver.onCompleted()
-        } catch (e: IllegalArgumentException) {
-            throw Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
         }
     }
 
@@ -264,7 +258,7 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
             .build()
 
     private fun StocktakeEntity.toProtoWithItems(): Stocktake {
-        val items = stocktakeService.getStocktakeItems(id)
+        val stocktakeItems = items.ifEmpty { stocktakeService.getStocktakeItems(id) }
         return Stocktake
             .newBuilder()
             .setId(id.toString())
@@ -273,7 +267,7 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
             .setStatus(status.toProtoStocktakeStatus())
             .setStartedAt(startedAt?.toString().orEmpty())
             .setCompletedAt(completedAt?.toString().orEmpty())
-            .addAllItems(items.map { it.toProto() })
+            .addAllItems(stocktakeItems.map { it.toProto() })
             .build()
     }
 
