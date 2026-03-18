@@ -58,7 +58,6 @@ export default defineConfig({
           icons: ['lucide-react'],
           scanner: ['html5-qrcode'],
           offline: ['dexie'],
-          charts: ['recharts'],
         },
       },
     },
