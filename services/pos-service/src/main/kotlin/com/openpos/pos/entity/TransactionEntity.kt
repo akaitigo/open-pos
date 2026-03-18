@@ -53,6 +53,10 @@ class TransactionEntity : BaseEntity() {
     @Column(name = "total", nullable = false)
     var total: Long = 0
 
+    /** お釣り額（複数決済のオーバーペイ分を現金で返金する額、銭単位） */
+    @Column(name = "change_amount", nullable = false)
+    var changeAmount: Long = 0
+
     @Column(name = "table_number", length = 20)
     var tableNumber: String? = null
 

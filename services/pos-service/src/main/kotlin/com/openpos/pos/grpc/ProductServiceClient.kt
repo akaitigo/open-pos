@@ -1,5 +1,6 @@
 package com.openpos.pos.grpc
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.grpc.CallOptions
 import io.grpc.Channel
 import io.grpc.ClientCall
@@ -9,6 +10,7 @@ import io.grpc.Metadata
 import io.grpc.MethodDescriptor
 import io.grpc.StatusRuntimeException
 import io.quarkus.grpc.GrpcClient
+import io.quarkus.redis.datasource.RedisDataSource
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import openpos.product.v1.DiscountType
@@ -18,15 +20,56 @@ import openpos.product.v1.ListTaxRatesRequest
 import openpos.product.v1.ProductServiceGrpc
 import openpos.product.v1.TaxRate
 import openpos.product.v1.ValidateCouponRequest
+import org.jboss.logging.Logger
 import java.util.UUID
 
+/**
+ * product-service の gRPC クライアント。
+ * cache-aside パターンで Redis キャッシュを利用する。
+ * キー形式: openpos:pos-service:{orgId}:product-snapshot:{productId}
+ * TTL: 3600 秒（1 時間）
+ */
 @ApplicationScoped
 class ProductServiceClient {
     @Inject
     @GrpcClient("product-service")
     lateinit var channel: Channel
 
+    @Inject
+    lateinit var redis: RedisDataSource
+
+    @Inject
+    lateinit var objectMapper: ObjectMapper
+
+    private val log = Logger.getLogger(ProductServiceClient::class.java)
+
+    companion object {
+        const val PRODUCT_SNAPSHOT_TTL_SECONDS = 3600L
+        private const val PREFIX = "openpos:pos-service"
+    }
+
     fun getProductSnapshot(
+        productId: UUID,
+        organizationId: UUID,
+    ): ProductSnapshot {
+        val cacheKey = "$PREFIX:$organizationId:product-snapshot:$productId"
+
+        // cache-aside: まずキャッシュを確認
+        val cached = getCached(cacheKey)
+        if (cached != null) {
+            return cached
+        }
+
+        // cache miss: gRPC で取得
+        val snapshot = fetchProductSnapshotFromService(productId, organizationId)
+
+        // キャッシュに書き込み（TTL 付き）
+        setCache(cacheKey, snapshot)
+
+        return snapshot
+    }
+
+    private fun fetchProductSnapshotFromService(
         productId: UUID,
         organizationId: UUID,
     ): ProductSnapshot {
@@ -129,6 +172,31 @@ class ProductServiceClient {
             DiscountType.DISCOUNT_TYPE_FIXED_AMOUNT -> "FIXED_AMOUNT"
             else -> "UNSPECIFIED"
         }
+
+    private fun getCached(key: String): ProductSnapshot? =
+        try {
+            val json = redis.value(String::class.java).get(key)
+            if (json != null) {
+                objectMapper.readValue(json, ProductSnapshot::class.java)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            log.warnf("Redis GET failed for key=%s: %s", key, e.message)
+            null
+        }
+
+    private fun setCache(
+        key: String,
+        snapshot: ProductSnapshot,
+    ) {
+        try {
+            val json = objectMapper.writeValueAsString(snapshot)
+            redis.value(String::class.java).setex(key, PRODUCT_SNAPSHOT_TTL_SECONDS, json)
+        } catch (e: Exception) {
+            log.warnf("Redis SET failed for key=%s: %s", key, e.message)
+        }
+    }
 
     private class TenantHeaderInterceptor(
         private val organizationId: UUID,
