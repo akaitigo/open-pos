@@ -71,7 +71,7 @@ class TransactionService {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
 
         if (!clientId.isNullOrBlank()) {
-            val existing = transactionRepository.findByClientId(clientId)
+            val existing = transactionRepository.findByClientId(clientId, orgId)
             if (existing != null) return existing
         }
 
