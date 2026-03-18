@@ -123,6 +123,7 @@ class EventConsumerTest {
                                 "subtotal" to it.subtotal,
                             )
                         },
+                    "originalTransactedAt" to "2026-03-06T10:00:00Z",
                 ),
             )
         val envelope =
