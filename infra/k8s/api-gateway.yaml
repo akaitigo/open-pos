@@ -27,6 +27,13 @@ spec:
                 name: api-gateway-config
             - secretRef:
                 name: openpos-secrets
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 12
           readinessProbe:
             httpGet:
               path: /health
@@ -41,11 +48,11 @@ spec:
             periodSeconds: 15
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
               cpu: 500m
               memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -67,5 +74,4 @@ metadata:
   name: api-gateway-config
   namespace: openpos
 data:
-  QUARKUS_HTTP_PORT: "8080"
-
+  QUARKUS_HTTP_PORT: '8080'

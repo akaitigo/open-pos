@@ -14,7 +14,31 @@ env:
   IMAGE_PREFIX: ghcr.io/${{ github.repository }}
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      semver: ${{ steps.version.outputs.semver }}
+      short_sha: ${{ steps.version.outputs.short_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Generate semantic version
+        id: version
+        run: |
+          # Derive version from git describe (falls back to 0.0.0 if no tags)
+          RAW_VERSION=$(git describe --tags --always 2>/dev/null || echo "v0.0.0-0-g$(git rev-parse --short HEAD)")
+          # Strip leading 'v' if present and normalize to semver
+          SEMVER=$(echo "$RAW_VERSION" | sed 's/^v//' | sed 's/-\([0-9]*\)-g\([a-f0-9]*\)$/+\1.\2/')
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "semver=${SEMVER}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "Version: ${SEMVER}"
+
   build-and-push:
+    needs: version
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -48,18 +72,59 @@ jobs:
           tags: |
             ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:latest
             ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:${{ needs.version.outputs.semver }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   deploy-staging:
-    needs: build-and-push
+    needs: [version, build-and-push]
     runs-on: ubuntu-latest
     environment: staging
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to staging
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
         run: |
-          echo "Staging deployment placeholder"
-          echo "Image tag: ${{ github.sha }}"
-          echo "TODO: Apply Kubernetes manifests to staging cluster"
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > "$HOME/.kube/config"
+
+      - name: Update image tags in manifests
+        run: |
+          IMAGE_TAG="${{ needs.version.outputs.semver }}"
+          SERVICES=(api-gateway product-service store-service pos-service inventory-service analytics-service)
+          for SERVICE in "${SERVICES[@]}"; do
+            sed -i "s|image: ghcr.io/akaitigo/open-pos/${SERVICE}:.*|image: ${{ env.IMAGE_PREFIX }}/${SERVICE}:${IMAGE_TAG}|" \
+              "infra/k8s/${SERVICE}.yaml"
+          done
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f infra/k8s/namespace.yaml
+          kubectl apply -f infra/k8s/network-policy.yaml
+          kubectl apply -f infra/k8s/ingress.yaml
+          kubectl apply -f infra/k8s/
+
+      - name: Rollout restart deployments
+        run: |
+          SERVICES=(api-gateway product-service store-service pos-service inventory-service analytics-service)
+          for SERVICE in "${SERVICES[@]}"; do
+            kubectl rollout restart deployment/"${SERVICE}" -n openpos
+          done
+
+      - name: Wait for rollout completion
+        run: |
+          SERVICES=(api-gateway product-service store-service pos-service inventory-service analytics-service)
+          for SERVICE in "${SERVICES[@]}"; do
+            echo "Waiting for ${SERVICE} rollout..."
+            kubectl rollout status deployment/"${SERVICE}" -n openpos --timeout=300s
+          done
+
+      - name: Verify deployment
+        run: |
+          echo "Deployed version: ${{ needs.version.outputs.semver }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          kubectl get deployments -n openpos
+          kubectl get pods -n openpos
