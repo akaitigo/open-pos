@@ -5,7 +5,7 @@ import jakarta.persistence.Entity
 import jakarta.persistence.Table
 import jakarta.persistence.Version
 import org.hibernate.annotations.SQLDelete
-import org.hibernate.annotations.Where
+import org.hibernate.annotations.SQLRestriction
 import java.time.Instant
 import java.util.UUID
 
@@ -18,7 +18,7 @@ import java.util.UUID
 @Entity
 @Table(name = "transactions", schema = "pos_schema")
 @SQLDelete(sql = "UPDATE pos_schema.transactions SET deleted = true WHERE id = ?")
-@Where(clause = "deleted = false")
+@SQLRestriction("deleted = false")
 class TransactionEntity : BaseEntity() {
     @Column(name = "store_id", nullable = false)
     lateinit var storeId: UUID
