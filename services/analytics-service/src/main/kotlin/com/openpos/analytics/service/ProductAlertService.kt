@@ -1,6 +1,7 @@
 package com.openpos.analytics.service
 
 import com.openpos.analytics.config.OrganizationIdHolder
+import com.openpos.analytics.config.TenantFilterService
 import com.openpos.analytics.entity.ProductAlertEntity
 import com.openpos.analytics.repository.ProductAlertRepository
 import io.quarkus.panache.common.Page
@@ -20,6 +21,9 @@ class ProductAlertService {
 
     @Inject
     lateinit var organizationIdHolder: OrganizationIdHolder
+
+    @Inject
+    lateinit var tenantFilterService: TenantFilterService
 
     fun listByOrganization(
         organizationId: UUID,
@@ -54,7 +58,16 @@ class ProductAlertService {
 
     @Transactional
     fun markAsRead(id: UUID): ProductAlertEntity? {
+        val orgId =
+            requireNotNull(organizationIdHolder.organizationId) {
+                "organizationId is not set in OrganizationIdHolder"
+            }
         val entity = productAlertRepository.findById(id) ?: return null
+        // ProductAlertEntity は BaseEntity を継承していないため Hibernate Filter が効かない。
+        // 手動でテナント所有権を検証し、他テナントのアラートを操作できないようにする。
+        if (entity.organizationId != orgId) {
+            return null
+        }
         entity.isRead = true
         productAlertRepository.persist(entity)
         return entity

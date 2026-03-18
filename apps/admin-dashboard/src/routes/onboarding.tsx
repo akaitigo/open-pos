@@ -68,7 +68,7 @@ export function OnboardingPage() {
 
   function handleComplete() {
     // プレースホルダー: 実際は API を呼び出して一括作成する
-    console.log('Onboarding data:', data)
+    // NOTE: PII (email, PIN, phone, address) をログに出力しないこと
     setCompleted(true)
   }
 
