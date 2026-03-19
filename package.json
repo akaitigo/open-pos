@@ -10,6 +10,9 @@
   "scripts": {
     "dev:pos": "pnpm --filter pos-terminal dev",
     "dev:admin": "pnpm --filter admin-dashboard dev",
+    "demo:capture": "pnpm --filter e2e capture:readme-demo",
+    "demo:gif": "bash scripts/render-demo-gif.sh",
+    "demo:assets": "pnpm run demo:capture && pnpm run demo:gif",
     "build": "pnpm -r build",
     "lint": "pnpm -r run lint",
     "format": "prettier --write \"apps/**/*.{ts,tsx,js,jsx,json,css,md}\" \"packages/**/*.{ts,tsx,js,jsx,json,css,md}\"",

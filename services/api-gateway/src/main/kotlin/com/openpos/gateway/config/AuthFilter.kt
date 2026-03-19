@@ -27,7 +27,7 @@ class AuthFilter : ContainerRequestFilter {
     lateinit var jwt: JsonWebToken
 
     @ConfigProperty(name = "openpos.auth.enabled", defaultValue = "true")
-    lateinit var authEnabled: java.lang.Boolean
+    var authEnabled: Boolean = true
 
     @ConfigProperty(name = "openpos.auth.skip-paths", defaultValue = "/api/health,/q/")
     lateinit var skipPaths: String
@@ -43,7 +43,7 @@ class AuthFilter : ContainerRequestFilter {
         }
 
         // 認証無効（dev プロファイル）
-        if (!authEnabled.booleanValue()) {
+        if (!authEnabled) {
             return
         }
 
@@ -89,14 +89,16 @@ class AuthFilter : ContainerRequestFilter {
         }
     }
 
-    private fun shouldSkipAuth(path: String): Boolean =
-        skipPaths.split(",").any { pattern ->
+    private fun shouldSkipAuth(path: String): Boolean {
+        val normalizedPath = path.removePrefix("/")
+        return skipPaths.split(",").any { pattern ->
             val trimmed = pattern.trim()
             if (trimmed.endsWith("{id}/authenticate")) {
                 // パターンマッチ: /api/staff/{id}/authenticate
-                path.matches(Regex("api/staff/[^/]+/authenticate"))
+                normalizedPath.matches(Regex("api/staff/[^/]+/authenticate"))
             } else {
-                path.startsWith(trimmed.removePrefix("/"))
+                normalizedPath.startsWith(trimmed.removePrefix("/"))
             }
         }
+    }
 }
