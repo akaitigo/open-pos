@@ -3,7 +3,7 @@ plugins {
     kotlin("plugin.allopen") apply false
     kotlin("plugin.noarg") apply false
     id("io.quarkus") apply false
-    id("org.owasp.dependencycheck") version "12.1.1" apply false
+    id("org.owasp.dependencycheck") version "12.2.0" apply false
 }
 
 allprojects {
