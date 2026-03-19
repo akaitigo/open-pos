@@ -168,7 +168,7 @@ proto-lint: ## Lint proto files
 	cd proto && buf lint
 
 proto-breaking: ## Check proto breaking changes
-	cd proto && buf breaking --against '.git#branch=main'
+	cd proto && buf breaking --against '../.git#branch=main,subdir=proto'
 
 # === Seed Data ===
 seed: ## Seed demo data (requires running backend)

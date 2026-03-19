@@ -7,7 +7,7 @@ import {
   PaginatedStoresSchema,
   PaginatedStaffSchema,
   PaginatedTransactionsSchema,
-  DailySalesSchema,
+  DailySalesResponseSchema,
   SalesSummarySchema,
   formatMoney,
 } from '@shared-types/openpos'
@@ -24,7 +24,6 @@ import {
   BarChart3,
   UserCheck,
 } from 'lucide-react'
-import { z } from 'zod'
 
 function todayString(): string {
   return new Date().toISOString().slice(0, 10)
@@ -80,10 +79,10 @@ export function DashboardPage() {
 
     // 過去7日間の日次売上
     api
-      .get('/api/analytics/daily', z.array(DailySalesSchema), {
+      .get('/api/analytics/daily-sales', DailySalesResponseSchema, {
         params: { startDate: daysAgoString(6), endDate: todayString() },
       })
-      .then(setDailySales)
+      .then((res) => setDailySales(res.data))
       .catch(() => {})
 
     // 今日のサマリー

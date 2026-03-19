@@ -117,9 +117,12 @@ class StocktakeService {
         return stocktake
     }
 
+    /**
+     * EntityGraph を使って棚卸しと項目を一括取得する（N+1 防止）。
+     */
     fun getStocktake(stocktakeId: UUID): StocktakeEntity {
         tenantFilterService.enableFilter()
-        return stocktakeRepository.findById(stocktakeId)
+        return stocktakeRepository.findByIdWithItems(stocktakeId)
             ?: throw IllegalArgumentException("Stocktake not found: $stocktakeId")
     }
 

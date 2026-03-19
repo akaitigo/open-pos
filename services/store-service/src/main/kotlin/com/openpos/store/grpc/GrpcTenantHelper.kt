@@ -34,4 +34,9 @@ class GrpcTenantHelper {
                 )
         organizationIdHolder.organizationId = orgId
     }
+
+    /**
+     * OrganizationIdHolder に設定済みの organizationId を返す。
+     */
+    fun currentOrganizationId(): java.util.UUID? = organizationIdHolder.organizationId
 }

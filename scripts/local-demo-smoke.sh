@@ -43,7 +43,16 @@ pass() {
 
 api_get() {
   local path="$1"
-  curl -fsS "$API_URL$path" -H "X-Organization-Id: $ORG_ID"
+  local response
+  local http_code
+  response=$(curl -sS -w "\n%{http_code}" "$API_URL$path" -H "X-Organization-Id: $ORG_ID")
+  http_code=$(echo "$response" | tail -1)
+  response=$(echo "$response" | sed '$d')
+  if [[ "$http_code" -ge 400 ]]; then
+    echo "ERROR: GET $path failed ($http_code): $response" >&2
+    exit 1
+  fi
+  echo "$response"
 }
 
 api_post() {

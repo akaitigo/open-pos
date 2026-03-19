@@ -5,9 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/lib/api'
-import { DailySalesSchema, formatMoney } from '@shared-types/openpos'
+import { DailySalesResponseSchema, formatMoney } from '@shared-types/openpos'
 import type { DailySales } from '@shared-types/openpos'
-import { z } from 'zod'
 import { Download } from 'lucide-react'
 
 function todayString(): string {
@@ -56,10 +55,10 @@ export function ExportPage() {
   async function handlePreview() {
     setLoading(true)
     try {
-      const data = await api.get('/api/analytics/daily', z.array(DailySalesSchema), {
+      const res = await api.get('/api/analytics/daily-sales', DailySalesResponseSchema, {
         params: { startDate, endDate },
       })
-      setPreviewData(data)
+      setPreviewData(res.data)
     } catch {
       // ignore
     } finally {
