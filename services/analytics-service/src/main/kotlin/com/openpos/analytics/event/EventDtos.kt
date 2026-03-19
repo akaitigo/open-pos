@@ -24,6 +24,7 @@ data class SaleVoidedPayload(
     val voidTransactionId: String,
     val storeId: String,
     val items: List<SaleItemPayload>,
+    val originalTransactedAt: String,
 )
 
 data class SaleItemPayload(

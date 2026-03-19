@@ -15,7 +15,10 @@ import { useCartStore, getCartSubtotal } from '@/stores/cart-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { useDiscountStore } from '@/stores/discount-store'
 import { api } from '@/lib/api'
+import { saveOfflineTransaction } from '@/lib/offline-db'
+import type { OfflineTransactionItem, OfflinePayment } from '@/lib/offline-db'
 import {
+  ApiError,
   FinalizeTransactionResponseSchema,
   formatMoney,
   TransactionSchema,
@@ -210,8 +213,56 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       setReceiptOpen(true)
       onOpenChange(false)
     } catch (err) {
-      const message = err instanceof Error ? err.message : '決済処理に失敗しました'
-      toast({ title: 'エラー', description: message, variant: 'destructive' })
+      // ネットワークエラー時（fetch の TypeError）はオフライン保存にフォールバック
+      const isNetworkError =
+        err instanceof TypeError || (!navigator.onLine && !(err instanceof ApiError))
+      if (isNetworkError && storeId && terminalId && staff) {
+        try {
+          const offlineItems: OfflineTransactionItem[] = items.map((item) => ({
+            productId: item.product.id,
+            productName: item.product.name,
+            unitPrice: item.product.price,
+            quantity: item.quantity,
+            taxRateName: '',
+            taxRate: '0',
+            isReducedTax: false,
+          }))
+          const offlinePayments: OfflinePayment[] = payments.map((p) => ({
+            method: p.method,
+            amount: p.amount,
+            ...(p.received != null ? { received: p.received } : {}),
+            ...(p.reference ? { reference: p.reference } : {}),
+          }))
+          await saveOfflineTransaction({
+            clientId: crypto.randomUUID(),
+            storeId,
+            terminalId,
+            staffId: staff.id,
+            items: offlineItems,
+            payments: offlinePayments,
+            createdAt: new Date().toISOString(),
+            syncStatus: 'pending',
+          })
+          toast({
+            title: 'オフライン保存',
+            description:
+              'ネットワークに接続できません。取引をローカルに保存しました。オンライン復帰時に自動同期されます。',
+          })
+          clearCart()
+          clearDiscounts()
+          resetDialogState()
+          onOpenChange(false)
+        } catch {
+          toast({
+            title: 'エラー',
+            description: 'オフライン保存にも失敗しました',
+            variant: 'destructive',
+          })
+        }
+      } else {
+        const message = err instanceof Error ? err.message : '決済処理に失敗しました'
+        toast({ title: 'エラー', description: message, variant: 'destructive' })
+      }
     } finally {
       setProcessing(false)
     }

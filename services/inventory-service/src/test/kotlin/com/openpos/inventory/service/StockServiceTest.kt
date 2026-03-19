@@ -142,7 +142,7 @@ class StockServiceTest {
     fun `adjustStock adds quantity to existing stock`() {
         // Arrange
         val existingStock = createStockEntity(quantity = 10)
-        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        whenever(stockRepository.findByStoreAndProductForUpdate(storeId, productId)).thenReturn(existingStock)
         doNothing().whenever(stockRepository).persist(any<StockEntity>())
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
@@ -169,7 +169,7 @@ class StockServiceTest {
     fun `adjustStock deducts quantity from existing stock`() {
         // Arrange
         val existingStock = createStockEntity(quantity = 20)
-        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        whenever(stockRepository.findByStoreAndProductForUpdate(storeId, productId)).thenReturn(existingStock)
         doNothing().whenever(stockRepository).persist(any<StockEntity>())
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
@@ -194,11 +194,11 @@ class StockServiceTest {
     fun `adjustStock throws when result would be negative`() {
         // Arrange
         val existingStock = createStockEntity(quantity = 3)
-        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        whenever(stockRepository.findByStoreAndProductForUpdate(storeId, productId)).thenReturn(existingStock)
 
         // Act & Assert
         val exception =
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(InsufficientStockException::class.java) {
                 stockService.adjustStock(
                     storeId = storeId,
                     productId = productId,
@@ -209,7 +209,7 @@ class StockServiceTest {
                 )
             }
         assertEquals(
-            "Stock quantity cannot be negative: current=3, change=-5",
+            "Insufficient stock: current=3, requested change=-5, product=$productId, store=$storeId",
             exception.message,
         )
     }
@@ -219,7 +219,7 @@ class StockServiceTest {
     @Test
     fun `adjustStock creates new stock when not found`() {
         // Arrange
-        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(null)
+        whenever(stockRepository.findByStoreAndProductForUpdate(storeId, productId)).thenReturn(null)
         doNothing().whenever(stockRepository).persist(any<StockEntity>())
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
@@ -245,10 +245,10 @@ class StockServiceTest {
     @Test
     fun `adjustStock for new stock throws when initial quantity is negative`() {
         // Arrange
-        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(null)
+        whenever(stockRepository.findByStoreAndProductForUpdate(storeId, productId)).thenReturn(null)
 
         // Act & Assert
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(InsufficientStockException::class.java) {
             stockService.adjustStock(
                 storeId = storeId,
                 productId = productId,
@@ -282,7 +282,7 @@ class StockServiceTest {
     fun `adjustStock deducts to exactly zero`() {
         // Arrange
         val existingStock = createStockEntity(quantity = 5)
-        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        whenever(stockRepository.findByStoreAndProductForUpdate(storeId, productId)).thenReturn(existingStock)
         doNothing().whenever(stockRepository).persist(any<StockEntity>())
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
@@ -307,7 +307,7 @@ class StockServiceTest {
     fun `adjustStock publishes StockLowEvent when stock drops below threshold`() {
         // Arrange: stock at 15, threshold 10, deduct 6 -> new quantity 9 (below 10)
         val existingStock = createStockEntity(quantity = 15)
-        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        whenever(stockRepository.findByStoreAndProductForUpdate(storeId, productId)).thenReturn(existingStock)
         doNothing().whenever(stockRepository).persist(any<StockEntity>())
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
@@ -335,7 +335,7 @@ class StockServiceTest {
     fun `adjustStock does not publish StockLowEvent when stock stays above threshold`() {
         // Arrange: stock at 20, threshold 10, deduct 5 -> new quantity 15 (above 10)
         val existingStock = createStockEntity(quantity = 20)
-        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        whenever(stockRepository.findByStoreAndProductForUpdate(storeId, productId)).thenReturn(existingStock)
         doNothing().whenever(stockRepository).persist(any<StockEntity>())
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
@@ -357,7 +357,7 @@ class StockServiceTest {
     fun `adjustStock does not publish StockLowEvent when stock was already below threshold`() {
         // Arrange: stock at 5, threshold 10, deduct 2 -> new quantity 3 (was already below)
         val existingStock = createStockEntity(quantity = 5)
-        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        whenever(stockRepository.findByStoreAndProductForUpdate(storeId, productId)).thenReturn(existingStock)
         doNothing().whenever(stockRepository).persist(any<StockEntity>())
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
@@ -379,7 +379,7 @@ class StockServiceTest {
     fun `adjustStock publishes StockLowEvent when stock drops exactly to threshold`() {
         // Arrange: stock at 15, threshold 10, deduct 5 -> new quantity 10 (equal to threshold)
         val existingStock = createStockEntity(quantity = 15)
-        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        whenever(stockRepository.findByStoreAndProductForUpdate(storeId, productId)).thenReturn(existingStock)
         doNothing().whenever(stockRepository).persist(any<StockEntity>())
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
@@ -407,7 +407,7 @@ class StockServiceTest {
     fun `adjustStock does not publish StockLowEvent when adding stock`() {
         // Arrange: stock at 5, threshold 10, add 20 -> new quantity 25 (adding stock)
         val existingStock = createStockEntity(quantity = 5)
-        whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(existingStock)
+        whenever(stockRepository.findByStoreAndProductForUpdate(storeId, productId)).thenReturn(existingStock)
         doNothing().whenever(stockRepository).persist(any<StockEntity>())
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 

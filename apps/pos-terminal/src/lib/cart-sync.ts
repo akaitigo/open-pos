@@ -3,6 +3,8 @@
  * WebSocket/BroadcastChannel を使用してカートを端末間で同期する。
  */
 
+import { z } from 'zod'
+import { ProductSchema } from '@shared-types/openpos'
 import type { CartItem } from '@/stores/cart-store'
 
 export type CartSyncAction = 'ADD' | 'REMOVE' | 'UPDATE' | 'CLEAR'
@@ -16,6 +18,23 @@ export interface CartSyncMessage {
   timestamp: number
   senderId: string
 }
+
+/** Zod schema for CartItem validation */
+const CartItemSchema = z.object({
+  product: ProductSchema,
+  quantity: z.number().int().nonnegative(),
+})
+
+/** Zod schema for validating incoming cart sync messages */
+const CartSyncMessageSchema = z.object({
+  orgId: z.string(),
+  storeId: z.string(),
+  cartId: z.string(),
+  items: z.array(CartItemSchema),
+  action: z.enum(['ADD', 'REMOVE', 'UPDATE', 'CLEAR']),
+  timestamp: z.number(),
+  senderId: z.string(),
+})
 
 const CHANNEL_NAME = 'openpos-cart-sync'
 const SENDER_ID = crypto.randomUUID()
@@ -34,7 +53,9 @@ export function startCartSync(onMessage: (message: CartSyncMessage) => void): vo
   messageHandler = onMessage
 
   channel.onmessage = (event: MessageEvent) => {
-    const message = event.data as CartSyncMessage
+    const parsed = CartSyncMessageSchema.safeParse(event.data)
+    if (!parsed.success) return
+    const message: CartSyncMessage = parsed.data
     // 自分自身からのメッセージは無視
     if (message.senderId === SENDER_ID) return
     messageHandler?.(message)
