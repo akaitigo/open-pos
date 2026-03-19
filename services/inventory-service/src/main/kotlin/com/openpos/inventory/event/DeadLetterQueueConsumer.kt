@@ -1,18 +1,21 @@
 package com.openpos.inventory.event
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.eclipse.microprofile.reactive.messaging.Channel
 import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.jboss.logging.Logger
+import java.util.concurrent.CompletionStage
 
 /**
  * inventory-service の Dead Letter Queue コンシューマー。
  * DLQ に到着したメッセージを監視し、リトライ可能な場合は元のキューに再送する。
  * 最大 3 回のリトライ（指数バックオフ: 1s, 5s, 25s）を試み、
  * それを超えた場合は永久失敗としてログに記録する。
+ * 明示的に ack/nack を行う。
  */
 @ApplicationScoped
 class DeadLetterQueueConsumer {
@@ -35,55 +38,58 @@ class DeadLetterQueueConsumer {
     }
 
     @Incoming("dlq-inventory-sale-completed")
-    fun onDlqSaleCompleted(message: String) {
-        handleDeadLetter(message, "inventory.sale-completed") { retryMessage ->
-            saleCompletedRetryEmitter.send(retryMessage)
+    fun onDlqSaleCompleted(message: IncomingRabbitMQMessage<String>): CompletionStage<Void> =
+        try {
+            val body = message.payload
+            handleDeadLetter(body, "inventory.sale-completed") { retryMessage ->
+                saleCompletedRetryEmitter.send(retryMessage)
+            }
+            message.ack()
+        } catch (e: Exception) {
+            log.errorf(e, "Failed to process DLQ sale-completed message, sending nack")
+            message.nack(e)
         }
-    }
 
     @Incoming("dlq-inventory-sale-voided")
-    fun onDlqSaleVoided(message: String) {
-        handleDeadLetter(message, "inventory.sale-voided") { retryMessage ->
-            saleVoidedRetryEmitter.send(retryMessage)
+    fun onDlqSaleVoided(message: IncomingRabbitMQMessage<String>): CompletionStage<Void> =
+        try {
+            val body = message.payload
+            handleDeadLetter(body, "inventory.sale-voided") { retryMessage ->
+                saleVoidedRetryEmitter.send(retryMessage)
+            }
+            message.ack()
+        } catch (e: Exception) {
+            log.errorf(e, "Failed to process DLQ sale-voided message, sending nack")
+            message.nack(e)
         }
-    }
 
     private fun handleDeadLetter(
-        message: String,
+        messageBody: String,
         originalQueue: String,
         republish: (String) -> Unit,
     ) {
-        try {
-            val retryCount = extractRetryCount(message)
+        val retryCount = extractRetryCount(messageBody)
 
-            if (retryCount < MAX_RETRY_COUNT) {
-                val delayMs = BACKOFF_DELAYS_MS[retryCount]
-                log.warnf(
-                    "DLQ message retry %d/%d for queue=%s, delay=%dms",
-                    retryCount + 1,
-                    MAX_RETRY_COUNT,
-                    originalQueue,
-                    delayMs,
-                )
-
-                Thread.sleep(delayMs)
-
-                val updatedMessage = incrementRetryCount(message, retryCount)
-                republish(updatedMessage)
-            } else {
-                log.errorf(
-                    "PERMANENT FAILURE: DLQ message exceeded max retries (%d) for queue=%s. Message: %s",
-                    MAX_RETRY_COUNT,
-                    originalQueue,
-                    message,
-                )
-            }
-        } catch (e: Exception) {
-            log.errorf(
-                e,
-                "PERMANENT FAILURE: Failed to process DLQ message for queue=%s. Message: %s",
+        if (retryCount < MAX_RETRY_COUNT) {
+            val delayMs = BACKOFF_DELAYS_MS[retryCount]
+            log.warnf(
+                "DLQ message retry %d/%d for queue=%s, delay=%dms",
+                retryCount + 1,
+                MAX_RETRY_COUNT,
                 originalQueue,
-                message,
+                delayMs,
+            )
+
+            Thread.sleep(delayMs)
+
+            val updatedMessage = incrementRetryCount(messageBody, retryCount)
+            republish(updatedMessage)
+        } else {
+            log.errorf(
+                "PERMANENT FAILURE: DLQ message exceeded max retries (%d) for queue=%s. Message: %s",
+                MAX_RETRY_COUNT,
+                originalQueue,
+                messageBody,
             )
         }
     }
@@ -107,7 +113,6 @@ class DeadLetterQueueConsumer {
             map["retryCount"] = currentRetryCount + 1
             objectMapper.writeValueAsString(map)
         } catch (e: Exception) {
-            // パース失敗時はそのまま返す（次のリトライで再度カウント0扱い）
             log.warnf("Failed to increment retry count: %s", e.message)
             message
         }

@@ -55,6 +55,9 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router'],
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-tabs'],
+          icons: ['lucide-react'],
+          scanner: ['html5-qrcode'],
+          offline: ['dexie'],
         },
       },
     },

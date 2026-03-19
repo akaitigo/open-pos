@@ -3,6 +3,10 @@
  * StarPay 等の外部決済端末との接続を抽象化する。
  */
 
+import { createLogger } from './logger'
+
+const log = createLogger('StarPay')
+
 export interface PaymentTerminalResult {
   success: boolean
   transactionId: string | null
@@ -30,10 +34,10 @@ export class StarPayTerminal implements PaymentTerminal {
   private connected = false
 
   async connect(): Promise<boolean> {
-    console.log('[StarPay] 接続中...')
+    log.info('接続中...')
     // プレースホルダー: 常に成功
     this.connected = true
-    console.log('[StarPay] 接続完了')
+    log.info('接続完了')
     return true
   }
 
@@ -46,7 +50,7 @@ export class StarPayTerminal implements PaymentTerminal {
       }
     }
 
-    console.log(`[StarPay] 決済処理中: ${amount} 銭`)
+    log.info(`決済処理中: ${amount} 銭`)
     // プレースホルダー: 常に成功
     return {
       success: true,
@@ -56,7 +60,7 @@ export class StarPayTerminal implements PaymentTerminal {
   }
 
   async cancel(): Promise<boolean> {
-    console.log('[StarPay] 決済キャンセル')
+    log.info('決済キャンセル')
     return true
   }
 

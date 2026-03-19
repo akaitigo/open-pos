@@ -12,7 +12,7 @@ class HealthCheckTest {
     fun `application starts and health endpoint responds`() {
         given()
             .`when`()
-            .get("/health")
+            .get("/q/health")
             .then()
             .statusCode(anyOf(`is`(200), `is`(503)))
     }
