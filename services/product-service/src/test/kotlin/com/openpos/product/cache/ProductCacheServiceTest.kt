@@ -78,12 +78,12 @@ class ProductCacheServiceTest {
     @Nested
     inner class Set {
         @Test
-        fun `デフォルトTTL（300秒）でsetexが呼ばれる`() {
+        fun `デフォルトTTL（3600秒）でsetexが呼ばれる`() {
             // Arrange & Act
             cacheService.set("openpos:product-service:product:123", "value")
 
             // Assert
-            verify(valueCommands).setex("openpos:product-service:product:123", 300L, "value")
+            verify(valueCommands).setex("openpos:product-service:product:123", 3600L, "value")
         }
 
         @Test

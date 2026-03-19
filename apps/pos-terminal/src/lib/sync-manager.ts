@@ -4,7 +4,12 @@ import {
   getPendingTransactions,
   updateTransactionSyncStatus,
   cleanupSyncedTransactions,
+  getCachedProducts,
 } from '@/lib/offline-db'
+import type { OfflineTransaction, OfflineTransactionItem } from '@/lib/offline-db'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('SyncManager')
 
 /**
  * 同期結果のスキーマ。
@@ -22,19 +27,54 @@ const SyncResponseSchema = z.object({
 
 type SyncResponse = z.infer<typeof SyncResponseSchema>
 
+/** 同期状態の種類 */
+export type SyncState = 'idle' | 'syncing' | 'retrying' | 'failed' | 'completed'
+
 /**
  * 同期マネージャの状態。
  */
 export interface SyncStatus {
+  state: SyncState
+  /** 後方互換のため isSyncing も保持 */
   isSyncing: boolean
   pendingCount: number
   lastSyncAt: string | null
   lastError: string | null
+  retryCount: number
+  /** 価格変更が検出された取引の clientId リスト */
+  priceConflicts: PriceConflict[]
 }
 
-let syncInProgress = false
+/** 価格競合の情報 */
+export interface PriceConflict {
+  clientId: string
+  items: PriceConflictItem[]
+}
+
+export interface PriceConflictItem {
+  productId: string
+  productName: string
+  /** オフライン取引時の価格（銭単位） */
+  offlinePrice: number
+  /** 現在のサーバー/キャッシュ価格（銭単位） */
+  currentPrice: number
+}
+
+/** Maximum retry attempts for sync */
+const MAX_SYNC_RETRIES = 5
+
+/** Base delay for exponential backoff (ms) */
+const BASE_BACKOFF_MS = 1000
+
+/** Maximum backoff delay (ms) */
+const MAX_BACKOFF_MS = 30_000
+
+let syncState: SyncState = 'idle'
+let retryCount = 0
 let lastSyncAt: string | null = null
 let lastError: string | null = null
+let priceConflicts: PriceConflict[] = []
+let retryTimeoutId: ReturnType<typeof setTimeout> | null = null
 const listeners: Set<() => void> = new Set()
 
 function notifyListeners(): void {
@@ -55,15 +95,82 @@ export function subscribeSyncStatus(callback: () => void): () => void {
 
 /**
  * 現在の同期ステータスを取得する。
- * pendingCount は同期開始時にカウントするため、リアルタイムではない。
  */
 export function getSyncStatus(): SyncStatus {
   return {
-    isSyncing: syncInProgress,
+    state: syncState,
+    isSyncing: syncState === 'syncing' || syncState === 'retrying',
     pendingCount: 0,
     lastSyncAt,
     lastError,
+    retryCount,
+    priceConflicts,
   }
+}
+
+/**
+ * Calculate exponential backoff delay with jitter.
+ */
+function calculateBackoffMs(attempt: number): number {
+  const exponentialDelay = BASE_BACKOFF_MS * Math.pow(2, attempt)
+  const clampedDelay = Math.min(exponentialDelay, MAX_BACKOFF_MS)
+  // Add random jitter (0-25% of delay) to prevent thundering herd
+  const jitter = clampedDelay * Math.random() * 0.25
+  return clampedDelay + jitter
+}
+
+/**
+ * Check for price changes between offline transactions and current product cache.
+ * Returns price conflicts for items whose prices have changed since going offline.
+ */
+async function detectPriceConflicts(transactions: OfflineTransaction[]): Promise<PriceConflict[]> {
+  const cachedProducts = await getCachedProducts()
+  const productPriceMap = new Map<string, number>()
+  for (const product of cachedProducts) {
+    productPriceMap.set(product.id, product.price)
+  }
+
+  const conflicts: PriceConflict[] = []
+
+  for (const tx of transactions) {
+    const conflictItems: PriceConflictItem[] = []
+    for (const item of tx.items) {
+      const currentPrice = productPriceMap.get(item.productId)
+      if (currentPrice !== undefined && currentPrice !== item.unitPrice) {
+        conflictItems.push({
+          productId: item.productId,
+          productName: item.productName,
+          offlinePrice: item.unitPrice,
+          currentPrice,
+        })
+      }
+    }
+    if (conflictItems.length > 0) {
+      conflicts.push({
+        clientId: tx.clientId,
+        items: conflictItems,
+      })
+    }
+  }
+
+  return conflicts
+}
+
+/**
+ * Recalculate transaction items with updated prices.
+ * Returns updated items with current prices applied.
+ */
+export function applyCurrentPrices(
+  items: OfflineTransactionItem[],
+  priceMap: Map<string, number>,
+): OfflineTransactionItem[] {
+  return items.map((item) => {
+    const currentPrice = priceMap.get(item.productId)
+    if (currentPrice !== undefined && currentPrice !== item.unitPrice) {
+      return { ...item, unitPrice: currentPrice }
+    }
+    return item
+  })
 }
 
 /**
@@ -71,17 +178,28 @@ export function getSyncStatus(): SyncStatus {
  * オンライン復帰時やアプリ起動時に呼び出す。
  */
 export async function syncPendingTransactions(): Promise<SyncResponse | null> {
-  if (syncInProgress) return null
+  if (syncState === 'syncing') return null
   if (!navigator.onLine) return null
 
-  syncInProgress = true
+  syncState = 'syncing'
   lastError = null
+  priceConflicts = []
   notifyListeners()
 
   try {
     const pending = await getPendingTransactions()
     if (pending.length === 0) {
+      syncState = 'completed'
+      notifyListeners()
       return null
+    }
+
+    // Detect price conflicts before syncing
+    const conflicts = await detectPriceConflicts(pending)
+    if (conflicts.length > 0) {
+      priceConflicts = conflicts
+      log.warn('Price conflicts detected during sync', { conflictCount: conflicts.length })
+      // Continue syncing with original prices - server should validate
     }
 
     const body = {
@@ -106,6 +224,7 @@ export async function syncPendingTransactions(): Promise<SyncResponse | null> {
           reference: p.reference,
         })),
         createdAt: tx.createdAt,
+        hasPriceConflict: conflicts.some((c) => c.clientId === tx.clientId),
       })),
     }
 
@@ -136,15 +255,76 @@ export async function syncPendingTransactions(): Promise<SyncResponse | null> {
     await cleanupSyncedTransactions()
 
     lastSyncAt = new Date().toISOString()
+    syncState = 'completed'
+    retryCount = 0
+    notifyListeners()
     return response
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Sync failed'
     lastError = message
+    log.error('Sync failed', { error: message, retryCount })
+
+    if (retryCount < MAX_SYNC_RETRIES) {
+      syncState = 'retrying'
+      notifyListeners()
+      scheduleRetry()
+    } else {
+      syncState = 'failed'
+      log.error('Max sync retries exceeded, giving up')
+      notifyListeners()
+    }
+
     return null
-  } finally {
-    syncInProgress = false
-    notifyListeners()
   }
+}
+
+/**
+ * Schedule a retry with exponential backoff.
+ */
+function scheduleRetry(): void {
+  if (retryTimeoutId !== null) {
+    clearTimeout(retryTimeoutId)
+  }
+
+  const delay = calculateBackoffMs(retryCount)
+  retryCount++
+  log.info(`Scheduling sync retry #${retryCount} in ${Math.round(delay)}ms`)
+
+  retryTimeoutId = setTimeout(() => {
+    retryTimeoutId = null
+    if (navigator.onLine) {
+      // Reset state to allow re-entry
+      syncState = 'idle'
+      void syncPendingTransactions()
+    } else {
+      // Wait for online event
+      syncState = 'retrying'
+      notifyListeners()
+    }
+  }, delay)
+}
+
+/**
+ * Reset retry counter and cancel pending retries.
+ */
+export function resetSyncRetries(): void {
+  retryCount = 0
+  syncState = 'idle'
+  lastError = null
+  priceConflicts = []
+  if (retryTimeoutId !== null) {
+    clearTimeout(retryTimeoutId)
+    retryTimeoutId = null
+  }
+  notifyListeners()
+}
+
+/**
+ * Acknowledge and clear price conflicts (user has reviewed them).
+ */
+export function acknowledgePriceConflicts(): void {
+  priceConflicts = []
+  notifyListeners()
 }
 
 /**
@@ -152,6 +332,8 @@ export async function syncPendingTransactions(): Promise<SyncResponse | null> {
  */
 export function setupAutoSync(): () => void {
   const handleOnline = () => {
+    retryCount = 0
+    syncState = 'idle'
     void syncPendingTransactions()
   }
 
@@ -164,5 +346,9 @@ export function setupAutoSync(): () => void {
 
   return () => {
     window.removeEventListener('online', handleOnline)
+    if (retryTimeoutId !== null) {
+      clearTimeout(retryTimeoutId)
+      retryTimeoutId = null
+    }
   }
 }

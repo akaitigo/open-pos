@@ -1,14 +1,18 @@
 package com.openpos.inventory.event
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
 import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import java.util.concurrent.CompletableFuture
 
 class DeadLetterQueueConsumerTest {
     private val objectMapper = ObjectMapper()
@@ -30,7 +34,16 @@ class DeadLetterQueueConsumerTest {
             voidedField.set(c, saleVoidedRetryEmitter)
         }
 
-    private fun buildMessage(retryCount: Int? = null): String {
+    @Suppress("UNCHECKED_CAST")
+    private fun mockMessage(body: String): IncomingRabbitMQMessage<String> {
+        val message = mock<IncomingRabbitMQMessage<String>>()
+        whenever(message.payload).thenReturn(body)
+        whenever(message.ack()).thenReturn(CompletableFuture.completedFuture(null))
+        whenever(message.nack(any<Throwable>())).thenReturn(CompletableFuture.completedFuture(null))
+        return message
+    }
+
+    private fun buildMessageBody(retryCount: Int? = null): String {
         val map =
             mutableMapOf<String, Any>(
                 "eventId" to "test-event-id",
@@ -46,7 +59,8 @@ class DeadLetterQueueConsumerTest {
         @Test
         fun `初回リトライ時はsaleCompletedRetryEmitterに再送する`() {
             // Arrange
-            val message = buildMessage(retryCount = 0)
+            val body = buildMessageBody(retryCount = 0)
+            val message = mockMessage(body)
 
             // Act
             consumer.onDlqSaleCompleted(message)
@@ -57,12 +71,14 @@ class DeadLetterQueueConsumerTest {
 
             val sentMessage = objectMapper.readValue(captor.firstValue, Map::class.java)
             assertTrue(sentMessage["retryCount"] == 1)
+            verify(message).ack()
         }
 
         @Test
         fun `retryCountなしの場合は0として扱いリトライする`() {
             // Arrange
-            val message = buildMessage(retryCount = null)
+            val body = buildMessageBody(retryCount = null)
+            val message = mockMessage(body)
 
             // Act
             consumer.onDlqSaleCompleted(message)
@@ -73,24 +89,28 @@ class DeadLetterQueueConsumerTest {
 
             val sentMessage = objectMapper.readValue(captor.firstValue, Map::class.java)
             assertTrue(sentMessage["retryCount"] == 1)
+            verify(message).ack()
         }
 
         @Test
         fun `最大リトライ回数到達後は再送しない`() {
             // Arrange
-            val message = buildMessage(retryCount = 3)
+            val body = buildMessageBody(retryCount = 3)
+            val message = mockMessage(body)
 
             // Act
             consumer.onDlqSaleCompleted(message)
 
             // Assert
-            verify(saleCompletedRetryEmitter, never()).send(org.mockito.kotlin.any())
+            verify(saleCompletedRetryEmitter, never()).send(any())
+            verify(message).ack()
         }
 
         @Test
         fun `2回目のリトライでretryCountが正しくインクリメントされる`() {
             // Arrange
-            val message = buildMessage(retryCount = 1)
+            val body = buildMessageBody(retryCount = 1)
+            val message = mockMessage(body)
 
             // Act
             consumer.onDlqSaleCompleted(message)
@@ -101,6 +121,7 @@ class DeadLetterQueueConsumerTest {
 
             val sentMessage = objectMapper.readValue(captor.firstValue, Map::class.java)
             assertTrue(sentMessage["retryCount"] == 2)
+            verify(message).ack()
         }
     }
 
@@ -109,25 +130,29 @@ class DeadLetterQueueConsumerTest {
         @Test
         fun `初回リトライ時はsaleVoidedRetryEmitterに再送する`() {
             // Arrange
-            val message = buildMessage(retryCount = 0)
+            val body = buildMessageBody(retryCount = 0)
+            val message = mockMessage(body)
 
             // Act
             consumer.onDlqSaleVoided(message)
 
             // Assert
-            verify(saleVoidedRetryEmitter).send(org.mockito.kotlin.any())
+            verify(saleVoidedRetryEmitter).send(any())
+            verify(message).ack()
         }
 
         @Test
         fun `最大リトライ回数到達後は再送しない`() {
             // Arrange
-            val message = buildMessage(retryCount = 3)
+            val body = buildMessageBody(retryCount = 3)
+            val message = mockMessage(body)
 
             // Act
             consumer.onDlqSaleVoided(message)
 
             // Assert
-            verify(saleVoidedRetryEmitter, never()).send(org.mockito.kotlin.any())
+            verify(saleVoidedRetryEmitter, never()).send(any())
+            verify(message).ack()
         }
     }
 

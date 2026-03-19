@@ -19,7 +19,8 @@ class ProductCacheService {
     private val log = Logger.getLogger(ProductCacheService::class.java)
 
     companion object {
-        const val TTL_SECONDS = 300L
+        /** デフォルト TTL: 3600 秒（1 時間） — products, categories 用 */
+        const val TTL_SECONDS = 3600L
         private const val PREFIX = "openpos:product-service"
     }
 
