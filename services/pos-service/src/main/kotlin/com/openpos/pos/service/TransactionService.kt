@@ -11,7 +11,10 @@ import com.openpos.pos.event.EventPublisher
 import com.openpos.pos.event.SaleCompletedEventDto
 import com.openpos.pos.event.SaleItemDto
 import com.openpos.pos.event.SaleVoidedEventDto
+import com.openpos.pos.grpc.BusinessPreconditionException
+import com.openpos.pos.grpc.InvalidInputException
 import com.openpos.pos.grpc.ProductServiceClient
+import com.openpos.pos.grpc.ResourceNotFoundException
 import com.openpos.pos.repository.PaymentRepository
 import com.openpos.pos.repository.TaxSummaryRepository
 import com.openpos.pos.repository.TransactionDiscountRepository
@@ -23,7 +26,7 @@ import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
 
 @ApplicationScoped
@@ -71,7 +74,7 @@ class TransactionService {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
 
         if (!clientId.isNullOrBlank()) {
-            val existing = transactionRepository.findByClientId(clientId)
+            val existing = transactionRepository.findByClientId(clientId, orgId)
             if (existing != null) return existing
         }
 
@@ -98,7 +101,7 @@ class TransactionService {
         productId: UUID,
         quantity: Int,
     ): TransactionEntity {
-        require(quantity > 0) { "quantity must be positive" }
+        if (quantity <= 0) throw InvalidInputException("quantity must be positive")
         val tx = getWritableTransaction(transactionId)
         val orgId = tx.organizationId
 
@@ -147,13 +150,13 @@ class TransactionService {
         itemId: UUID,
         quantity: Int,
     ): TransactionEntity {
-        require(quantity > 0) { "quantity must be positive, use removeItem for deletion" }
+        if (quantity <= 0) throw InvalidInputException("quantity must be positive, use removeItem for deletion")
         val tx = getWritableTransaction(transactionId)
 
         val item =
             itemRepository.findById(itemId)
-                ?: throw IllegalArgumentException("Item not found: $itemId")
-        require(item.transactionId == transactionId) { "Item does not belong to this transaction" }
+                ?: throw ResourceNotFoundException("Item not found: $itemId")
+        if (item.transactionId != transactionId) throw BusinessPreconditionException("Item does not belong to this transaction")
 
         item.quantity = quantity
         val taxResult = taxCalculationService.calculateItemTax(item.unitPrice, quantity, item.taxRate)
@@ -175,8 +178,8 @@ class TransactionService {
 
         val item =
             itemRepository.findById(itemId)
-                ?: throw IllegalArgumentException("Item not found: $itemId")
-        require(item.transactionId == transactionId) { "Item does not belong to this transaction" }
+                ?: throw ResourceNotFoundException("Item not found: $itemId")
+        if (item.transactionId != transactionId) throw BusinessPreconditionException("Item does not belong to this transaction")
 
         itemRepository.delete(item)
         recalculateTransactionTotals(tx)
@@ -196,6 +199,46 @@ class TransactionService {
         transactionItemId: UUID?,
     ): TransactionEntity {
         val tx = getWritableTransaction(transactionId)
+
+        // バリデーション: 負の割引額を拒否
+        require(amount >= 0) { "Discount amount must not be negative: $amount" }
+
+        // 割引種別ごとのバリデーション
+        when (discountType) {
+            "PERCENTAGE" -> {
+                // パーセンテージは 0〜100（文字列 "0"〜"100"）の範囲
+                val pct =
+                    value.toBigDecimalOrNull()
+                        ?: throw IllegalArgumentException("Invalid percentage value: $value")
+                require(pct >= java.math.BigDecimal.ZERO && pct <= java.math.BigDecimal("100")) {
+                    "Percentage discount must be between 0 and 100, got: $value"
+                }
+            }
+
+            "FIXED_AMOUNT" -> {
+                // 固定額割引: 対象金額を超えてはならない
+                val targetSubtotal =
+                    if (transactionItemId != null) {
+                        val item =
+                            itemRepository.findById(transactionItemId)
+                                ?: throw IllegalArgumentException("Transaction item not found: $transactionItemId")
+                        require(item.transactionId == transactionId) {
+                            "Item does not belong to this transaction"
+                        }
+                        item.subtotal
+                    } else {
+                        val items = itemRepository.findByTransactionId(transactionId)
+                        items.sumOf { it.subtotal }
+                    }
+                require(amount <= targetSubtotal) {
+                    "Discount amount ($amount) exceeds subtotal ($targetSubtotal)"
+                }
+            }
+
+            else -> {
+                throw IllegalArgumentException("Unknown discount type: $discountType")
+            }
+        }
 
         val discount =
             TransactionDiscountEntity().apply {
@@ -224,16 +267,28 @@ class TransactionService {
         tenantFilterService.enableFilter()
         val tx =
             transactionRepository.findById(transactionId)
-                ?: throw IllegalArgumentException("Transaction not found: $transactionId")
-        require(tx.status == "DRAFT") { "Transaction must be in DRAFT status to finalize, current: ${tx.status}" }
+                ?: throw ResourceNotFoundException("Transaction not found: $transactionId")
+        if (tx.status !=
+            "DRAFT"
+        ) {
+            throw BusinessPreconditionException("Transaction must be in DRAFT status to finalize, current: ${tx.status}")
+        }
 
         val items = itemRepository.findByTransactionId(transactionId)
-        require(items.isNotEmpty()) { "Transaction has no items" }
+        if (items.isEmpty()) throw BusinessPreconditionException("Transaction has no items")
 
         recalculateTransactionTotals(tx)
 
         val paymentTotal = payments.sumOf { it.amount }
-        require(paymentTotal >= tx.total) { "Payment total ($paymentTotal) is less than transaction total (${tx.total})" }
+        if (paymentTotal <
+            tx.total
+        ) {
+            throw BusinessPreconditionException("Payment total ($paymentTotal) is less than transaction total (${tx.total})")
+        }
+
+        // オーバーペイ分（複数決済での余剰金額）を現金お釣りとして返金
+        val overpayAmount = paymentTotal - tx.total
+        tx.changeAmount = overpayAmount
 
         for (input in payments) {
             val payment =
@@ -295,9 +350,13 @@ class TransactionService {
         tenantFilterService.enableFilter()
         val tx =
             transactionRepository.findById(transactionId)
-                ?: throw IllegalArgumentException("Transaction not found: $transactionId")
-        require(tx.status == "COMPLETED") { "Only COMPLETED transactions can be voided, current: ${tx.status}" }
-        require(reason.isNotBlank()) { "Void reason is required" }
+                ?: throw ResourceNotFoundException("Transaction not found: $transactionId")
+        if (tx.status !=
+            "COMPLETED"
+        ) {
+            throw BusinessPreconditionException("Only COMPLETED transactions can be voided, current: ${tx.status}")
+        }
+        if (reason.isBlank()) throw InvalidInputException("Void reason is required")
 
         tx.status = "VOIDED"
         transactionRepository.persist(tx)
@@ -313,7 +372,7 @@ class TransactionService {
     fun getTransaction(transactionId: UUID): TransactionEntity {
         tenantFilterService.enableFilter()
         return transactionRepository.findById(transactionId)
-            ?: throw IllegalArgumentException("Transaction not found: $transactionId")
+            ?: throw ResourceNotFoundException("Transaction not found: $transactionId")
     }
 
     fun getTransactionItems(transactionId: UUID): List<TransactionItemEntity> = itemRepository.findByTransactionId(transactionId)
@@ -372,8 +431,8 @@ class TransactionService {
         tenantFilterService.enableFilter()
         val tx =
             transactionRepository.findById(transactionId)
-                ?: throw IllegalArgumentException("Transaction not found: $transactionId")
-        require(tx.status == "DRAFT") { "Transaction is not in DRAFT status: ${tx.status}" }
+                ?: throw ResourceNotFoundException("Transaction not found: $transactionId")
+        if (tx.status != "DRAFT") throw BusinessPreconditionException("Transaction is not in DRAFT status: ${tx.status}")
         return tx
     }
 
@@ -390,7 +449,7 @@ class TransactionService {
     }
 
     private fun generateTransactionNumber(): String {
-        val date = LocalDate.now(ZoneId.of("Asia/Tokyo"))
+        val date = LocalDate.now(ZoneOffset.UTC)
         val seq = (System.nanoTime() % 1_000_000).toString().padStart(6, '0')
         return "T-$date-$seq"
     }
@@ -437,6 +496,7 @@ class TransactionService {
                             subtotal = item.subtotal,
                         )
                     },
+                originalTransactedAt = (tx.completedAt ?: tx.createdAt).toString(),
             )
         eventPublisher.publish("sale.voided", tx.organizationId, event)
     }

@@ -24,8 +24,11 @@ RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew --no-daemon :services:${SERVICE_NAME}:quarkusBuild -Dquarkus.package.jar.type=uber-jar
 
 FROM eclipse-temurin:21-jre
+RUN groupadd -r appuser && useradd -r -g appuser -u 1001 appuser
 WORKDIR /app
 ARG SERVICE_NAME
 COPY --from=build /app/services/${SERVICE_NAME}/build/*-runner.jar app.jar
+RUN chown -R appuser:appuser /app
+USER appuser
 EXPOSE 8080 9000
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -9,15 +9,15 @@
 
 A multi-tenant, offline-capable POS (Point of Sale) system built with microservices architecture.
 
-> [!WARNING]
-> **This project is in early development (v0.1.x).** Authentication and authorization are NOT yet implemented on REST API endpoints. **Do not deploy to production or expose to the public internet.** See [SECURITY.md](SECURITY.md) for details.
+> [!NOTE]
+> **v1.0 release candidate.** Authentication (ORY Hydra OIDC/PKCE) and RBAC are implemented. Review [SECURITY.md](SECURITY.md) for the supported-versions matrix and responsible-disclosure process before any public deployment.
 
 ## Project Status
 
-- **Stage**: Public alpha for local development and architecture exploration
+- **Version**: v1.0 release candidate
 - **Supported demo flows**: `make local-demo` and `make docker-demo`
 - **Quality gates on `main`**: CI, dependency audit, secret scanning, CodeQL, Playwright E2E
-- **Not supported yet**: production deployment, internet exposure, or hard security guarantees
+- **Auth**: ORY Hydra v2.2 (OIDC/PKCE) with RBAC (Owner / Manager / Cashier)
 
 ## Features
 
@@ -69,7 +69,7 @@ A multi-tenant, offline-capable POS (Point of Sale) system built with microservi
 ## Tech Stack
 
 **Backend**: Kotlin 2.3 / Quarkus 3.32 / GraalVM CE 21 / Gradle 9
-**Frontend**: React 19 / TypeScript / Vite 6 / Tailwind CSS + shadcn/ui
+**Frontend**: React 19 / TypeScript / Vite 7 / Tailwind CSS + shadcn/ui
 **Database**: PostgreSQL 17 (schema isolation, Flyway migrations)
 **Cache**: Redis 7 (Lettuce, cache-aside pattern)
 **Messaging**: RabbitMQ 4 (SmallRye Reactive Messaging)

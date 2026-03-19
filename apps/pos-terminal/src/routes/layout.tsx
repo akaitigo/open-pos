@@ -7,19 +7,28 @@ import { LoginScreen } from '@/components/login-screen'
 import { SetupScreen } from '@/components/setup-screen'
 import { Toaster } from '@/components/ui/toast'
 import { hasPosRuntimeConfig } from '@/lib/runtime-config'
+import { setupAutoSync } from '@/lib/sync-manager'
 import { useAuthStore } from '@/stores/auth-store'
 import { useAccessibilityStore } from '@/stores/accessibility-store'
 import { useKeyboardNav } from '@/hooks/use-keyboard-nav'
+import { useOnlineStatus } from '@/hooks/use-online-status'
 
 export function Layout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const location = useLocation()
   const showSidebar = location.pathname !== '/cart'
   const [isTraining, setIsTraining] = useState(false)
+  const isOnline = useOnlineStatus()
 
   // Initialize accessibility settings on mount
   useEffect(() => {
     useAccessibilityStore.getState().initialize()
+  }, [])
+
+  // Setup auto-sync for offline transactions on mount
+  useEffect(() => {
+    const cleanup = setupAutoSync()
+    return cleanup
   }, [])
 
   // Keyboard navigation (#153)
@@ -53,7 +62,21 @@ export function Layout() {
   return (
     <div className="flex min-h-svh flex-col">
       <TrainingModeBanner isTraining={isTraining} />
-      <Header isTraining={isTraining} onToggleTraining={() => setIsTraining((prev) => !prev)} />
+      <Header
+        isTraining={isTraining}
+        isOnline={isOnline}
+        onToggleTraining={() => setIsTraining((prev) => !prev)}
+      />
+      {!isOnline && (
+        <div
+          className="flex items-center justify-center gap-2 bg-amber-500 px-4 py-1.5 text-sm font-medium text-white"
+          role="status"
+          data-testid="offline-banner"
+        >
+          <span className="inline-block h-2 w-2 rounded-full bg-white/80" aria-hidden="true" />
+          オフラインモード — 取引はローカルに保存され、オンライン復帰時に自動同期されます
+        </div>
+      )}
       <div className="flex flex-1 overflow-hidden">
         <main className="flex flex-1 flex-col overflow-auto">
           <Outlet />

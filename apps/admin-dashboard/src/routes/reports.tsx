@@ -5,9 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/lib/api'
-import { DailySalesSchema, SalesSummarySchema, formatMoney } from '@shared-types/openpos'
+import { DailySalesResponseSchema, SalesSummarySchema, formatMoney } from '@shared-types/openpos'
 import type { DailySales, SalesSummary } from '@shared-types/openpos'
-import { z } from 'zod'
 import { Printer } from 'lucide-react'
 
 function todayString(): string {
@@ -29,15 +28,15 @@ export function ReportsPage() {
   async function handleGenerate() {
     setLoading(true)
     try {
-      const [dailyData, summaryData] = await Promise.all([
-        api.get('/api/analytics/daily', z.array(DailySalesSchema), {
+      const [dailyRes, summaryData] = await Promise.all([
+        api.get('/api/analytics/daily-sales', DailySalesResponseSchema, {
           params: { startDate, endDate },
         }),
         api.get('/api/analytics/summary', SalesSummarySchema, {
           params: { startDate, endDate },
         }),
       ])
-      setDailySales(dailyData)
+      setDailySales(dailyRes.data)
       setSummary(summaryData)
     } catch {
       // ignore

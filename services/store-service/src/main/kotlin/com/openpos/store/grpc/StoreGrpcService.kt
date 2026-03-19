@@ -56,6 +56,10 @@ import java.util.UUID
 @GrpcService
 @Blocking
 class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
+    private val logger =
+        org.jboss.logging.Logger
+            .getLogger(StoreGrpcService::class.java)
+
     @Inject
     lateinit var organizationService: OrganizationService
 
@@ -97,8 +101,18 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         request: GetOrganizationRequest,
         responseObserver: io.grpc.stub.StreamObserver<GetOrganizationResponse>,
     ) {
+        // OrganizationEntity はテナントルートのため Hibernate Filter 不要だが、
+        // 呼び出し元の x-organization-id を検証し、自テナントのみアクセス可能にする
+        tenantHelper.setupTenantContextWithoutFilter()
+        val requestedId = request.id.toUUID()
+        val callerId = requireNotNull(tenantHelper.currentOrganizationId()) { "organizationId is not set" }
+        if (requestedId != callerId) {
+            throw Status.PERMISSION_DENIED
+                .withDescription("Cannot access organization belonging to another tenant")
+                .asRuntimeException()
+        }
         val entity =
-            organizationService.findById(request.id.toUUID())
+            organizationService.findById(requestedId)
                 ?: throw Status.NOT_FOUND.withDescription("Organization not found: ${request.id}").asRuntimeException()
         responseObserver.onNext(
             GetOrganizationResponse.newBuilder().setOrganization(entity.toProto()).build(),
@@ -110,9 +124,19 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         request: UpdateOrganizationRequest,
         responseObserver: io.grpc.stub.StreamObserver<UpdateOrganizationResponse>,
     ) {
+        // OrganizationEntity はテナントルートのため Hibernate Filter 不要だが、
+        // 呼び出し元の x-organization-id を検証し、自テナントのみ更新可能にする
+        tenantHelper.setupTenantContextWithoutFilter()
+        val requestedId = request.id.toUUID()
+        val callerId = requireNotNull(tenantHelper.currentOrganizationId()) { "organizationId is not set" }
+        if (requestedId != callerId) {
+            throw Status.PERMISSION_DENIED
+                .withDescription("Cannot update organization belonging to another tenant")
+                .asRuntimeException()
+        }
         val entity =
             organizationService.update(
-                id = request.id.toUUID(),
+                id = requestedId,
                 name = request.name.ifBlank { null },
                 businessType = request.businessType.ifBlank { null },
                 invoiceNumber = request.invoiceNumber.ifBlank { null },
@@ -302,26 +326,34 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         request: ListStaffRequest,
         responseObserver: io.grpc.stub.StreamObserver<ListStaffResponse>,
     ) {
-        tenantHelper.setupTenantContext()
-        val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
-        val (staff, totalCount) = staffService.listByStoreId(request.storeId.toUUID(), page, pageSize)
-        val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
-        responseObserver.onNext(
-            ListStaffResponse
-                .newBuilder()
-                .addAllStaff(staff.map { it.toProto() })
-                .setPagination(
-                    PaginationResponse
-                        .newBuilder()
-                        .setPage(page + 1)
-                        .setPageSize(pageSize)
-                        .setTotalCount(totalCount)
-                        .setTotalPages(totalPages)
-                        .build(),
-                ).build(),
-        )
-        responseObserver.onCompleted()
+        try {
+            tenantHelper.setupTenantContext()
+            val page = if (request.hasPagination()) request.pagination.page - 1 else 0
+            val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+            val (staff, totalCount) = staffService.listByStoreId(request.storeId.toUUID(), page, pageSize)
+            val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
+            responseObserver.onNext(
+                ListStaffResponse
+                    .newBuilder()
+                    .addAllStaff(staff.map { it.toProto() })
+                    .setPagination(
+                        PaginationResponse
+                            .newBuilder()
+                            .setPage(page + 1)
+                            .setPageSize(pageSize)
+                            .setTotalCount(totalCount)
+                            .setTotalPages(totalPages)
+                            .build(),
+                    ).build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            logger.error("listStaff failed", e)
+            throw Status.INTERNAL
+                .withDescription(e.message)
+                .withCause(e)
+                .asRuntimeException()
+        }
     }
 
     override fun updateStaff(
