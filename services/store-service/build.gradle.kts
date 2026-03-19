@@ -27,7 +27,7 @@ dependencies {
 
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("io.quarkus:quarkus-junit5-mockito")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.2.3")
     testImplementation("io.quarkus:quarkus-jdbc-h2")
     testImplementation("io.rest-assured:rest-assured")
 }
