@@ -56,11 +56,13 @@ class StaffService {
         return entity
     }
 
+    @Transactional
     fun findById(id: UUID): StaffEntity? {
         tenantFilterService.enableFilter()
         return staffRepository.findById(id)
     }
 
+    @Transactional
     fun listByStoreId(
         storeId: UUID,
         page: Int,

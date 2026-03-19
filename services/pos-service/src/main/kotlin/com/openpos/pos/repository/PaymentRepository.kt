@@ -19,10 +19,12 @@ class PaymentRepository : PanacheRepositoryBase<PaymentEntity, UUID> {
 
     /**
      * 指定端末の完了済み取引における現金支払合計を取得する（精算用）。
+     * organization_id で明示的にフィルタし、マルチテナント分離を保証する。
      */
     fun sumCashPaymentsByTerminal(
         storeId: UUID,
         terminalId: UUID,
+        organizationId: UUID,
     ): Long {
         val result =
             getEntityManager()
@@ -35,10 +37,13 @@ class PaymentRepository : PanacheRepositoryBase<PaymentEntity, UUID> {
                       AND t.terminalId = :terminalId
                       AND t.status = 'COMPLETED'
                       AND p.method = 'CASH'
+                      AND t.organizationId = :organizationId
+                      AND p.organizationId = :organizationId
                     """.trimIndent(),
                     Long::class.javaObjectType,
                 ).setParameter("storeId", storeId)
                 .setParameter("terminalId", terminalId)
+                .setParameter("organizationId", organizationId)
                 .singleResult
         return result ?: 0L
     }

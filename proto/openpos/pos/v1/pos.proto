@@ -129,6 +129,8 @@ message Transaction {
   string updated_at = 19;
   // 確定日時（ISO 8601 形式、COMPLETED 時に設定）
   string completed_at = 20;
+  // お釣り額（複数決済オーバーペイ分、銭単位）
+  int64 change_amount = 21;
 }
 
 // 取引明細
@@ -358,6 +360,14 @@ message ApplyDiscountRequest {
   string coupon_code = 3;
   // 明細ID（明細レベルの割引を適用する場合、省略時は取引全体）
   string transaction_item_id = 4;
+  // 割引名（任意、省略時は "Discount"）
+  string discount_name = 5;
+  // 割引種別（"PERCENTAGE" または "FIXED_AMOUNT"、省略時は "FIXED_AMOUNT"）
+  string discount_type = 6;
+  // 割引値（パーセンテージの場合は "10" のような文字列、固定額の場合は "0"）
+  string discount_value = 7;
+  // 割引額（銭単位、FIXED_AMOUNT の場合は実際の割引額）
+  int64 discount_amount = 8;
 }
 
 // 取引確定リクエスト
