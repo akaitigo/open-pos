@@ -14,6 +14,8 @@ pnpm dev:admin
 pnpm dev:pos
 ```
 
+If you are reusing a long-lived local PostgreSQL volume from older branches, run `make reset` once before capturing assets so the demo data is rebuilt on a fresh local schema.
+
 ## One Command Refresh
 
 ```bash
