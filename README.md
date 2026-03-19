@@ -26,6 +26,36 @@ A multi-tenant, offline-capable POS (Point of Sale) system built with microservi
 - **Microservices**: 6 backend services communicating via gRPC and RabbitMQ
 - **Modern frontend**: React 19 + TypeScript + Tailwind CSS + shadcn/ui
 
+## Demo
+
+### POS Checkout Flow
+
+![POS checkout flow](docs/assets/demo/pos-checkout.gif)
+
+### Admin Dashboard
+
+![Admin dashboard](docs/assets/demo/admin-dashboard.png)
+
+### Inventory Management
+
+![Inventory management](docs/assets/demo/admin-inventory.png)
+
+### POS Product Grid
+
+![POS product grid](docs/assets/demo/pos-products.png)
+
+Regenerate these assets with the supported local demo stack:
+
+```bash
+pnpm e2e:install
+make local-demo
+pnpm dev:admin
+pnpm dev:pos
+pnpm demo:assets
+```
+
+See [docs/guides/demo-assets.md](docs/guides/demo-assets.md) for the repeatable capture workflow and output locations.
+
 ## Architecture
 
 ```
@@ -55,16 +85,16 @@ A multi-tenant, offline-capable POS (Point of Sale) system built with microservi
      └───────────┘  └────────────┘
 ```
 
-| Service | Technology | Role |
-|---------|-----------|------|
-| api-gateway | Quarkus (REST) | BFF, auth, tenant injection |
-| pos-service | Quarkus (gRPC) | Transactions, payments, receipts |
-| product-service | Quarkus (gRPC) | Products, categories, tax rates |
-| inventory-service | Quarkus (gRPC) | Inventory, stock movements |
-| analytics-service | Quarkus (gRPC) | Sales analytics |
-| store-service | Quarkus (gRPC) | Stores, staff management |
-| pos-terminal | React PWA | POS terminal (tablet-optimized) |
-| admin-dashboard | React SPA | Admin panel (desktop) |
+| Service           | Technology     | Role                             |
+| ----------------- | -------------- | -------------------------------- |
+| api-gateway       | Quarkus (REST) | BFF, auth, tenant injection      |
+| pos-service       | Quarkus (gRPC) | Transactions, payments, receipts |
+| product-service   | Quarkus (gRPC) | Products, categories, tax rates  |
+| inventory-service | Quarkus (gRPC) | Inventory, stock movements       |
+| analytics-service | Quarkus (gRPC) | Sales analytics                  |
+| store-service     | Quarkus (gRPC) | Stores, staff management         |
+| pos-terminal      | React PWA      | POS terminal (tablet-optimized)  |
+| admin-dashboard   | React SPA      | Admin panel (desktop)            |
 
 ## Tech Stack
 

@@ -9,6 +9,7 @@
     "directory": "e2e"
   },
   "scripts": {
+    "capture:readme-demo": "node scripts/capture-readme-demo.mjs",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed"

@@ -16,6 +16,7 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Response
+import org.eclipse.microprofile.config.inject.ConfigProperty
 import openpos.common.v1.PaginationRequest
 import openpos.store.v1.AuthenticateByPinRequest
 import openpos.store.v1.CreateStaffRequest
@@ -37,6 +38,9 @@ class StaffResource {
 
     @Inject
     lateinit var sessionTokenService: SessionTokenService
+
+    @ConfigProperty(name = "openpos.auth.enabled", defaultValue = "true")
+    var authEnabled: Boolean = true
 
     @POST
     fun create(body: CreateStaffBody): Response {
@@ -132,7 +136,7 @@ class StaffResource {
             result["staff"] = staff.toMap()
 
             // 認証成功時にセッショントークンを発行
-            if (response.success) {
+            if (response.success && authEnabled) {
                 val roleName =
                     when (staff.role) {
                         StaffRole.STAFF_ROLE_OWNER -> "OWNER"
