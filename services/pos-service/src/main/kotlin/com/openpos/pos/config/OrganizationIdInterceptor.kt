@@ -93,6 +93,12 @@ class OrganizationIdInterceptor : ServerInterceptor {
                 return object : ServerCall.Listener<ReqT>() {}
             }
 
+        // MDC にトレース情報とテナント情報を設定（構造化ログ用）
+        org.jboss.logging.MDC
+            .put("trace_id", requestId)
+        org.jboss.logging.MDC
+            .put("organization_id", orgId.toString())
+
         val ctx =
             Context
                 .current()

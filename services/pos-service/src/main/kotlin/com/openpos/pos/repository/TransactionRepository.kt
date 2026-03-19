@@ -10,7 +10,10 @@ import java.util.UUID
 
 @ApplicationScoped
 class TransactionRepository : PanacheRepositoryBase<TransactionEntity, UUID> {
-    fun findByClientId(clientId: String): TransactionEntity? = find("clientId = ?1", clientId).firstResult()
+    fun findByClientId(
+        clientId: String,
+        organizationId: UUID,
+    ): TransactionEntity? = find("clientId = ?1 AND organizationId = ?2", clientId, organizationId).firstResult()
 
     fun listByStoreId(
         storeId: UUID,

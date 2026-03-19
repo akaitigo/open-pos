@@ -56,7 +56,7 @@ jobs:
           :services:pos-service:build
           :services:inventory-service:build
           :services:analytics-service:build
-          -x test --no-build-cache
+          -x test
       - name: Unit & Functional Test
         run: >-
           ./gradlew
@@ -66,7 +66,6 @@ jobs:
           :services:pos-service:test
           :services:inventory-service:test
           :services:analytics-service:test
-          --no-build-cache
       - name: JaCoCo Coverage Report
         run: >-
           ./gradlew
@@ -108,7 +107,6 @@ jobs:
           ./gradlew
           :services:product-service:test
           -Dquarkus.test.profile=integration
-          --no-build-cache
 
   frontend:
     name: Frontend Build, Lint & Test

@@ -44,6 +44,15 @@ This directory contains the project design, runbooks, product requirements, and 
 - [adr/004-multi-tenant.md](adr/004-multi-tenant.md)
 - [adr/005-money-as-bigint.md](adr/005-money-as-bigint.md)
 
+## Deployment and Operations
+
+- [deployment-guide.md](deployment-guide.md): production K8s deployment, Flyway migrations, rollback procedures
+- [api-reference.md](api-reference.md): REST API endpoints, gRPC services, response formats
+
+## Compliance
+
+- [compliance/invoice-compliance.md](compliance/invoice-compliance.md): Japanese Qualified Invoice System (インボイス制度) requirements
+
 ## Historical Research and Audits
 
 - [research/](research/): external research and implementation notes
