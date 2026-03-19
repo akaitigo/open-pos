@@ -1,5 +1,7 @@
 package com.openpos.product.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.openpos.product.cache.ProductCacheService
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.DiscountEntity
@@ -7,12 +9,16 @@ import com.openpos.product.repository.DiscountRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
+import org.jboss.logging.Logger
 import java.time.Instant
 import java.util.UUID
 
 /**
  * 割引のビジネスロジック層。
  * CRUD と有効期間チェックを提供する。
+ * cache-aside パターンで Redis キャッシュを利用する。
+ * キー形式: openpos:product-service:{orgId}:discount:{id}
+ * TTL: 1800 秒（30 分）
  */
 @ApplicationScoped
 class DiscountService {
@@ -25,8 +31,25 @@ class DiscountService {
     @Inject
     lateinit var organizationIdHolder: OrganizationIdHolder
 
+    @Inject
+    lateinit var cacheService: ProductCacheService
+
+    @Inject
+    lateinit var objectMapper: ObjectMapper
+
+    private val log = Logger.getLogger(DiscountService::class.java)
+
+    companion object {
+        const val DISCOUNT_TTL_SECONDS = 1800L
+        private const val PREFIX = "openpos:product-service"
+    }
+
+    private fun discountKey(id: String): String = "$PREFIX:discount:$id"
+
+    private fun discountListKey(activeOnly: Boolean): String = "$PREFIX:discount:list:$activeOnly"
+
     /**
-     * 割引を作成する。
+     * 割引を作成する。作成後にリストキャッシュを無効化する。
      */
     @Transactional
     fun create(
@@ -52,6 +75,7 @@ class DiscountService {
                 this.isActive = true
             }
         discountRepository.persist(entity)
+        invalidateDiscountListCaches()
         return entity
     }
 
@@ -70,14 +94,39 @@ class DiscountService {
 
     /**
      * IDで割引を取得する。
+     * cache-aside: Redis にキャッシュがあればそこから返す。
      */
     fun findById(id: UUID): DiscountEntity? {
         tenantFilterService.enableFilter()
-        return discountRepository.findById(id)
+        val cacheKey = discountKey(id.toString())
+
+        // cache-aside: キャッシュ確認
+        val cached = cacheService.get(cacheKey)
+        if (cached != null) {
+            return try {
+                val dto = objectMapper.readValue(cached, DiscountCacheDto::class.java)
+                dto.toEntity()
+            } catch (e: Exception) {
+                log.warnf("Failed to deserialize discount cache: %s", e.message)
+                discountRepository.findById(id)
+            }
+        }
+
+        // cache miss: DB から取得
+        val entity = discountRepository.findById(id) ?: return null
+
+        // キャッシュに書き込み
+        try {
+            cacheService.set(cacheKey, objectMapper.writeValueAsString(DiscountCacheDto.from(entity)), DISCOUNT_TTL_SECONDS)
+        } catch (e: Exception) {
+            log.warnf("Failed to cache discount: %s", e.message)
+        }
+
+        return entity
     }
 
     /**
-     * 割引を更新する。
+     * 割引を更新する。更新後にキャッシュを無効化する。
      */
     @Transactional
     fun update(
@@ -102,6 +151,56 @@ class DiscountService {
         isActive?.let { entity.isActive = it }
 
         discountRepository.persist(entity)
+        cacheService.invalidate(discountKey(id.toString()))
+        invalidateDiscountListCaches()
         return entity
+    }
+
+    private fun invalidateDiscountListCaches() {
+        cacheService.invalidatePattern("$PREFIX:discount:list:*")
+    }
+}
+
+/**
+ * Redis シリアライズ用の DTO。
+ * JPA エンティティを直接シリアライズしない。
+ */
+data class DiscountCacheDto(
+    val id: UUID,
+    val organizationId: UUID,
+    val name: String,
+    val discountType: String,
+    val value: Long,
+    val appliesTo: String,
+    val validFrom: String?,
+    val validUntil: String?,
+    val isActive: Boolean,
+) {
+    fun toEntity(): DiscountEntity =
+        DiscountEntity().apply {
+            this.id = this@DiscountCacheDto.id
+            this.organizationId = this@DiscountCacheDto.organizationId
+            this.name = this@DiscountCacheDto.name
+            this.discountType = this@DiscountCacheDto.discountType
+            this.value = this@DiscountCacheDto.value
+            this.appliesTo = this@DiscountCacheDto.appliesTo
+            this.validFrom = this@DiscountCacheDto.validFrom?.let { Instant.parse(it) }
+            this.validUntil = this@DiscountCacheDto.validUntil?.let { Instant.parse(it) }
+            this.isActive = this@DiscountCacheDto.isActive
+        }
+
+    companion object {
+        fun from(entity: DiscountEntity): DiscountCacheDto =
+            DiscountCacheDto(
+                id = entity.id,
+                organizationId = entity.organizationId,
+                name = entity.name,
+                discountType = entity.discountType,
+                value = entity.value,
+                appliesTo = entity.appliesTo,
+                validFrom = entity.validFrom?.toString(),
+                validUntil = entity.validUntil?.toString(),
+                isActive = entity.isActive,
+            )
     }
 }

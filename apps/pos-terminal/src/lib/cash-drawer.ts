@@ -3,6 +3,11 @@
  * Web Serial API を使用してドロワーを制御する。
  */
 
+import { createLogger } from './logger'
+
+const log = createLogger('ドロワー')
+const dummyLog = createLogger('ダミードロワー')
+
 export type DrawerStatus = 'OPEN' | 'CLOSED' | 'UNKNOWN'
 
 export interface CashDrawer {
@@ -12,6 +17,18 @@ export interface CashDrawer {
   getStatus(): Promise<DrawerStatus>
   /** 接続状態を確認する */
   isConnected(): boolean
+}
+
+/** Web Serial API の型定義 */
+interface SerialNavigator {
+  serial: {
+    requestPort: () => Promise<SerialPort>
+  }
+}
+
+/** Navigator が Web Serial API を持つか判定する型ガード */
+function hasSerialApi(nav: Navigator): nav is Navigator & SerialNavigator {
+  return 'serial' in nav
 }
 
 /**
@@ -24,13 +41,11 @@ export class SerialCashDrawer implements CashDrawer {
   async open(): Promise<boolean> {
     try {
       if (!this.port) {
-        if (!('serial' in navigator)) {
-          console.warn('[ドロワー] Web Serial API は非対応です')
+        if (!hasSerialApi(navigator)) {
+          log.warn('Web Serial API は非対応です')
           return false
         }
-        this.port = await (
-          navigator as unknown as { serial: { requestPort: () => Promise<SerialPort> } }
-        ).serial.requestPort()
+        this.port = await navigator.serial.requestPort()
         await this.port.open({ baudRate: 9600 })
       }
 
@@ -42,10 +57,10 @@ export class SerialCashDrawer implements CashDrawer {
       await writer.write(drawerKick)
       writer.releaseLock()
 
-      console.log('[ドロワー] 開放コマンド送信')
+      log.info('開放コマンド送信')
       return true
     } catch (error) {
-      console.error('[ドロワー] エラー:', error)
+      log.error('エラー:', error)
       return false
     }
   }
@@ -69,7 +84,7 @@ export class DummyCashDrawer implements CashDrawer {
 
   async open(): Promise<boolean> {
     this.status = 'OPEN'
-    console.log('[ダミードロワー] 開放')
+    dummyLog.info('開放')
     return true
   }
 

@@ -3,9 +3,14 @@
  * Used for OAuth2/OIDC flow with ORY Hydra.
  */
 
+import { z } from 'zod'
+
 const HYDRA_PUBLIC_URL = import.meta.env.VITE_HYDRA_PUBLIC_URL || 'http://localhost:14444'
 const CLIENT_ID = import.meta.env.VITE_OIDC_CLIENT_ID || 'admin-dashboard'
 const REDIRECT_URI = import.meta.env.VITE_OIDC_REDIRECT_URI || `${window.location.origin}/callback`
+
+/** Maximum number of token refresh retries before redirecting to login */
+const MAX_REFRESH_RETRIES = 3
 
 /** Generate a cryptographically random code verifier (43-128 chars) */
 export function generateCodeVerifier(): string {
@@ -39,8 +44,27 @@ export interface TokenData {
   idToken: string | null
 }
 
+/** Zod schema for validating stored token data */
+const TokenDataSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string().nullable(),
+  expiresAt: z.number(),
+  idToken: z.string().nullable(),
+})
+
+/** Zod schema for OAuth2 token endpoint response */
+const OAuthTokenResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string().optional(),
+  expires_in: z.number(),
+  id_token: z.string().optional(),
+})
+
 const TOKEN_STORAGE_KEY = 'openpos-admin-tokens'
 const VERIFIER_STORAGE_KEY = 'openpos-admin-pkce-verifier'
+
+/** Current retry count for token refresh */
+let refreshRetryCount = 0
 
 /** Store tokens securely (sessionStorage, never localStorage) */
 export function storeTokens(tokens: TokenData): void {
@@ -52,7 +76,12 @@ export function getStoredTokens(): TokenData | null {
   const raw = sessionStorage.getItem(TOKEN_STORAGE_KEY)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as TokenData
+    const parsed: unknown = JSON.parse(raw)
+    const result = TokenDataSchema.safeParse(parsed)
+    if (result.success) {
+      return result.data
+    }
+    return null
   } catch {
     return null
   }
@@ -62,6 +91,7 @@ export function getStoredTokens(): TokenData | null {
 export function clearTokens(): void {
   sessionStorage.removeItem(TOKEN_STORAGE_KEY)
   sessionStorage.removeItem(VERIFIER_STORAGE_KEY)
+  refreshRetryCount = 0
 }
 
 /** Check if stored tokens are expired */
@@ -69,6 +99,49 @@ export function isTokenExpired(): boolean {
   const tokens = getStoredTokens()
   if (!tokens) return true
   return Date.now() >= tokens.expiresAt - 30_000 // 30s buffer
+}
+
+/** Zod schema for JWT payload with expiration claim */
+const JwtExpPayloadSchema = z
+  .object({
+    exp: z.number(),
+  })
+  .passthrough()
+
+/**
+ * Decode JWT payload to extract expiration time.
+ * Returns the exp claim (seconds since epoch) or null if decoding fails.
+ */
+function getJwtExpiration(token: string): number | null {
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    const payloadPart = parts[1]
+    if (!payloadPart) return null
+    // Restore base64 padding
+    const padded = payloadPart + '='.repeat((4 - (payloadPart.length % 4)) % 4)
+    const decoded = atob(padded.replace(/-/g, '+').replace(/_/g, '/'))
+    const json: unknown = JSON.parse(decoded)
+    const result = JwtExpPayloadSchema.safeParse(json)
+    if (result.success) {
+      return result.data.exp
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/** Check if refresh token is expired */
+export function isRefreshTokenExpired(refreshToken: string): boolean {
+  const exp = getJwtExpiration(refreshToken)
+  if (exp === null) {
+    // If we cannot decode the token, assume it might still be valid
+    // and let the server reject it if necessary
+    return false
+  }
+  // Add 30s buffer
+  return Date.now() >= exp * 1000 - 30_000
 }
 
 /** Start the PKCE authorization flow */
@@ -112,12 +185,8 @@ export async function exchangeCodeForTokens(code: string): Promise<TokenData> {
     throw new Error(`Token exchange failed: ${response.status}`)
   }
 
-  const data = (await response.json()) as {
-    access_token: string
-    refresh_token?: string
-    expires_in: number
-    id_token?: string
-  }
+  const json: unknown = await response.json()
+  const data = OAuthTokenResponseSchema.parse(json)
 
   const tokens: TokenData = {
     accessToken: data.access_token,
@@ -128,6 +197,7 @@ export async function exchangeCodeForTokens(code: string): Promise<TokenData> {
 
   storeTokens(tokens)
   sessionStorage.removeItem(VERIFIER_STORAGE_KEY)
+  refreshRetryCount = 0
   return tokens
 }
 
@@ -135,6 +205,19 @@ export async function exchangeCodeForTokens(code: string): Promise<TokenData> {
 export async function refreshAccessToken(): Promise<TokenData> {
   const tokens = getStoredTokens()
   if (!tokens?.refreshToken) throw new Error('No refresh token available')
+
+  // Check if refresh token itself is expired before attempting refresh
+  if (isRefreshTokenExpired(tokens.refreshToken)) {
+    clearTokens()
+    throw new Error('Refresh token expired')
+  }
+
+  // Check retry limit to prevent infinite loops
+  if (refreshRetryCount >= MAX_REFRESH_RETRIES) {
+    clearTokens()
+    throw new Error('Max refresh retries exceeded')
+  }
+  refreshRetryCount++
 
   const response = await fetch(`${HYDRA_PUBLIC_URL}/oauth2/token`, {
     method: 'POST',
@@ -151,12 +234,8 @@ export async function refreshAccessToken(): Promise<TokenData> {
     throw new Error(`Token refresh failed: ${response.status}`)
   }
 
-  const data = (await response.json()) as {
-    access_token: string
-    refresh_token?: string
-    expires_in: number
-    id_token?: string
-  }
+  const json: unknown = await response.json()
+  const data = OAuthTokenResponseSchema.parse(json)
 
   const newTokens: TokenData = {
     accessToken: data.access_token,
@@ -166,12 +245,14 @@ export async function refreshAccessToken(): Promise<TokenData> {
   }
 
   storeTokens(newTokens)
+  refreshRetryCount = 0
   return newTokens
 }
 
 /**
  * Get a valid access token, refreshing if necessary.
  * Returns null if no tokens are available.
+ * Redirects to login if refresh token is expired or max retries exceeded.
  */
 export async function getValidAccessToken(): Promise<string | null> {
   const tokens = getStoredTokens()
@@ -179,10 +260,20 @@ export async function getValidAccessToken(): Promise<string | null> {
 
   if (isTokenExpired()) {
     if (!tokens.refreshToken) return null
+
+    // Check refresh token expiration before attempting
+    if (isRefreshTokenExpired(tokens.refreshToken)) {
+      clearTokens()
+      await startAuthFlow()
+      return null
+    }
+
     try {
       const refreshed = await refreshAccessToken()
       return refreshed.accessToken
     } catch {
+      // If refresh fails (including max retries), redirect to login
+      await startAuthFlow()
       return null
     }
   }

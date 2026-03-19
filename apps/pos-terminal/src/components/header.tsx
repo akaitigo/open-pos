@@ -4,14 +4,15 @@ import { Button } from '@/components/ui/button'
 import { getCartItemCount, useCartStore } from '@/stores/cart-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
-import { History, LogOut, ShoppingCart } from 'lucide-react'
+import { History, LogOut, ShoppingCart, Wifi, WifiOff } from 'lucide-react'
 
 interface HeaderProps {
   isTraining?: boolean
+  isOnline?: boolean
   onToggleTraining?: () => void
 }
 
-export function Header({ isTraining, onToggleTraining }: HeaderProps) {
+export function Header({ isTraining, isOnline = true, onToggleTraining }: HeaderProps) {
   const { staff, storeName, logout } = useAuthStore()
   const location = useLocation()
   const itemCount = useCartStore((state) => getCartItemCount(state.items))
@@ -26,6 +27,23 @@ export function Header({ isTraining, onToggleTraining }: HeaderProps) {
           <Badge variant="outline" className="text-xs">
             {storeName}
           </Badge>
+        )}
+        {!isOnline && (
+          <Badge
+            variant="outline"
+            className="gap-1 border-amber-400 text-xs text-amber-600 dark:text-amber-400"
+            data-testid="offline-indicator"
+          >
+            <WifiOff className="h-3 w-3" aria-hidden="true" />
+            オフライン
+          </Badge>
+        )}
+        {isOnline && (
+          <Wifi
+            className="h-3.5 w-3.5 text-green-500"
+            aria-label="オンライン"
+            data-testid="online-indicator"
+          />
         )}
         {isTraining && (
           <Badge variant="destructive" className="text-xs">
