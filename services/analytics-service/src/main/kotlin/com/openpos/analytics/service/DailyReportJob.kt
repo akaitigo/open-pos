@@ -22,7 +22,7 @@ class DailyReportJob {
     }
 
     /**
-     * 毎日 23:59 に前日の売上サマリーを生成する。
+     * 毎日 23:59 に前日の売上サマリーをテナントごとに生成する。
      * cron 式: 秒 分 時 日 月 曜日
      */
     @Scheduled(cron = "0 59 23 * * ?", identity = "daily-report-job")
@@ -30,11 +30,23 @@ class DailyReportJob {
         val yesterday = LocalDate.now().minusDays(1)
         logger.info("Generating daily sales report for $yesterday")
 
-        val sales = dailySalesRepository.findBySaleDate(yesterday)
-        if (sales.isEmpty()) {
+        val organizationIds = dailySalesRepository.findDistinctOrganizationIdsBySaleDate(yesterday)
+        if (organizationIds.isEmpty()) {
             logger.info("No sales data found for $yesterday")
             return
         }
+
+        for (orgId in organizationIds) {
+            generateReportForOrganization(yesterday, orgId)
+        }
+    }
+
+    private fun generateReportForOrganization(
+        date: LocalDate,
+        organizationId: java.util.UUID,
+    ) {
+        val sales = dailySalesRepository.findBySaleDate(date, organizationId)
+        if (sales.isEmpty()) return
 
         val totalSales = sales.sumOf { it.grossAmount }
         val totalTransactions = sales.sumOf { it.transactionCount }
@@ -42,7 +54,7 @@ class DailyReportJob {
 
         val summary =
             buildString {
-                appendLine("=== 売上速報 ($yesterday) ===")
+                appendLine("=== 売上速報 ($date) [org=$organizationId] ===")
                 appendLine("総売上: $totalSales (銭単位)")
                 appendLine("取引数: $totalTransactions")
                 appendLine("店舗数: $storeCount")
@@ -54,6 +66,6 @@ class DailyReportJob {
 
         logger.info(summary)
         // プレースホルダー: メール送信
-        // emailService.send(to = "admin@example.com", subject = "売上速報 $yesterday", body = summary)
+        // emailService.send(to = "admin@example.com", subject = "売上速報 $date", body = summary)
     }
 }

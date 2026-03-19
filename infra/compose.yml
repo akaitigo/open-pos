@@ -147,6 +147,7 @@ services:
       REDIS_URL: redis://redis:6379
       HYDRA_JWKS_URL: http://hydra:4444/.well-known/jwks.json
       HYDRA_ISSUER: http://hydra:4444/
+      OPENPOS_AUTH_ENABLED: '${OPENPOS_AUTH_ENABLED:-false}'
       PRODUCT_SERVICE_HOST: product-service
       PRODUCT_SERVICE_PORT: 9000
       STORE_SERVICE_HOST: store-service
@@ -166,7 +167,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/api/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -204,7 +205,11 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1']
+      test:
+        [
+          'CMD-SHELL',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -243,7 +248,11 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1']
+      test:
+        [
+          'CMD-SHELL',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -282,7 +291,11 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1']
+      test:
+        [
+          'CMD-SHELL',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -319,7 +332,11 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1']
+      test:
+        [
+          'CMD-SHELL',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -356,7 +373,11 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1']
+      test:
+        [
+          'CMD-SHELL',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

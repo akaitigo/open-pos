@@ -10,7 +10,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
 
 /**
@@ -37,8 +37,8 @@ class SalesEventProcessor {
     ) {
         val storeId = UUID.fromString(payload.storeId)
         val transactedAt = Instant.parse(payload.transactedAt)
-        val saleDate = transactedAt.atZone(ZoneId.of("Asia/Tokyo")).toLocalDate()
-        val hour = transactedAt.atZone(ZoneId.of("Asia/Tokyo")).hour
+        val saleDate = transactedAt.atZone(ZoneOffset.UTC).toLocalDate()
+        val hour = transactedAt.atZone(ZoneOffset.UTC).hour
 
         // 日次売上更新
         updateDailySales(organizationId, storeId, saleDate, payload.totalAmount)
@@ -69,11 +69,13 @@ class SalesEventProcessor {
         payload: SaleVoidedPayload,
     ) {
         val storeId = UUID.fromString(payload.storeId)
-        val today = LocalDate.now(ZoneId.of("Asia/Tokyo"))
+        val originalTransactedAt = Instant.parse(payload.originalTransactedAt)
+        val originalDate = originalTransactedAt.atZone(ZoneOffset.UTC).toLocalDate()
+        val originalHour = originalTransactedAt.atZone(ZoneOffset.UTC).hour
 
         // 日次売上ロールバック（取消合計を計算）
         val totalAmount = payload.items.sumOf { it.subtotal }
-        rollbackDailySales(organizationId, storeId, today, totalAmount)
+        rollbackDailySales(organizationId, storeId, originalDate, totalAmount)
 
         // 商品別売上ロールバック
         for (item in payload.items) {
@@ -81,15 +83,14 @@ class SalesEventProcessor {
                 organizationId,
                 storeId,
                 UUID.fromString(item.productId),
-                today,
+                originalDate,
                 item.quantity,
                 item.subtotal,
             )
         }
 
         // 時間帯別売上ロールバック
-        val currentHour = Instant.now().atZone(ZoneId.of("Asia/Tokyo")).hour
-        rollbackHourlySales(organizationId, storeId, today, currentHour, totalAmount)
+        rollbackHourlySales(organizationId, storeId, originalDate, originalHour, totalAmount)
     }
 
     private fun updateDailySales(

@@ -87,10 +87,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: pnpm audit (frontend)
-        run: pnpm audit --audit-level=high || true
+        run: pnpm audit --audit-level=high
 
       - name: Gradle dependency verification (backend)
-        run: ./gradlew dependencies --scan || true
+        run: ./gradlew dependencies --scan
 
   container-scan:
     name: Container Security Scan (Trivy)
