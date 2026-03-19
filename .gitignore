@@ -30,6 +30,9 @@ services/*/bin/
 .DS_Store
 Thumbs.db
 
+# === Security / Secrets ===
+*.pem
+
 # === Environment ===
 .env
 .env.local

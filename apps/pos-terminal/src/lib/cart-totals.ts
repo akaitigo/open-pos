@@ -34,9 +34,9 @@ function calculateExternalTax(subtotal: number, taxRate: string | null): number 
 }
 
 export function getCartEstimatedTax(items: CartItem[], taxRates: TaxRate[]): number {
-  return items.reduce((sum, item) => {
-    return sum + getCartItemTax(item, taxRates)
-  }, 0)
+  // Use group-level tax calculation to match BE (floor on group subtotal, not per-item)
+  const breakdown = getCartTaxBreakdown(items, taxRates)
+  return breakdown.reduce((sum, entry) => sum + entry.taxAmount, 0)
 }
 
 export function getCartEstimatedTotal(items: CartItem[], taxRates: TaxRate[]): number {
@@ -72,8 +72,12 @@ export function getCartTaxBreakdown(
     }
 
     current.taxableAmount += getCartItemSubtotal(item)
-    current.taxAmount += getCartItemTax(item, taxRates)
     breakdown.set(key, current)
+  }
+
+  // Recalculate tax from grouped taxableAmount to match BE (floor on group total)
+  for (const entry of breakdown.values()) {
+    entry.taxAmount = calculateExternalTax(entry.taxableAmount, entry.rate)
   }
 
   return Array.from(breakdown.values()).sort(

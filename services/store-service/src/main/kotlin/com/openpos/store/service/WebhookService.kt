@@ -95,9 +95,10 @@ class WebhookService {
     ) {
         val webhooks = webhookRepository.findActiveByOrganizationId(organizationId)
         for (webhook in webhooks) {
+            @Suppress("UNUSED_VARIABLE")
             val signature = generateSignature(payload, webhook.secret)
             logger.info(
-                "Webhook trigger: event=$event, url=${webhook.url}, signature=$signature (placeholder - no HTTP call)",
+                "Webhook trigger: event=$event, webhookId=${webhook.id} (placeholder - no HTTP call)",
             )
         }
     }
