@@ -36,7 +36,7 @@ class SettlementService {
         tenantFilterService.enableFilter()
 
         // Calculate expected cash from completed transactions' cash payments
-        val cashExpected = paymentRepository.sumCashPaymentsByTerminal(storeId, terminalId)
+        val cashExpected = paymentRepository.sumCashPaymentsByTerminal(storeId, terminalId, orgId)
 
         val settlement =
             SettlementEntity().apply {

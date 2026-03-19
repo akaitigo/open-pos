@@ -77,12 +77,12 @@ class StockService {
 
     /**
      * 在庫を調整する。
-     * 1. stocks テーブルから store_id + product_id で検索（なければ新規作成）
-     * 2. quantity を更新（結果が負になる場合は例外）
+     * 1. stocks テーブルから store_id + product_id を SELECT FOR UPDATE で検索（なければ新規作成）
+     * 2. quantity を更新（結果が負になる場合は FAILED_PRECONDITION 例外）
      * 3. stock_movements に記録
      *
      * @return 調整後の在庫エンティティ
-     * @throws IllegalArgumentException 調整後の在庫が負になる場合
+     * @throws InsufficientStockException 在庫不足の場合（gRPC FAILED_PRECONDITION にマッピング）
      */
     @Transactional
     fun adjustStock(
@@ -100,8 +100,9 @@ class StockService {
 
         tenantFilterService.enableFilter()
 
+        // 悲観的ロック（SELECT FOR UPDATE）で在庫行を取得し Race Condition を防止
         val stock =
-            stockRepository.findByStoreAndProduct(storeId, productId)
+            stockRepository.findByStoreAndProductForUpdate(storeId, productId)
                 ?: StockEntity().apply {
                     this.organizationId = orgId
                     this.storeId = storeId
@@ -110,8 +111,10 @@ class StockService {
                 }
 
         val newQuantity = stock.quantity + quantityChange
-        require(newQuantity >= 0) {
-            "Stock quantity cannot be negative: current=${stock.quantity}, change=$quantityChange"
+        if (newQuantity < 0) {
+            throw InsufficientStockException(
+                "Insufficient stock: current=${stock.quantity}, requested change=$quantityChange, product=$productId, store=$storeId",
+            )
         }
 
         val previousQuantity = stock.quantity
@@ -165,3 +168,11 @@ class StockService {
         return Pair(movements, totalCount)
     }
 }
+
+/**
+ * 在庫不足例外。
+ * gRPC レイヤーで FAILED_PRECONDITION ステータスにマッピングされる。
+ */
+class InsufficientStockException(
+    message: String,
+) : RuntimeException(message)

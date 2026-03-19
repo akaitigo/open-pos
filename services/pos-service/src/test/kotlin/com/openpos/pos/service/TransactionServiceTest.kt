@@ -16,6 +16,9 @@ import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import com.openpos.pos.grpc.BusinessPreconditionException
+import com.openpos.pos.grpc.InvalidInputException
+import com.openpos.pos.grpc.ResourceNotFoundException
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -203,7 +206,7 @@ class TransactionServiceTest {
             val tx = createDraftTransaction()
 
             // Act & Assert
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(InvalidInputException::class.java) {
                 transactionService.addItem(tx.id, productId, 0)
             }
         }
@@ -240,7 +243,7 @@ class TransactionServiceTest {
             val fakeItemId = UUID.randomUUID()
 
             // Act & Assert
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(ResourceNotFoundException::class.java) {
                 transactionService.updateItem(tx.id, fakeItemId, 3)
             }
         }
@@ -255,7 +258,7 @@ class TransactionServiceTest {
             val itemId = itemRepository.findByTransactionId(tx.id)[0].id
 
             // Act & Assert
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(InvalidInputException::class.java) {
                 transactionService.updateItem(tx.id, itemId, 0)
             }
         }
@@ -292,7 +295,7 @@ class TransactionServiceTest {
             val fakeItemId = UUID.randomUUID()
 
             // Act & Assert
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(ResourceNotFoundException::class.java) {
                 transactionService.removeItem(tx.id, fakeItemId)
             }
         }
@@ -348,7 +351,7 @@ class TransactionServiceTest {
             val payments = listOf(PaymentInput(method = "CASH", amount = 10000, received = 10000, reference = null))
 
             // Act & Assert
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(BusinessPreconditionException::class.java) {
                 transactionService.finalizeTransaction(tx.id, payments)
             }
         }
@@ -364,7 +367,7 @@ class TransactionServiceTest {
             transactionService.finalizeTransaction(tx.id, payments) // COMPLETED に
 
             // Act & Assert — 再度 finalize 試行
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(BusinessPreconditionException::class.java) {
                 transactionService.finalizeTransaction(tx.id, payments)
             }
         }
@@ -376,7 +379,7 @@ class TransactionServiceTest {
             val payments = listOf(PaymentInput(method = "CASH", amount = 0, received = 0, reference = null))
 
             // Act & Assert
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(BusinessPreconditionException::class.java) {
                 transactionService.finalizeTransaction(tx.id, payments)
             }
         }
@@ -440,7 +443,7 @@ class TransactionServiceTest {
             val tx = createDraftTransaction()
 
             // Act & Assert
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(BusinessPreconditionException::class.java) {
                 transactionService.voidTransaction(tx.id, "テスト理由")
             }
         }
@@ -451,7 +454,7 @@ class TransactionServiceTest {
             val tx = createCompletedTransaction()
 
             // Act & Assert
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(InvalidInputException::class.java) {
                 transactionService.voidTransaction(tx.id, "")
             }
         }
@@ -462,7 +465,7 @@ class TransactionServiceTest {
             val tx = createCompletedTransaction()
 
             // Act & Assert
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(InvalidInputException::class.java) {
                 transactionService.voidTransaction(tx.id, "   ")
             }
         }
@@ -491,7 +494,7 @@ class TransactionServiceTest {
             val fakeId = UUID.randomUUID()
 
             // Act & Assert
-            assertThrows(IllegalArgumentException::class.java) {
+            assertThrows(ResourceNotFoundException::class.java) {
                 transactionService.getTransaction(fakeId)
             }
         }

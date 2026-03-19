@@ -38,21 +38,38 @@ class DailySalesRepository : PanacheRepositoryBase<DailySalesEntity, UUID> {
         ).list()
 
     /**
-     * 特定日の全店舗の日次売上を取得する。
+     * 特定日の指定テナントの日次売上を取得する。
      */
-    fun findBySaleDate(date: LocalDate): List<DailySalesEntity> = list("date = ?1", date)
+    fun findBySaleDate(
+        date: LocalDate,
+        organizationId: UUID,
+    ): List<DailySalesEntity> = list("date = ?1 AND organizationId = ?2", date, organizationId)
 
     /**
-     * 日付範囲で全店舗の日次売上を取得する（日付昇順）。
+     * 日付範囲で指定テナントの日次売上を取得する（日付昇順）。
      */
     fun listByDateRange(
         startDate: LocalDate,
         endDate: LocalDate,
+        organizationId: UUID,
     ): List<DailySalesEntity> =
         find(
-            "date >= ?1 AND date <= ?2",
+            "date >= ?1 AND date <= ?2 AND organizationId = ?3",
             Sort.ascending("date"),
             startDate,
             endDate,
+            organizationId,
         ).list()
+
+    /**
+     * 指定日に売上データが存在するテナントの organization_id 一覧を返す。
+     */
+    fun findDistinctOrganizationIdsBySaleDate(date: LocalDate): List<UUID> {
+        @Suppress("UNCHECKED_CAST")
+        return getEntityManager()
+            .createQuery(
+                "SELECT DISTINCT d.organizationId FROM DailySalesEntity d WHERE d.date = :date",
+            ).setParameter("date", date)
+            .resultList as List<UUID>
+    }
 }
