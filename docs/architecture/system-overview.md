@@ -37,13 +37,13 @@
 
 | レイヤー | 技術 | 用途 |
 |---------|------|------|
-| Frontend | React 18 / TypeScript / Vite | SPA/PWA |
+| Frontend | React 19 / TypeScript / Vite 7 | SPA/PWA |
 | Frontend | Dexie.js | IndexedDB オフラインDB |
 | Frontend | Service Worker | Background Sync |
 | API Gateway | Kotlin / Quarkus / RESTEasy | REST エンドポイント |
 | Backend | Kotlin / Quarkus / gRPC | マイクロサービス |
 | Auth | ORY Hydra | OAuth2/OIDC プロバイダー |
-| DB | PostgreSQL 15 / Cloud SQL | メインDB |
+| DB | PostgreSQL 17 / Cloud SQL | メインDB |
 | DB Pool | pgBouncer | コネクションプール |
 | Cache | Redis / Memorystore | キャッシュ |
 | MQ | RabbitMQ | 非同期イベント |

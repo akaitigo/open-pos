@@ -61,6 +61,29 @@ describe('Header', () => {
     expect(screen.getByText('田中太郎')).toBeInTheDocument()
   })
 
+  it('デフォルトでオンラインインジケーターが表示される', () => {
+    render(
+      <MemoryRouter>
+        <Header />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByTestId('online-indicator')).toBeInTheDocument()
+    expect(screen.queryByTestId('offline-indicator')).not.toBeInTheDocument()
+  })
+
+  it('isOnline=false のときオフラインバッジが表示される', () => {
+    render(
+      <MemoryRouter>
+        <Header isOnline={false} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByTestId('offline-indicator')).toBeInTheDocument()
+    expect(screen.getByText('オフライン')).toBeInTheDocument()
+    expect(screen.queryByTestId('online-indicator')).not.toBeInTheDocument()
+  })
+
   it('カート導線に商品点数が表示される', () => {
     useCartStore.setState({
       items: [

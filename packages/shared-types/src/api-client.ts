@@ -109,11 +109,11 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
   let baseUrl = config.baseUrl
   let organizationId = config.organizationId
 
-  /** 共通リクエスト処理 */
-  async function request<T>(
+  /** Validated request that returns parsed data via Zod schema */
+  async function requestWithSchema<T>(
     method: HttpMethod,
     path: string,
-    schema: z.ZodType<T> | null,
+    schema: z.ZodType<T>,
     body?: unknown,
     requestOptions?: RequestOptions,
   ): Promise<T> {
@@ -130,39 +130,61 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
       headers['X-Organization-Id'] = organizationId
     }
 
-    const fetchOptions: RequestInit = {
+    const fetchInit: RequestInit = {
       method,
       headers,
       signal: requestOptions?.signal,
     }
 
-    if (body !== undefined && method !== 'GET' && method !== 'DELETE') {
-      fetchOptions.body = JSON.stringify(body)
+    if (body !== undefined && method !== 'GET') {
+      fetchInit.body = JSON.stringify(body)
     }
 
-    const response = await fetch(url, fetchOptions)
+    const response = await fetch(url, fetchInit)
 
     if (!response.ok) {
       await handleErrorResponse(response)
     }
 
-    // DELETE は void を返す
-    if (method === 'DELETE' || response.status === 204) {
-      return undefined as T
+    if (response.status === 204) {
+      return schema.parse(undefined)
     }
 
     const json: unknown = await response.json()
+    return schema.parse(json)
+  }
 
-    if (schema) {
-      return schema.parse(json)
+  /** Void request for DELETE (no schema needed) */
+  async function requestVoid(path: string, requestOptions?: RequestOptions): Promise<void> {
+    const url = buildUrl(baseUrl, path, requestOptions?.params)
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...config.headers,
+      ...requestOptions?.headers,
     }
 
-    return json as T
+    if (organizationId) {
+      headers['X-Organization-Id'] = organizationId
+    }
+
+    const fetchInit: RequestInit = {
+      method: 'DELETE',
+      headers,
+      signal: requestOptions?.signal,
+    }
+
+    const response = await fetch(url, fetchInit)
+
+    if (!response.ok) {
+      await handleErrorResponse(response)
+    }
   }
 
   return {
     get<T>(path: string, schema: z.ZodType<T>, options?: RequestOptions): Promise<T> {
-      return request('GET', path, schema, undefined, options)
+      return requestWithSchema('GET', path, schema, undefined, options)
     },
 
     post<T>(
@@ -171,7 +193,7 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
       schema: z.ZodType<T>,
       options?: RequestOptions,
     ): Promise<T> {
-      return request('POST', path, schema, body, options)
+      return requestWithSchema('POST', path, schema, body, options)
     },
 
     put<T>(
@@ -180,7 +202,7 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
       schema: z.ZodType<T>,
       options?: RequestOptions,
     ): Promise<T> {
-      return request('PUT', path, schema, body, options)
+      return requestWithSchema('PUT', path, schema, body, options)
     },
 
     patch<T>(
@@ -189,11 +211,11 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
       schema: z.ZodType<T>,
       options?: RequestOptions,
     ): Promise<T> {
-      return request('PATCH', path, schema, body, options)
+      return requestWithSchema('PATCH', path, schema, body, options)
     },
 
-    async delete(path: string, options?: RequestOptions): Promise<void> {
-      await request('DELETE', path, null, undefined, options)
+    delete(path: string, options?: RequestOptions): Promise<void> {
+      return requestVoid(path, options)
     },
 
     setOrganizationId(id?: string | null): void {

@@ -22,6 +22,7 @@ dependencies {
     implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
     implementation("io.quarkus:quarkus-opentelemetry")
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
+    implementation("io.quarkus:quarkus-scheduler")
     implementation("io.quarkus:quarkus-arc")
 
     testImplementation("io.quarkus:quarkus-junit5")

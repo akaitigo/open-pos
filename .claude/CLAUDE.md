@@ -3,6 +3,13 @@
 ## プロジェクト概要
 汎用POSシステム（マルチテナント、オフライン対応）のモノリポ。
 
+## v1.0 リリースロードマップ
+**必ず [`docs/plans/v1-release-roadmap.md`](../../docs/plans/v1-release-roadmap.md) を参照してから作業すること。**
+- GitHub マイルストーン: [v1.0.0 — OSS Public Release](https://github.com/akaitigo/open-pos/milestone/18) (65 issues)
+- Phase 0（ブロッカー解除）→ Phase 1（セキュリティ）→ Phase 2（ビジネスロジック）→ Phase 3（耐障害性）→ Phase 4（ドキュメント）→ Phase 5（品質）
+- イシュー番号に `gh issue view #XXX` で詳細を確認してから着手
+- 既存PR: #313 (Docker build), #314 (テスト), #316 (Flyway) が未マージ
+
 ## 技術スタック
 - Backend: Kotlin 2.3 / Quarkus 3.32 / GraalVM CE 21 / Gradle 9
 - Frontend: React 19 / TypeScript / Vite 6 / Tailwind + shadcn/ui

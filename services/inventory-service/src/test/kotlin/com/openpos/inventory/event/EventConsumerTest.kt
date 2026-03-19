@@ -3,7 +3,7 @@ package com.openpos.inventory.event
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
-import org.junit.jupiter.api.Assertions.assertThrows
+import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -13,6 +13,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 
 class EventConsumerTest {
     private val idempotentHandler: IdempotentEventHandler = mock()
@@ -54,6 +55,15 @@ class EventConsumerTest {
     }
 
     // --- ヘルパー ---
+
+    @Suppress("UNCHECKED_CAST")
+    private fun mockMessage(body: String): IncomingRabbitMQMessage<String> {
+        val message = mock<IncomingRabbitMQMessage<String>>()
+        whenever(message.payload).thenReturn(body)
+        whenever(message.ack()).thenReturn(CompletableFuture.completedFuture(null))
+        whenever(message.nack(any<Throwable>())).thenReturn(CompletableFuture.completedFuture(null))
+        return message
+    }
 
     private fun buildSaleCompletedJson(
         eventId: UUID = this.eventId,
@@ -145,7 +155,8 @@ class EventConsumerTest {
         @Test
         fun `正常なJSONでprocessSaleCompletedが呼ばれる`() {
             // Arrange
-            val message = buildSaleCompletedJson()
+            val json = buildSaleCompletedJson()
+            val message = mockMessage(json)
 
             // Act
             consumer.onSaleCompleted(message)
@@ -153,17 +164,20 @@ class EventConsumerTest {
             // Assert
             verify(idempotentHandler).handleIdempotent(eq(eventId), eq("sale.completed"), any())
             verify(stockEventProcessor).processSaleCompleted(eq(orgId), any())
+            verify(message).ack()
         }
 
         @Test
-        fun `不正なJSONでは例外がスローされる`() {
+        fun `不正なJSONではnackが呼ばれる`() {
             // Arrange
             val invalidJson = "{ invalid json }"
+            val message = mockMessage(invalidJson)
 
-            // Act & Assert
-            assertThrows(Exception::class.java) {
-                consumer.onSaleCompleted(invalidJson)
-            }
+            // Act
+            consumer.onSaleCompleted(message)
+
+            // Assert
+            verify(message).nack(any<Throwable>())
         }
     }
 
@@ -172,7 +186,8 @@ class EventConsumerTest {
         @Test
         fun `正常なJSONでprocessSaleVoidedが呼ばれる`() {
             // Arrange
-            val message = buildSaleVoidedJson()
+            val json = buildSaleVoidedJson()
+            val message = mockMessage(json)
 
             // Act
             consumer.onSaleVoided(message)
@@ -180,17 +195,20 @@ class EventConsumerTest {
             // Assert
             verify(idempotentHandler).handleIdempotent(eq(eventId), eq("sale.voided"), any())
             verify(stockEventProcessor).processSaleVoided(eq(orgId), any())
+            verify(message).ack()
         }
 
         @Test
-        fun `不正なJSONでは例外がスローされる`() {
+        fun `不正なJSONではnackが呼ばれる`() {
             // Arrange
             val invalidJson = "not valid json"
+            val message = mockMessage(invalidJson)
 
-            // Act & Assert
-            assertThrows(Exception::class.java) {
-                consumer.onSaleVoided(invalidJson)
-            }
+            // Act
+            consumer.onSaleVoided(message)
+
+            // Assert
+            verify(message).nack(any<Throwable>())
         }
     }
 }

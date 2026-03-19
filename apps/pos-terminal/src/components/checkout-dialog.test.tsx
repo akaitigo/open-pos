@@ -9,6 +9,7 @@ import type { Product, Staff } from '@shared-types/openpos'
 
 const mockApiPost = vi.fn()
 const mockApiGet = vi.fn().mockResolvedValue({})
+const mockSaveOfflineTransaction = vi.fn()
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -16,6 +17,10 @@ vi.mock('@/lib/api', () => ({
     post: (...args: unknown[]) => mockApiPost(...args),
     setOrganizationId: vi.fn(),
   },
+}))
+
+vi.mock('@/lib/offline-db', () => ({
+  saveOfflineTransaction: (...args: unknown[]) => mockSaveOfflineTransaction(...args),
 }))
 
 const mockProduct: Product = {
@@ -58,6 +63,8 @@ describe('CheckoutDialog', () => {
     mockApiPost.mockReset()
     mockApiGet.mockReset()
     mockApiGet.mockResolvedValue([])
+    mockSaveOfflineTransaction.mockReset()
+    mockSaveOfflineTransaction.mockResolvedValue(1)
   })
 
   it('合計金額と支払方法タブを表示する', () => {
@@ -230,6 +237,60 @@ describe('CheckoutDialog', () => {
   it('open=false のとき何も表示しない', () => {
     render(<CheckoutDialog open={false} onOpenChange={vi.fn()} />)
     expect(screen.queryByText('お会計')).not.toBeInTheDocument()
+  })
+
+  it('ネットワークエラー時にオフライン保存にフォールバックする', async () => {
+    mockApiPost.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+
+    const onOpenChange = vi.fn()
+    render(<CheckoutDialog open={true} onOpenChange={onOpenChange} />)
+    await userEvent.click(screen.getByText('ぴったり'))
+    await userEvent.click(screen.getByText('お会計を確定'))
+
+    await waitFor(() => {
+      expect(mockSaveOfflineTransaction).toHaveBeenCalledTimes(1)
+    })
+
+    const savedTx = mockSaveOfflineTransaction.mock.calls[0]![0] as {
+      clientId: string
+      storeId: string
+      terminalId: string
+      staffId: string
+      items: Array<{ productId: string; productName: string }>
+      payments: Array<{ method: string; amount: number }>
+      syncStatus: string
+    }
+    expect(savedTx.storeId).toBe('store-1')
+    expect(savedTx.terminalId).toBe('terminal-1')
+    expect(savedTx.staffId).toBe(mockStaff.id)
+    expect(savedTx.items).toHaveLength(1)
+    expect(savedTx.items[0]!.productId).toBe(mockProduct.id)
+    expect(savedTx.items[0]!.productName).toBe('ドリップコーヒー')
+    expect(savedTx.payments).toHaveLength(1)
+    expect(savedTx.payments[0]!.method).toBe('CASH')
+    expect(savedTx.syncStatus).toBe('pending')
+    expect(savedTx.clientId).toBeTruthy()
+
+    // ダイアログが閉じられる
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+    })
+  })
+
+  it('ApiError 時はオフライン保存ではなく通常エラーを表示する', async () => {
+    const { ApiError } = await import('@shared-types/openpos')
+    mockApiPost.mockRejectedValueOnce(new ApiError(500, 'INTERNAL_ERROR', 'サーバーエラー'))
+
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+    await userEvent.click(screen.getByText('ぴったり'))
+    await userEvent.click(screen.getByText('お会計を確定'))
+
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalled()
+    })
+
+    // オフライン保存は呼ばれない（サーバーエラーはネットワークエラーではない）
+    expect(mockSaveOfflineTransaction).not.toHaveBeenCalled()
   })
 
   it('ぴったりボタンは端数税額を切り上げた円額を入力する', async () => {
