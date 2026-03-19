@@ -154,7 +154,7 @@ ensure_rabbitmq_user
 
 start_service \
   product-service \
-  "http://localhost:8081/health" \
+  "http://localhost:8081/q/health" \
   QUARKUS_HTTP_PORT=8081 \
   QUARKUS_GRPC_SERVER_PORT=9001 \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
@@ -163,7 +163,7 @@ start_service \
   RABBITMQ_PASS="$RABBITMQ_PASS"
 start_service \
   store-service \
-  "http://localhost:8082/health" \
+  "http://localhost:8082/q/health" \
   QUARKUS_HTTP_PORT=8082 \
   QUARKUS_GRPC_SERVER_PORT=9002 \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
@@ -172,7 +172,7 @@ start_service \
   RABBITMQ_PASS="$RABBITMQ_PASS"
 start_service \
   pos-service \
-  "http://localhost:8083/health" \
+  "http://localhost:8083/q/health" \
   QUARKUS_HTTP_PORT=8083 \
   QUARKUS_GRPC_SERVER_PORT=9003 \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
@@ -181,7 +181,7 @@ start_service \
   RABBITMQ_PASS="$RABBITMQ_PASS"
 start_service \
   inventory-service \
-  "http://localhost:8084/health" \
+  "http://localhost:8084/q/health" \
   QUARKUS_HTTP_PORT=8084 \
   QUARKUS_GRPC_SERVER_PORT=9004 \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
@@ -192,6 +192,7 @@ start_service \
   api-gateway \
   "http://localhost:8080/api/health" \
   QUARKUS_HTTP_PORT=8080 \
+  OPENPOS_AUTH_ENABLED="${OPENPOS_AUTH_ENABLED:-false}" \
   PRODUCT_SERVICE_HOST=localhost \
   PRODUCT_SERVICE_PORT=9001 \
   STORE_SERVICE_HOST=localhost \
