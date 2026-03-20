@@ -228,10 +228,34 @@ describe('Layout', () => {
     expect(screen.queryByTestId('offline-banner')).not.toBeInTheDocument()
   })
 
-  it('terminal 設定が未構成ならセットアップ案内を表示する', () => {
+  it('organizationId のみ設定時は店舗/端末選択画面を表示する', async () => {
     resetRuntimeConfigForTests({
       apiUrl: 'http://localhost:8080',
       organizationId: '00000000-0000-0000-0000-000000000000',
+      storeId: null,
+      terminalId: null,
+    })
+    useAuthStore.setState({
+      isAuthenticated: false,
+      staff: null,
+      storeId: null,
+      storeName: null,
+      terminalId: null,
+    })
+
+    render(
+      <MemoryRouter>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByTestId('store-terminal-selector')).toBeInTheDocument()
+  })
+
+  it('organizationId 未設定ならセットアップ案内を表示する', () => {
+    resetRuntimeConfigForTests({
+      apiUrl: 'http://localhost:8080',
+      organizationId: null,
       storeId: null,
       terminalId: null,
     })

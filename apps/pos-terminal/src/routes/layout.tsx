@@ -5,8 +5,9 @@ import { CartSidebar } from '@/components/cart-sidebar'
 import { TrainingModeBanner } from '@/components/training-mode-banner'
 import { LoginScreen } from '@/components/login-screen'
 import { SetupScreen } from '@/components/setup-screen'
+import { StoreTerminalSelector } from '@/components/store-terminal-selector'
 import { Toaster } from '@/components/ui/toast'
-import { hasPosRuntimeConfig } from '@/lib/runtime-config'
+import { getRuntimeConfig, updateStoreTerminal } from '@/lib/runtime-config'
 import { setupAutoSync } from '@/lib/sync-manager'
 import { useAuthStore } from '@/stores/auth-store'
 import { useAccessibilityStore } from '@/stores/accessibility-store'
@@ -41,7 +42,12 @@ export function Layout() {
     onSearch: handleSearch,
   })
 
-  if (!hasPosRuntimeConfig()) {
+  // 店舗/端末の動的選択後に再レンダーするためのキー
+  const [configVersion, setConfigVersion] = useState(0)
+  const config = getRuntimeConfig()
+  const hasOrgButNoStore = Boolean(config.organizationId) && (!config.storeId || !config.terminalId)
+
+  if (!config.organizationId) {
     return (
       <>
         <SetupScreen />
@@ -50,10 +56,24 @@ export function Layout() {
     )
   }
 
+  if (hasOrgButNoStore) {
+    return (
+      <>
+        <StoreTerminalSelector
+          onSelect={(storeId, _storeName, terminalId) => {
+            updateStoreTerminal(storeId, terminalId)
+            setConfigVersion((v) => v + 1)
+          }}
+        />
+        <Toaster />
+      </>
+    )
+  }
+
   if (!isAuthenticated) {
     return (
       <>
-        <LoginScreen />
+        <LoginScreen key={configVersion} />
         <Toaster />
       </>
     )
