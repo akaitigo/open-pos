@@ -11,12 +11,12 @@ test.describe('POS Smoke', () => {
   })
 
   test('shows seeded product list after login', async () => {
-    await expect(posPage.page.getByText('ドリップコーヒー')).toBeVisible()
+    await expect(posPage.page.getByText('ドリップコーヒー', { exact: true })).toBeVisible()
   })
 
   test('filters products by search term', async () => {
     await posPage.searchProduct('ドリップコーヒー')
-    await expect(posPage.page.getByText('ドリップコーヒー')).toBeVisible()
+    await expect(posPage.page.getByText('ドリップコーヒー', { exact: true })).toBeVisible()
     await expect(posPage.page.getByText('北海道おにぎり鮭')).not.toBeVisible()
   })
 
@@ -35,7 +35,8 @@ test.describe('POS Smoke', () => {
     await expect(posPage.receiptDialog).toBeVisible()
     await expect(posPage.receiptDialog).toContainText('レシート')
     await posPage.closeReceipt()
-    await expect(posPage.page.getByText('ドリップコーヒー')).toBeVisible()
+    await posPage.dismissToastIfVisible()
+    await expect(posPage.productList.first()).toBeVisible()
     await expect(posPage.cart).toContainText('カートは空です')
   })
 })
@@ -171,6 +172,6 @@ test.describe('POS Transaction - History View', () => {
     await posPage.page.getByRole('button', { name: 'レシート' }).first().click()
 
     await expect(posPage.page.getByRole('dialog').filter({ hasText: 'レシート' })).toBeVisible()
-    await expect(posPage.page.getByRole('button', { name: '次のお客様へ' })).toBeVisible()
+    await expect(posPage.page.getByRole('button', { name: '閉じる' })).toBeVisible()
   })
 })

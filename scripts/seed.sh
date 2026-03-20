@@ -155,16 +155,30 @@ api_request() {
 expect_json() {
   local label="$1"
   shift
+  local max_retries=3
+  local retry=0
 
-  api_request "$@"
-  case "$HTTP_STATUS" in
-    2??)
-      printf '%s' "$HTTP_BODY"
-      ;;
-    *)
-      fail "$label failed ($HTTP_STATUS): $HTTP_BODY"
-      ;;
-  esac
+  while (( retry < max_retries )); do
+    api_request "$@"
+    case "$HTTP_STATUS" in
+      2??)
+        printf '%s' "$HTTP_BODY"
+        return 0
+        ;;
+      500)
+        retry=$(( retry + 1 ))
+        if (( retry < max_retries )); then
+          warn "$label returned 500, retrying in 3s ($retry/$max_retries)..."
+          sleep 3
+        else
+          fail "$label failed ($HTTP_STATUS): $HTTP_BODY"
+        fi
+        ;;
+      *)
+        fail "$label failed ($HTTP_STATUS): $HTTP_BODY"
+        ;;
+    esac
+  done
 }
 
 api_get() {
