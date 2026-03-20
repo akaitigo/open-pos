@@ -24,6 +24,8 @@ jobs:
   analyze:
     name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-latest
+    # java-kotlin CodeQL は Kotlin 2.3 未対応のため non-blocking（Trivy/gitleaks でカバー）
+    continue-on-error: ${{ matrix.language == 'java-kotlin' }}
     strategy:
       fail-fast: false
       matrix:
