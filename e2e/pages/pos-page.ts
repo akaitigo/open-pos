@@ -64,8 +64,16 @@ export class PosPage {
   }
 
   async dismissToastIfVisible(): Promise<void> {
-    if (await this.notificationCloseButton.isVisible().catch(() => false)) {
-      await this.notificationCloseButton.click()
+    // Wait briefly for any toast animation to appear
+    await this.page.waitForTimeout(500)
+    const toastContainer = this.page.locator('.fixed.right-0.top-0.z-100')
+    if (await toastContainer.isVisible().catch(() => false)) {
+      // Try clicking the close button, or wait for auto-dismiss
+      if (await this.notificationCloseButton.isVisible().catch(() => false)) {
+        await this.notificationCloseButton.click()
+      }
+      // Wait for toast to disappear
+      await toastContainer.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
     }
   }
 
@@ -78,11 +86,12 @@ export class PosPage {
   }
 
   async startPayment(): Promise<void> {
-    await this.payButton.click()
+    await this.dismissToastIfVisible()
+    await this.payButton.click({ force: true })
   }
 
   async selectExactCashPayment(): Promise<void> {
-    await this.page.getByRole('button', { name: 'ぴったり' }).click()
+    await this.page.getByRole('button', { name: 'ぴったり' }).click({ force: true })
   }
 
   async enterPaymentAmount(amount: string): Promise<void> {
@@ -90,15 +99,17 @@ export class PosPage {
   }
 
   async confirmPayment(): Promise<void> {
-    await this.paymentConfirmButton.click()
+    await this.paymentConfirmButton.click({ force: true })
   }
 
   async closeReceipt(): Promise<void> {
-    await this.receiptCloseButton.click()
+    await this.receiptCloseButton.click({ force: true })
   }
 
   async navigateToHistory(): Promise<void> {
-    await this.page.getByRole('link', { name: '履歴' }).click()
+    await this.dismissToastIfVisible()
+    // force: true でtoastオーバーレイ(z-100)によるクリックブロックをバイパス
+    await this.page.getByRole('link', { name: '履歴' }).click({ force: true })
     await expect(this.page.getByText('取引履歴')).toBeVisible()
   }
 }
