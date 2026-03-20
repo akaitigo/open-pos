@@ -1,128 +1,128 @@
-# API Reference
+# API リファレンス
 
-open-pos exposes a REST API through the api-gateway (BFF) and uses gRPC for internal service-to-service communication.
+open-pos は api-gateway (BFF) を通じて REST API を公開し、サービス間通信には gRPC を使用しています。
 
 ## OpenAPI / Swagger
 
-The api-gateway includes SmallRye OpenAPI (`quarkus-smallrye-openapi`). When the gateway is running, the interactive documentation is available at:
+api-gateway には SmallRye OpenAPI (`quarkus-smallrye-openapi`) が組み込まれています。gateway の起動中は、以下の URL でインタラクティブなドキュメントを参照できます。
 
 - **Swagger UI**: `http://localhost:8080/q/swagger-ui`
 - **OpenAPI JSON**: `http://localhost:8080/q/openapi`
 
-Resource classes under `services/api-gateway/src/main/kotlin/com/openpos/gateway/resource/` use `@Tag` and `@Operation` annotations from MicroProfile OpenAPI.
+`services/api-gateway/src/main/kotlin/com/openpos/gateway/resource/` 配下の Resource クラスは MicroProfile OpenAPI の `@Tag` および `@Operation` アノテーションを使用しています。
 
-## REST API Endpoints
+## REST API エンドポイント
 
-All endpoints are prefixed with `/api`. Authentication uses `Authorization: Bearer {token}` (JWT from ORY Hydra). Tenant isolation is automatic via `X-Organization-Id` header injected by the gateway.
+すべてのエンドポイントは `/api` プレフィックスが付きます。認証は `Authorization: Bearer {token}` (ORY Hydra 発行の JWT) を使用します。テナント分離は gateway が注入する `X-Organization-Id` ヘッダーにより自動的に行われます。
 
 ### Transactions (POS)
 
-| Method | Path | Description | Role |
-|--------|------|-------------|------|
-| POST | `/api/transactions` | Create a transaction | CASHIER+ |
-| GET | `/api/transactions/{id}` | Get transaction details | CASHIER+ |
-| GET | `/api/transactions` | List transactions | MANAGER+ |
-| POST | `/api/transactions/{id}/void` | Void a transaction | MANAGER+ |
-| POST | `/api/transactions/{id}/return` | Return a transaction | MANAGER+ |
-| GET | `/api/transactions/{id}/receipt` | Get receipt | CASHIER+ |
+| Method | Path | 説明 | Role |
+|--------|------|------|------|
+| POST | `/api/transactions` | 取引を作成 | CASHIER+ |
+| GET | `/api/transactions/{id}` | 取引詳細を取得 | CASHIER+ |
+| GET | `/api/transactions` | 取引一覧を取得 | MANAGER+ |
+| POST | `/api/transactions/{id}/void` | 取引を無効化 | MANAGER+ |
+| POST | `/api/transactions/{id}/return` | 取引を返品処理 | MANAGER+ |
+| GET | `/api/transactions/{id}/receipt` | レシートを取得 | CASHIER+ |
 
 ### Products
 
-| Method | Path | Description | Role |
-|--------|------|-------------|------|
-| GET | `/api/products` | List products (filter, paginate) | CASHIER+ |
-| POST | `/api/products` | Create a product | MANAGER+ |
-| PUT | `/api/products/{id}` | Update a product | MANAGER+ |
-| DELETE | `/api/products/{id}` | Soft-delete a product | MANAGER+ |
-| GET | `/api/products/search?barcode=` | Search by barcode | CASHIER+ |
+| Method | Path | 説明 | Role |
+|--------|------|------|------|
+| GET | `/api/products` | 商品一覧（フィルタ・ページネーション対応） | CASHIER+ |
+| POST | `/api/products` | 商品を作成 | MANAGER+ |
+| PUT | `/api/products/{id}` | 商品を更新 | MANAGER+ |
+| DELETE | `/api/products/{id}` | 商品を論理削除 | MANAGER+ |
+| GET | `/api/products/search?barcode=` | バーコードで検索 | CASHIER+ |
 
 ### Categories
 
-| Method | Path | Description | Role |
-|--------|------|-------------|------|
-| GET | `/api/categories` | List categories (hierarchical) | CASHIER+ |
-| POST | `/api/categories` | Create a category | MANAGER+ |
-| PUT | `/api/categories/{id}` | Update a category | MANAGER+ |
-| DELETE | `/api/categories/{id}` | Delete a category | MANAGER+ |
+| Method | Path | 説明 | Role |
+|--------|------|------|------|
+| GET | `/api/categories` | カテゴリ一覧（階層構造） | CASHIER+ |
+| POST | `/api/categories` | カテゴリを作成 | MANAGER+ |
+| PUT | `/api/categories/{id}` | カテゴリを更新 | MANAGER+ |
+| DELETE | `/api/categories/{id}` | カテゴリを削除 | MANAGER+ |
 
 ### Tax Rates
 
-| Method | Path | Description | Role |
-|--------|------|-------------|------|
-| GET | `/api/tax-rates` | List tax rates | CASHIER+ |
-| POST | `/api/tax-rates` | Create a tax rate | MANAGER+ |
-| PUT | `/api/tax-rates/{id}` | Update a tax rate | MANAGER+ |
+| Method | Path | 説明 | Role |
+|--------|------|------|------|
+| GET | `/api/tax-rates` | 税率一覧を取得 | CASHIER+ |
+| POST | `/api/tax-rates` | 税率を作成 | MANAGER+ |
+| PUT | `/api/tax-rates/{id}` | 税率を更新 | MANAGER+ |
 
 ### Discounts and Coupons
 
-| Method | Path | Description | Role |
-|--------|------|-------------|------|
-| GET | `/api/discounts` | List discounts | CASHIER+ |
-| GET | `/api/coupons/validate?code=` | Validate a coupon code | CASHIER+ |
+| Method | Path | 説明 | Role |
+|--------|------|------|------|
+| GET | `/api/discounts` | 割引一覧を取得 | CASHIER+ |
+| GET | `/api/coupons/validate?code=` | クーポンコードを検証 | CASHIER+ |
 
 ### Inventory
 
-| Method | Path | Description | Role |
-|--------|------|-------------|------|
-| GET | `/api/inventory?store_id=` | List inventory | MANAGER+ |
-| PUT | `/api/inventory/{id}/adjust` | Adjust stock | MANAGER+ |
-| POST | `/api/purchase-orders` | Create purchase order | MANAGER+ |
-| PUT | `/api/purchase-orders/{id}/receive` | Confirm receipt | MANAGER+ |
+| Method | Path | 説明 | Role |
+|--------|------|------|------|
+| GET | `/api/inventory?store_id=` | 在庫一覧を取得 | MANAGER+ |
+| PUT | `/api/inventory/{id}/adjust` | 在庫数を調整 | MANAGER+ |
+| POST | `/api/purchase-orders` | 発注を作成 | MANAGER+ |
+| PUT | `/api/purchase-orders/{id}/receive` | 入荷を確認 | MANAGER+ |
 
 ### Analytics
 
-| Method | Path | Description | Role |
-|--------|------|-------------|------|
-| GET | `/api/analytics/daily` | Daily sales | MANAGER+ |
-| GET | `/api/analytics/products` | Product-level sales | MANAGER+ |
-| GET | `/api/analytics/hourly` | Hourly sales | MANAGER+ |
-| GET | `/api/analytics/summary` | Sales summary | MANAGER+ |
-| GET | `/api/analytics/abc` | ABC analysis | MANAGER+ |
-| GET | `/api/analytics/gross-profit` | Gross profit report | MANAGER+ |
-| GET | `/api/analytics/forecast` | Sales forecast | MANAGER+ |
+| Method | Path | 説明 | Role |
+|--------|------|------|------|
+| GET | `/api/analytics/daily` | 日次売上 | MANAGER+ |
+| GET | `/api/analytics/products` | 商品別売上 | MANAGER+ |
+| GET | `/api/analytics/hourly` | 時間帯別売上 | MANAGER+ |
+| GET | `/api/analytics/summary` | 売上サマリー | MANAGER+ |
+| GET | `/api/analytics/abc` | ABC 分析 | MANAGER+ |
+| GET | `/api/analytics/gross-profit` | 粗利レポート | MANAGER+ |
+| GET | `/api/analytics/forecast` | 売上予測 | MANAGER+ |
 
 ### Stores and Staff
 
-| Method | Path | Description | Role |
-|--------|------|-------------|------|
-| GET | `/api/stores` | List stores | MANAGER+ |
-| POST | `/api/stores` | Create a store | OWNER |
-| GET | `/api/staff` | List staff | MANAGER+ |
-| POST | `/api/staff` | Create staff member | OWNER |
-| PUT | `/api/staff/{id}` | Update staff member | OWNER |
+| Method | Path | 説明 | Role |
+|--------|------|------|------|
+| GET | `/api/stores` | 店舗一覧を取得 | MANAGER+ |
+| POST | `/api/stores` | 店舗を作成 | OWNER |
+| GET | `/api/staff` | スタッフ一覧を取得 | MANAGER+ |
+| POST | `/api/staff` | スタッフを作成 | OWNER |
+| PUT | `/api/staff/{id}` | スタッフ情報を更新 | OWNER |
 
 ### Drawer and Settlement
 
-| Method | Path | Description | Role |
-|--------|------|-------------|------|
-| POST | `/api/drawers/open` | Open cash drawer | CASHIER+ |
-| POST | `/api/drawers/close` | Close cash drawer | CASHIER+ |
-| GET | `/api/drawers/status` | Get drawer status | CASHIER+ |
-| POST | `/api/settlements` | Create settlement | MANAGER+ |
-| GET | `/api/settlements/{id}` | Get settlement | MANAGER+ |
+| Method | Path | 説明 | Role |
+|--------|------|------|------|
+| POST | `/api/drawers/open` | キャッシュドロワーを開く | CASHIER+ |
+| POST | `/api/drawers/close` | キャッシュドロワーを閉じる | CASHIER+ |
+| GET | `/api/drawers/status` | ドロワー状態を取得 | CASHIER+ |
+| POST | `/api/settlements` | 精算を作成 | MANAGER+ |
+| GET | `/api/settlements/{id}` | 精算情報を取得 | MANAGER+ |
 
 ### Auth and Sync
 
-| Method | Path | Description | Role |
-|--------|------|-------------|------|
-| POST | `/api/auth/pin-login` | Staff PIN login | Terminal-authenticated |
-| GET | `/api/sync/master` | Get master data diff | CASHIER+ |
-| POST | `/api/sync/transactions` | Batch sync offline txns | CASHIER+ |
-| GET | `/api/health` | Health check | None |
+| Method | Path | 説明 | Role |
+|--------|------|------|------|
+| POST | `/api/auth/pin-login` | スタッフ PIN ログイン | Terminal-authenticated |
+| GET | `/api/sync/master` | マスターデータの差分を取得 | CASHIER+ |
+| POST | `/api/sync/transactions` | オフライン取引を一括同期 | CASHIER+ |
+| GET | `/api/health` | ヘルスチェック | None |
 
-### Additional Resources
+### その他のリソース
 
-| Method | Path | Description | Role |
-|--------|------|-------------|------|
-| GET/POST | `/api/organizations` | Organization management | OWNER |
-| GET/POST | `/api/system-settings` | System settings CRUD | OWNER |
-| GET/POST | `/api/journals` | Electronic journal entries | MANAGER+ |
-| GET/POST | `/api/customers` | Customer management | CASHIER+ |
-| GET/POST | `/api/reservations` | Reservation management | CASHIER+ |
+| Method | Path | 説明 | Role |
+|--------|------|------|------|
+| GET/POST | `/api/organizations` | 組織管理 | OWNER |
+| GET/POST | `/api/system-settings` | システム設定 CRUD | OWNER |
+| GET/POST | `/api/journals` | 電子ジャーナルエントリ | MANAGER+ |
+| GET/POST | `/api/customers` | 顧客管理 | CASHIER+ |
+| GET/POST | `/api/reservations` | 予約管理 | CASHIER+ |
 
-## Response Format
+## レスポンスフォーマット
 
-### Success
+### 成功時
 
 ```json
 {
@@ -131,7 +131,7 @@ All endpoints are prefixed with `/api`. Authentication uses `Authorization: Bear
 }
 ```
 
-### Paginated
+### ページネーション時
 
 ```json
 {
@@ -140,7 +140,7 @@ All endpoints are prefixed with `/api`. Authentication uses `Authorization: Bear
 }
 ```
 
-### Error
+### エラー時
 
 ```json
 {
@@ -152,17 +152,17 @@ All endpoints are prefixed with `/api`. Authentication uses `Authorization: Bear
 }
 ```
 
-## Pagination
+## ページネーション
 
 ```
 GET /api/products?page=0&size=20&sort=display_order,asc
 ```
 
-## gRPC Services (Internal)
+## gRPC サービス（内部通信）
 
-gRPC is used for service-to-service communication within the cluster. Proto definitions are in `proto/openpos/`.
+gRPC はクラスター内のサービス間通信に使用されます。Proto 定義は `proto/openpos/` にあります。
 
-### Service Definitions
+### サービス定義
 
 | Package | Service | Proto File |
 |---------|---------|-----------|
@@ -173,63 +173,63 @@ gRPC is used for service-to-service communication within the cluster. Proto defi
 | `openpos.store.v1` | `StoreService` | `proto/openpos/store/v1/store.proto` |
 | `openpos.store.v1` | `SystemSettingService` | `proto/openpos/store/v1/store.proto` |
 
-### Key RPCs
+### 主要な RPC
 
-| Service | RPC | Description |
-|---------|-----|-------------|
-| PosService | `CreateTransaction` | Create a draft transaction |
-| PosService | `AddTransactionItem` | Add item to transaction |
-| PosService | `FinalizeTransaction` | Complete with payment |
-| PosService | `VoidTransaction` | Void a transaction |
-| PosService | `SyncOfflineTransactions` | Batch sync from offline terminal |
-| PosService | `OpenDrawer` / `CloseDrawer` | Cash drawer operations |
-| PosService | `CreateSettlement` | Register settlement |
-| ProductService | `ListProducts` | List products with filters |
-| ProductService | `GetProductByBarcode` | Barcode lookup |
-| ProductService | `ValidateCoupon` | Coupon validation |
-| ProductService | `CreateTaxRate` / `ListTaxRates` | Tax rate management |
-| InventoryService | `GetStock` / `ListStocks` | Stock queries |
-| InventoryService | `AdjustStock` | Manual stock adjustment |
-| InventoryService | `StartStocktake` / `CompleteStocktake` | Physical inventory |
-| AnalyticsService | `GetDailySales` | Daily sales report |
-| AnalyticsService | `GetAbcAnalysis` | ABC product analysis |
-| AnalyticsService | `GetSalesForecast` | Moving-average forecast |
-| StoreService | `AuthenticateByPin` | Staff PIN auth |
-| StoreService | `RegisterTerminal` | Terminal registration |
-| SystemSettingService | `UpsertSystemSetting` | Tenant-level settings |
+| Service | RPC | 説明 |
+|---------|-----|------|
+| PosService | `CreateTransaction` | 下書き取引を作成 |
+| PosService | `AddTransactionItem` | 取引に明細を追加 |
+| PosService | `FinalizeTransaction` | 決済を行い取引を完了 |
+| PosService | `VoidTransaction` | 取引を無効化 |
+| PosService | `SyncOfflineTransactions` | オフライン端末から一括同期 |
+| PosService | `OpenDrawer` / `CloseDrawer` | キャッシュドロワー操作 |
+| PosService | `CreateSettlement` | 精算を登録 |
+| ProductService | `ListProducts` | フィルタ付き商品一覧 |
+| ProductService | `GetProductByBarcode` | バーコード検索 |
+| ProductService | `ValidateCoupon` | クーポン検証 |
+| ProductService | `CreateTaxRate` / `ListTaxRates` | 税率管理 |
+| InventoryService | `GetStock` / `ListStocks` | 在庫照会 |
+| InventoryService | `AdjustStock` | 手動在庫調整 |
+| InventoryService | `StartStocktake` / `CompleteStocktake` | 棚卸し |
+| AnalyticsService | `GetDailySales` | 日次売上レポート |
+| AnalyticsService | `GetAbcAnalysis` | ABC 商品分析 |
+| AnalyticsService | `GetSalesForecast` | 移動平均による売上予測 |
+| StoreService | `AuthenticateByPin` | スタッフ PIN 認証 |
+| StoreService | `RegisterTerminal` | 端末登録 |
+| SystemSettingService | `UpsertSystemSetting` | テナントレベルの設定 |
 
 ### gRPC Metadata
 
-| Key | Value | Description |
-|-----|-------|-------------|
-| `authorization` | `Bearer {token}` | Access token |
-| `x-organization-id` | UUID | Tenant identifier |
-| `x-staff-id` | UUID | Authenticated staff |
-| `x-role` | `OWNER` / `MANAGER` / `CASHIER` | Staff role |
-| `x-request-id` | UUID | Correlation ID for tracing |
+| Key | Value | 説明 |
+|-----|-------|------|
+| `authorization` | `Bearer {token}` | アクセストークン |
+| `x-organization-id` | UUID | テナント識別子 |
+| `x-staff-id` | UUID | 認証済みスタッフ |
+| `x-role` | `OWNER` / `MANAGER` / `CASHIER` | スタッフロール |
+| `x-request-id` | UUID | トレーシング用の相関 ID |
 
-All RPCs use a 5-second deadline: `withDeadlineAfter(5, TimeUnit.SECONDS)`.
+すべての RPC は 5 秒の deadline を使用します: `withDeadlineAfter(5, TimeUnit.SECONDS)`
 
-### Generating Proto Docs
+### Proto ドキュメントの生成
 
-To generate HTML documentation from proto files:
+Proto ファイルから HTML ドキュメントを生成するには以下を実行します。
 
 ```bash
 buf generate --template buf.gen.doc.yaml
 ```
 
-Or use `protoc-gen-doc`:
+または `protoc-gen-doc` を使用します。
 
 ```bash
 protoc --doc_out=docs/proto --doc_opt=html,index.html proto/openpos/**/*.proto
 ```
 
-## RabbitMQ Events
+## RabbitMQ イベント
 
-Events are published to the `openpos.events` topic exchange:
+イベントは `openpos.events` topic exchange に発行されます。
 
-| Routing Key | Publisher | Subscribers | Description |
-|-------------|-----------|-------------|-------------|
-| `sale.completed` | pos-service | inventory-service, analytics-service | Transaction finalized |
-| `sale.voided` | pos-service | inventory-service, analytics-service | Transaction voided |
-| `stock.low` | inventory-service | store-service | Stock below threshold |
+| Routing Key | Publisher | Subscribers | 説明 |
+|-------------|-----------|-------------|------|
+| `sale.completed` | pos-service | inventory-service, analytics-service | 取引が確定 |
+| `sale.voided` | pos-service | inventory-service, analytics-service | 取引が無効化 |
+| `stock.low` | inventory-service | store-service | 在庫が閾値を下回った |

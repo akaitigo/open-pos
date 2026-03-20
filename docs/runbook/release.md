@@ -1,19 +1,19 @@
-# Release Runbook
+# リリース Runbook
 
-This runbook describes the minimum maintainer checklist for cutting an `open-pos` release.
+この Runbook では、`open-pos` のリリースを行う際のメンテナー向け最低限のチェックリストを説明します。
 
-## Release Policy
+## リリースポリシー
 
-- `open-pos` follows SemVer.
-- Until `1.0.0`, releases are expected to be `0.x.y` and may still include breaking changes when documented clearly.
-- Every release must have a Git tag, GitHub Release entry, and a corresponding `CHANGELOG.md` update.
+- `open-pos` は SemVer に準拠します。
+- `1.0.0` までのリリースは `0.x.y` を想定しており、明確に文書化された上で破壊的変更を含む場合があります。
+- すべてのリリースには Git タグ、GitHub Release エントリ、および対応する `CHANGELOG.md` の更新が必要です。
 
-## Pre-flight Checklist
+## リリース前チェックリスト
 
-1. Start from a clean `main` branch.
-2. Review the scope and unresolved risks for the release.
-3. Update [../../CHANGELOG.md](../../CHANGELOG.md).
-4. Run the supported local checks:
+1. クリーンな `main` ブランチから開始する。
+2. リリースのスコープと未解決のリスクを確認する。
+3. [../../CHANGELOG.md](../../CHANGELOG.md) を更新する。
+4. ローカルチェックを実行する:
 
 ```bash
 make doctor
@@ -21,18 +21,18 @@ pnpm install
 make verify
 ```
 
-5. If the release changes demo flows, frontend apps, seed data, auth, or API contracts, also run:
+5. リリースがデモフロー、フロントエンドアプリ、シードデータ、認証、または API コントラクトに影響する場合は、以下も実行する:
 
 ```bash
 pnpm e2e:install
 make verify-full
 ```
 
-6. Confirm the latest GitHub Actions runs on `main` are green:
+6. `main` ブランチでの最新の GitHub Actions 実行がすべてグリーンであることを確認する:
    - `CI`
    - `Security`
 
-## Tag and Release
+## タグ付けとリリース
 
 ```bash
 git checkout main
@@ -42,17 +42,17 @@ git push origin v0.x.y
 gh release create v0.x.y --generate-notes
 ```
 
-`gh release create --generate-notes` uses [../../.github/release.yml](../../.github/release.yml) for category grouping.
+`gh release create --generate-notes` はカテゴリグルーピングに [../../.github/release.yml](../../.github/release.yml) を使用します。
 
-## Post-release
+## リリース後
 
-1. Verify the GitHub Release notes look correct.
-2. Confirm the tag points at the expected commit.
-3. Move any unfinished issues to the next milestone.
-4. Start a fresh `Unreleased` section in [../../CHANGELOG.md](../../CHANGELOG.md) if needed.
+1. GitHub Release のリリースノートが正しいことを確認する。
+2. タグが期待するコミットを指していることを確認する。
+3. 未完了の Issue を次のマイルストーンに移動する。
+4. 必要に応じて [../../CHANGELOG.md](../../CHANGELOG.md) に新しい `Unreleased` セクションを追加する。
 
-## Hotfixes
+## Hotfix
 
-- Branch from the release commit or current `main`, depending on impact.
-- Run the same checklist as a normal release.
-- Prefer a follow-up patch release instead of force-updating an existing tag.
+- 影響範囲に応じて、リリースコミットまたは現在の `main` からブランチを作成する。
+- 通常リリースと同じチェックリストを実行する。
+- 既存タグの強制更新ではなく、フォローアップのパッチリリースを推奨する。

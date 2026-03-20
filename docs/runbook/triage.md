@@ -1,53 +1,53 @@
-# Triage Runbook
+# トリアージ Runbook
 
-This runbook describes the minimum maintainer workflow for incoming issues and pull requests.
+この Runbook では、受信した Issue と Pull Request に対するメンテナーの最低限のワークフローを説明します。
 
-## Goals
+## 目的
 
-- keep user-facing reports actionable
-- route questions to the right channel
-- preserve a predictable label taxonomy
-- make priority visible without over-processing
+- ユーザーからの報告を対処可能な状態に保つ
+- 質問を適切なチャネルに振り分ける
+- 予測可能なラベル分類体系を維持する
+- 過度な処理を行わずに優先度を可視化する
 
-## Issue Intake
+## Issue の受付
 
-1. Confirm the report belongs in the public tracker.
-2. Redirect setup and usage questions to Discussions when they are not actionable bugs.
-3. Reject public security reports and point reporters to [../../SECURITY.md](../../SECURITY.md).
-4. Ask for missing reproduction details before attempting a fix.
+1. 報告がパブリックトラッカーに適切であることを確認する。
+2. 対処可能なバグではないセットアップや使い方の質問は Discussions にリダイレクトする。
+3. セキュリティに関する公開報告は受け付けず、報告者を [../../SECURITY.md](../../SECURITY.md) に案内する。
+4. 修正に着手する前に、不足している再現手順の詳細を確認する。
 
-## Baseline Labels
+## 基本ラベル
 
-Use at least one label from each relevant group:
+関連する各グループから少なくとも一つのラベルを付与してください:
 
-- `type:*` for the work shape, for example `type:bug`, `type:feature`, `type:docs`, `type:chore`
-- `svc:*`, `app:*`, `pkg:*`, `infra`, or `proto` for the affected surface
-- `area:*` when the problem maps to a product or technical concern
-- `P0:*` to `P3:*` when priority needs to be made explicit
+- `type:*`: 作業種別（例: `type:bug`、`type:feature`、`type:docs`、`type:chore`）
+- `svc:*`、`app:*`、`pkg:*`、`infra`、または `proto`: 影響範囲
+- `area:*`: 問題がプロダクトまたは技術関心事に対応する場合
+- `P0:*` から `P3:*`: 優先度を明示する必要がある場合
 
-See [labels.md](labels.md) for the current label taxonomy and PR label automation rules.
+現在のラベル分類体系と PR ラベル自動化ルールについては [labels.md](labels.md) を参照してください。
 
-## Priority Guidance
+## 優先度ガイドライン
 
-- `P0:critical`: security issue, data corruption, or a release-blocking regression
-- `P1:high`: broken supported flow, major contributor friction, or high-confidence user pain
-- `P2:medium`: important but not release-blocking
-- `P3:low`: backlog, polish, or speculative work
+- `P0:critical`: セキュリティ問題、データ破損、またはリリースブロッキングのリグレッション
+- `P1:high`: サポート対象フローの障害、コントリビューターの大きなフリクション、またはユーザー影響度が高い問題
+- `P2:medium`: 重要だがリリースブロッキングではない
+- `P3:low`: バックログ、改善、または検討段階の作業
 
-## Pull Request Triage
+## Pull Request のトリアージ
 
-Before merge, confirm that:
+マージ前に以下を確認してください:
 
-- the title and labels describe the change
-- auto-applied surface labels still match the final diff
-- the linked issue or rationale is clear for non-trivial work
-- the author ran the relevant local checks
-- required GitHub checks are green
-- changelog, docs, ADRs, or follow-up issues exist when the change affects long-lived behavior
+- タイトルとラベルが変更内容を適切に説明している
+- 自動付与された影響範囲ラベルが最終的な差分と一致している
+- 非自明な作業については、リンクされた Issue または根拠が明確である
+- 作者がローカルチェックを実行済みである
+- 必須の GitHub チェックがグリーンである
+- 長期的な振る舞いに影響する変更には、changelog、ドキュメント、ADR、またはフォローアップ Issue が存在する
 
-## Closing Rules
+## クローズルール
 
-- Close as duplicate when an existing issue already tracks the same problem.
-- Close as not planned when the request does not fit the current roadmap or support boundary.
-- Close as answered when the thread is support-only and the outcome is documented elsewhere.
-- Prefer linking the canonical issue, ADR, discussion, or docs page when closing.
+- 既存の Issue が同じ問題を追跡している場合は、重複としてクローズする。
+- リクエストが現在のロードマップやサポート範囲に合わない場合は、計画外としてクローズする。
+- スレッドがサポートのみで、結果が他のドキュメントに記載されている場合は、回答済みとしてクローズする。
+- クローズ時には、正規の Issue、ADR、Discussion、またはドキュメントページへのリンクを付与することを推奨する。
