@@ -1,50 +1,50 @@
 # open-pos
 
-> Universal Point of Sale System — 汎用POSシステム
+> Universal Point of Sale System -- 汎用POSシステム
 
 [![CI](https://github.com/akaitigo/open-pos/actions/workflows/ci.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/ci.yml)
 [![Security](https://github.com/akaitigo/open-pos/actions/workflows/security.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/security.yml)
 [![Release Drafter](https://github.com/akaitigo/open-pos/actions/workflows/release-drafter.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/release-drafter.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A multi-tenant, offline-capable POS (Point of Sale) system built with microservices architecture.
+マルチテナント・オフライン対応の汎用 POS（Point of Sale）システム。マイクロサービスアーキテクチャで構築。
 
 > [!NOTE]
-> **v1.0 release candidate.** Authentication (ORY Hydra OIDC/PKCE) and RBAC are implemented. Review [SECURITY.md](SECURITY.md) for the supported-versions matrix and responsible-disclosure process before any public deployment.
+> **v1.0 リリース候補。** 認証（ORY Hydra OIDC/PKCE）と RBAC は実装済み。公開デプロイ前に [SECURITY.md](SECURITY.md) のサポートバージョンマトリックスと脆弱性報告プロセスを確認してください。
 
-## Project Status
+## プロジェクト状態
 
-- **Version**: v1.0 release candidate
-- **Supported demo flows**: `make local-demo` and `make docker-demo`
-- **Quality gates on `main`**: CI, dependency audit, secret scanning, CodeQL, Playwright E2E
-- **Auth**: ORY Hydra v2.2 (OIDC/PKCE) with RBAC (Owner / Manager / Cashier)
+- **バージョン**: v1.0 リリース候補
+- **サポートされるデモフロー**: `make local-demo` / `make docker-demo`
+- **`main` ブランチの品質ゲート**: CI、依存関係監査、シークレットスキャン、CodeQL、Playwright E2E
+- **認証**: ORY Hydra v2.2（OIDC/PKCE）+ RBAC（Owner / Manager / Cashier）
 
-## Features
+## 主な機能
 
-- **Multi-tenant**: Organization-level data isolation via Hibernate Filters
-- **Offline-capable**: POS terminal works offline with IndexedDB (Dexie.js), syncs when back online
-- **Microservices**: 6 backend services communicating via gRPC and RabbitMQ
-- **Modern frontend**: React 19 + TypeScript + Tailwind CSS + shadcn/ui
+- **マルチテナント**: Hibernate Filter による組織レベルのデータ分離
+- **オフライン対応**: IndexedDB（Dexie.js）によるオフライン動作、オンライン復帰時に自動同期
+- **マイクロサービス**: gRPC + RabbitMQ で連携する 6 つのバックエンドサービス
+- **モダンフロントエンド**: React 19 + TypeScript + Tailwind CSS + shadcn/ui
 
-## Demo
+## デモ
 
-### POS Checkout Flow
+### POS 会計フロー
 
 ![POS checkout flow](docs/assets/demo/pos-checkout.gif)
 
-### Admin Dashboard
+### 管理ダッシュボード
 
 ![Admin dashboard](docs/assets/demo/admin-dashboard.png)
 
-### Inventory Management
+### 在庫管理
 
 ![Inventory management](docs/assets/demo/admin-inventory.png)
 
-### POS Product Grid
+### POS 商品グリッド
 
 ![POS product grid](docs/assets/demo/pos-products.png)
 
-Regenerate these assets with the supported local demo stack:
+デモアセットの再生成方法:
 
 ```bash
 pnpm e2e:install
@@ -54,9 +54,9 @@ pnpm dev:pos
 pnpm demo:assets
 ```
 
-See [docs/guides/demo-assets.md](docs/guides/demo-assets.md) for the repeatable capture workflow and output locations.
+詳細は [docs/guides/demo-assets.md](docs/guides/demo-assets.md) を参照。
 
-## Architecture
+## アーキテクチャ
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -85,182 +85,276 @@ See [docs/guides/demo-assets.md](docs/guides/demo-assets.md) for the repeatable 
      └───────────┘  └────────────┘
 ```
 
-| Service           | Technology     | Role                             |
-| ----------------- | -------------- | -------------------------------- |
-| api-gateway       | Quarkus (REST) | BFF, auth, tenant injection      |
-| pos-service       | Quarkus (gRPC) | Transactions, payments, receipts |
-| product-service   | Quarkus (gRPC) | Products, categories, tax rates  |
-| inventory-service | Quarkus (gRPC) | Inventory, stock movements       |
-| analytics-service | Quarkus (gRPC) | Sales analytics                  |
-| store-service     | Quarkus (gRPC) | Stores, staff management         |
-| pos-terminal      | React PWA      | POS terminal (tablet-optimized)  |
-| admin-dashboard   | React SPA      | Admin panel (desktop)            |
+| サービス | 技術 | 役割 |
+| --- | --- | --- |
+| api-gateway | Quarkus (REST) | BFF、認証、テナント注入 |
+| pos-service | Quarkus (gRPC) | 取引、決済、レシート |
+| product-service | Quarkus (gRPC) | 商品、カテゴリ、税率 |
+| inventory-service | Quarkus (gRPC) | 在庫、入出庫管理 |
+| analytics-service | Quarkus (gRPC) | 売上分析 |
+| store-service | Quarkus (gRPC) | 店舗、スタッフ管理 |
+| pos-terminal | React PWA | POS 端末（タブレット最適化） |
+| admin-dashboard | React SPA | 管理画面（デスクトップ） |
 
-## Tech Stack
+## 技術スタック
 
-**Backend**: Kotlin 2.3 / Quarkus 3.32 / GraalVM CE 21 / Gradle 9
-**Frontend**: React 19 / TypeScript / Vite 7 / Tailwind CSS + shadcn/ui
-**Database**: PostgreSQL 17 (schema isolation, Flyway migrations)
-**Cache**: Redis 7 (Lettuce, cache-aside pattern)
-**Messaging**: RabbitMQ 4 (SmallRye Reactive Messaging)
-**Auth**: ORY Hydra v2.2 (OIDC/PKCE)
-**API**: gRPC (proto3 + buf toolchain)
+| カテゴリ | 技術 |
+| --- | --- |
+| バックエンド | Kotlin 2.3 / Quarkus 3.32 / GraalVM CE 21 / Gradle 9 |
+| フロントエンド | React 19 / TypeScript / Vite 7 / Tailwind CSS + shadcn/ui |
+| データベース | PostgreSQL 17（スキーマ分離、Flyway マイグレーション） |
+| キャッシュ | Redis 7（Lettuce、cache-aside パターン） |
+| メッセージング | RabbitMQ 4（SmallRye Reactive Messaging） |
+| 認証 | ORY Hydra v2.2（OIDC/PKCE） |
+| API | gRPC（proto3 + buf ツールチェーン） |
 
-## Getting Started
+## はじめに
 
-### Prerequisites
+### 前提条件
 
-- Java 21 (GraalVM CE recommended)
-- Node.js 22+
-- **pnpm 10.30.3** -- pinned in `package.json` `"packageManager"` and `.mise.toml`; `mise install` or `corepack enable` will set the exact version automatically
-- Docker & Docker Compose
-- buf CLI
-- curl
-- jq
-- bash 4+ (macOS ships 3.2; `brew install bash` for seed scripts)
-- grpcurl (optional, for `make grpc-test`)
+| ツール | バージョン | 用途 |
+| --- | --- | --- |
+| Java (GraalVM CE) | 21 | バックエンドのビルド・実行 |
+| Node.js | 22+ | フロントエンドのビルド・実行 |
+| pnpm | 10+ | フロントエンドパッケージ管理 |
+| Docker & Docker Compose | v2+ | インフラ（PostgreSQL, Redis, RabbitMQ, Hydra）の起動 |
+| buf CLI | 1.x | Protocol Buffers のリント・コード生成 |
+| curl | 任意 | seed/smoke スクリプト |
+| jq | 任意 | seed/smoke スクリプト |
+| grpcurl | 任意（オプション） | `make grpc-test` で使用 |
+| mise | 最新（推奨） | ツールバージョン管理 |
 
-### Quick Start
+> [!TIP]
+> [mise](https://mise.jdx.dev/) を使えば Java, Node.js, pnpm, buf を `.mise.toml` の定義通りに一括インストールできます。
+
+### クイックスタート
 
 ```bash
+# 1. リポジトリをクローン
+git clone https://github.com/akaitigo/open-pos.git
+cd open-pos
+
+# 2. ツールのインストール（mise 利用時）
 mise install
+
+# 3. 前提条件の確認
 make doctor
+
+# 4. フロントエンド依存関係のインストール
 pnpm install
 
-# Fastest supported local path: infra in Docker, supported local backend on the host
+# 5a. ローカルデモ起動（推奨: インフラは Docker、バックエンドはホスト実行）
 make local-demo
 pnpm dev:admin   # http://localhost:5174
 pnpm dev:pos     # http://localhost:5173
 
-# Containerized alternative: the same local backend in Docker too
+# 5b. コンテナデモ起動（バックエンドも Docker で実行）
 make docker-demo
 pnpm dev:admin
 pnpm dev:pos
 ```
 
-`make local-demo` / `make docker-demo` writes `apps/*/public/demo-config.json`, so reloading the browser is enough to pick up the latest seeded organization, store, and terminal IDs.
+`make local-demo` / `make docker-demo` は `apps/*/public/demo-config.json` を生成するため、ブラウザをリロードするだけで最新のシードデータ（組織・店舗・端末ID）を読み込めます。
 
-The seeded demo data is idempotent. It creates a fixed organization (`テスト株式会社`), two stores, two terminals per store, owner/manager/cashier staff, 40 products, normalized inventory, and 10 sample transactions.
+シードされるデモデータは冪等です。固定の組織（`テスト株式会社`）、2店舗、各店舗2端末、owner/manager/cashier スタッフ、40商品、在庫、10件のサンプル取引が作成されます。
 
-### Development
+### 開発コマンド
 
 ```bash
-# Start with dev tools (pgAdmin, Redis Commander)
+# インフラ + 開発ツール起動
 make up-dev
-make logs         # Docker Compose logs
-make logs-pos     # pos-service logs in the active backend mode
+make logs         # Docker Compose ログ
+make logs-pos     # pos-service ログ（動作中のモード）
 
-# Run backend service in dev mode
-make dev-product   # product-service on quarkusDev
-make dev-gateway   # api-gateway on quarkusDev
+# バックエンドを quarkusDev モードで起動（個別サービス開発向け）
+make dev-product   # product-service
+make dev-gateway   # api-gateway
 
-# Run frontend dev servers
-pnpm dev:pos       # POS terminal → http://localhost:5173
-pnpm dev:admin     # Admin dashboard → http://localhost:5174
+# フロントエンド開発サーバー
+pnpm dev:pos       # POS 端末 → http://localhost:5173
+pnpm dev:admin     # 管理画面 → http://localhost:5174
 
-# Run tests
-make test          # Backend tests
-make test-apps     # Frontend unit/functional tests
-make grpc-test     # gRPC health checks for running backend services
-make verify        # typecheck + lint + backend/frontend unit-functional tests
-pnpm e2e:install   # Install Playwright browser once
+# テスト
+make test          # バックエンドテスト
+make test-apps     # フロントエンド単体/機能テスト
+make grpc-test     # gRPC ヘルスチェック（起動中のサービスに対して）
+make verify        # typecheck + lint + バックエンド/フロントエンドテスト
+pnpm e2e:install   # Playwright ブラウザの初回インストール
 make verify-full   # verify + docker-demo + Playwright E2E
 
-# Lint supported local targets
+# リント
 make lint          # Proto + Frontend
 
-# Database helpers
+# データベースユーティリティ
 make db-backup
 make db-restore FILE=.local/backups/openpos-20260314-120000.sql
-make reset
+make reset         # PostgreSQL ボリューム再作成 + 再シード
 ```
 
-`pnpm test` runs unit/functional tests for `packages/` and `apps/`. E2E is opt-in via `pnpm test:e2e` so routine local verification does not depend on Playwright browsers.
+`pnpm test` は `packages/` と `apps/` の単体/機能テストを実行します。E2E は `pnpm test:e2e` でオプトイン（Playwright ブラウザに依存しない）。
 
-### Supported Demo Paths
+### ローカル開発モードの詳細
 
-For day-to-day development, run infra in Docker and the supported local backend services on the host:
+2つのローカル開発モードがあります。詳細は [docs/guides/local-development.md](docs/guides/local-development.md) を参照してください。
 
-```bash
-make local-demo  # starts infra + local backend + seed data + runtime demo-config files
-pnpm dev:admin   # http://localhost:5174
-pnpm dev:pos     # http://localhost:5173
-```
+| モード | コマンド | 用途 |
+| --- | --- | --- |
+| `local-demo` | `make local-demo` | 日常開発（ホスト実行） |
+| `docker-demo` | `make docker-demo` | リリース検証、CI 再現 |
 
-If you want the same local stack containerized:
-
-```bash
-make docker-demo # builds the local-demo images, starts them, seeds data, and verifies the API
-pnpm dev:admin   # http://localhost:5174
-pnpm dev:pos     # http://localhost:5173
-```
-
-If you only need to restart the host backend processes after a code change:
+モード切替時は現在のバックエンドを停止してから新しいモードを起動してください:
 
 ```bash
-make local-up-fast
+# local-demo → docker-demo に切り替え
 make local-down
-make local-smoke
-make docker-up-core
+make docker-demo
+
+# docker-demo → local-demo に切り替え
 make docker-down-core
-make docker-build-core
-make docker-build
+make local-demo
 ```
 
-`make docker-up-core` stops the locally managed host backend first, so switching between the two supported modes is predictable.
+セットアップの詳細は [docs/guides/setup.md](docs/guides/setup.md) を参照。
 
-`make reset` recreates the PostgreSQL data volume, then brings the last detected supported backend mode back up and reseeds the demo data. `make db-backup` writes a plain SQL dump under `.local/backups/` by default, and `make db-restore FILE=...` restores that dump and restarts the detected backend mode.
-
-See [docs/guides/setup.md](docs/guides/setup.md) for detailed setup instructions.
-
-## Project Structure
+## プロジェクト構成
 
 ```
 open-pos/
-├── proto/              # Protobuf definitions (buf workspace)
-├── services/           # Quarkus microservices
+├── proto/              # Protobuf 定義（buf workspace）
+├── services/           # Quarkus マイクロサービス
 │   ├── api-gateway/
 │   ├── pos-service/
 │   ├── product-service/
 │   ├── inventory-service/
 │   ├── analytics-service/
 │   └── store-service/
-├── apps/               # React frontends
+├── apps/               # React フロントエンド
 │   ├── pos-terminal/
 │   └── admin-dashboard/
-├── packages/           # Shared TypeScript packages
+├── packages/           # 共有 TypeScript パッケージ
 │   └── shared-types/
-├── e2e/                # Playwright E2E tests
-├── infra/              # Docker Compose + init scripts
-└── docs/               # Architecture, design, guides
+├── e2e/                # Playwright E2E テスト
+├── infra/              # Docker Compose + 初期化スクリプト
+└── docs/               # アーキテクチャ・設計・ガイド
 ```
 
-## Documentation Map
+## ドキュメント一覧
 
-- Start here: [docs/README.md](docs/README.md)
-- Setup and local workflow: [docs/guides/setup.md](docs/guides/setup.md), [docs/runbook/local-dev.md](docs/runbook/local-dev.md)
-- Architecture: [docs/architecture/system-overview.md](docs/architecture/system-overview.md), [docs/architecture/api-design.md](docs/architecture/api-design.md), [docs/architecture/data-model.md](docs/architecture/data-model.md)
-- Requirements and roadmap: [docs/requirements/overview.md](docs/requirements/overview.md), [docs/plans/roadmap.md](docs/plans/roadmap.md)
-- Decision records: [docs/adr/001-monorepo.md](docs/adr/001-monorepo.md)
+| カテゴリ | リンク |
+| --- | --- |
+| ドキュメント索引 | [docs/README.md](docs/README.md) |
+| セットアップ | [docs/guides/setup.md](docs/guides/setup.md) |
+| ローカル開発モード | [docs/guides/local-development.md](docs/guides/local-development.md) |
+| ローカル開発 Runbook | [docs/runbook/local-dev.md](docs/runbook/local-dev.md) |
+| アーキテクチャ概要 | [docs/architecture/system-overview.md](docs/architecture/system-overview.md) |
+| API 設計 | [docs/architecture/api-design.md](docs/architecture/api-design.md) |
+| データモデル | [docs/architecture/data-model.md](docs/architecture/data-model.md) |
+| 要件概要 | [docs/requirements/overview.md](docs/requirements/overview.md) |
+| ロードマップ | [docs/plans/roadmap.md](docs/plans/roadmap.md) |
+| ADR | [docs/adr/001-monorepo.md](docs/adr/001-monorepo.md) |
 
-## Support
+## トラブルシューティング
 
-- Questions and setup help: [GitHub Discussions](https://github.com/akaitigo/open-pos/discussions)
-- Setup help and usage guidance: [SUPPORT.md](SUPPORT.md)
-- Security reporting: [SECURITY.md](SECURITY.md)
-- Governance and decision process: [GOVERNANCE.md](GOVERNANCE.md)
-- Maintainer expectations: [MAINTAINERS.md](MAINTAINERS.md)
-- Release history: [CHANGELOG.md](CHANGELOG.md)
-- Citation metadata: [CITATION.cff](CITATION.cff)
+### `make doctor` が失敗する
 
-## Contributing
+`make doctor` は前提ツールのバージョンを検証します。失敗した場合は出力を確認し、不足ツールをインストールしてください。
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and how to submit changes. Start with `make doctor`, then use `make verify` before opening a pull request.
+```bash
+# mise を使う場合（推奨）
+mise install
 
-## Security
+# 手動の場合
+# Java: https://github.com/graalvm/graalvm-ce-builds/releases
+# Node.js: https://nodejs.org/
+# buf: https://buf.build/docs/installation
+```
 
-See [SECURITY.md](SECURITY.md) for our security policy and how to report vulnerabilities.
+### Docker デーモンに接続できない
 
-## License
+Docker Desktop（または Docker Engine）が起動していることを確認してください。
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+```bash
+docker info
+```
+
+WSL2 環境では Docker Desktop の設定で「Use the WSL 2 based engine」が有効であることを確認してください。
+
+### ポート競合
+
+open-pos は非標準ポートを使用しますが、他のプロジェクトと競合する場合があります:
+
+| サービス | ポート |
+| --- | --- |
+| PostgreSQL | 15432 |
+| Redis | 16379 |
+| RabbitMQ AMQP / UI | 15672 / 15673 |
+| Hydra Public / Admin | 14444 / 14445 |
+| api-gateway | 8080 |
+| POS Terminal dev | 5173 |
+| Admin Dashboard dev | 5174 |
+
+競合するプロセスを停止してから `make local-demo` または `make docker-demo` を実行してください。
+
+### バックエンドが起動しない
+
+```bash
+# ログ確認（ホスト実行モードの場合）
+ls .local/logs/
+cat .local/logs/pos-service.log
+
+# 再ビルドして再起動
+make local-down
+make local-up
+```
+
+### シードデータが反映されない
+
+```bash
+# 再シード
+make local-seed
+make local-smoke
+
+# ブラウザをリロード（dev server の再起動は不要）
+```
+
+### モード切替後に smoke テストが失敗する
+
+同時に1つのバックエンドモードだけが動作するようにしてください:
+
+```bash
+make local-down
+make docker-down-core
+# その後、目的のモードを起動
+```
+
+### 完全リセット
+
+何をしても解決しない場合:
+
+```bash
+make down
+docker volume rm $(docker volume ls -q | grep open-pos) 2>/dev/null || true
+make local-demo
+```
+
+## サポート
+
+- 質問・セットアップ支援: [GitHub Discussions](https://github.com/akaitigo/open-pos/discussions)
+- サポートポリシー: [SUPPORT.md](SUPPORT.md)
+- セキュリティ報告: [SECURITY.md](SECURITY.md)
+- ガバナンス: [GOVERNANCE.md](GOVERNANCE.md)
+- メンテナー: [MAINTAINERS.md](MAINTAINERS.md)
+- リリース履歴: [CHANGELOG.md](CHANGELOG.md)
+- 引用情報: [CITATION.cff](CITATION.cff)
+
+## コントリビューション
+
+[CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。`make doctor` でツール確認後、`make verify` を実行してから PR を作成してください。
+
+## セキュリティ
+
+セキュリティポリシーと脆弱性報告については [SECURITY.md](SECURITY.md) を参照してください。
+
+## ライセンス
+
+MIT License -- 詳細は [LICENSE](LICENSE) を参照。
