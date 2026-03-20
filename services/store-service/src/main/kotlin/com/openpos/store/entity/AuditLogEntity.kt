@@ -6,7 +6,10 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
 import jakarta.persistence.PrePersist
 import jakarta.persistence.Table
+import org.hibernate.annotations.Filter
+import org.hibernate.annotations.FilterDef
 import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.annotations.ParamDef
 import org.hibernate.type.SqlTypes
 import java.time.Instant
 import java.util.UUID
@@ -14,10 +17,17 @@ import java.util.UUID
 /**
  * 監査ログエンティティ。
  * 重要操作（作成・更新・削除）の記録を保存する。
- * テナントフィルターは不要（audit は横断的に参照する可能性がある）。
+ *
+ * organizationFilter を定義し、テナント単位のアクセス制御を可能にする。
+ * 管理者横断参照時はフィルターを有効化しないことで対応。
  */
 @Entity
 @Table(name = "audit_logs", schema = "store_schema")
+@FilterDef(
+    name = "organizationFilter",
+    parameters = [ParamDef(name = "organizationId", type = UUID::class)],
+)
+@Filter(name = "organizationFilter", condition = "organization_id = :organizationId")
 class AuditLogEntity {
     @Id
     @GeneratedValue

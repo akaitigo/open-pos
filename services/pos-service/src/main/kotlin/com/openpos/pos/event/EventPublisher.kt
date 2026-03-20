@@ -78,7 +78,7 @@ class EventPublisher {
                 eventId,
                 eventType,
             )
-            saveToOutbox(eventType, json)
+            saveToOutbox(eventType, organizationId, json)
         }
         return eventId
     }
@@ -88,16 +88,18 @@ class EventPublisher {
      */
     private fun saveToOutbox(
         eventType: String,
+        organizationId: UUID,
         json: String,
     ) {
         val outboxEvent =
             OutboxEventEntity().apply {
+                this.organizationId = organizationId
                 this.eventType = eventType
                 this.payload = json
                 this.status = "PENDING"
                 this.retryCount = 0
             }
         outboxRepository.persist(outboxEvent)
-        log.infof("Saved event to outbox: type=%s", eventType)
+        log.infof("Saved event to outbox: type=%s, orgId=%s", eventType, organizationId)
     }
 }
