@@ -23,6 +23,8 @@ service ProductService {
   rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
   // バーコードで商品を検索する（POS スキャン時に使用）
   rpc GetProductByBarcode(GetProductByBarcodeRequest) returns (GetProductByBarcodeResponse);
+  // 複数商品を一括取得する（N+1 RPC 防止）
+  rpc BatchGetProducts(BatchGetProductsRequest) returns (BatchGetProductsResponse);
 
   // カテゴリを作成する
   rpc CreateCategory(CreateCategoryRequest) returns (CreateCategoryResponse);
@@ -525,4 +527,16 @@ message ValidateCouponResponse {
   Discount discount = 3;
   // 無効理由（is_valid=false の場合に設定: 例 "EXPIRED", "MAX_USES_REACHED"）
   string reason = 4;
+}
+
+// 複数商品一括取得リクエスト（N+1 RPC 防止用）
+message BatchGetProductsRequest {
+  // 取得対象の商品ID一覧（UUID）
+  repeated string ids = 1;
+}
+
+// 複数商品一括取得レスポンス
+message BatchGetProductsResponse {
+  // 取得できた商品一覧（存在しない ID は含まれない）
+  repeated Product products = 1;
 }

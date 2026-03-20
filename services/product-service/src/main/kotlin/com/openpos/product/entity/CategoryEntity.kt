@@ -3,6 +3,7 @@ package com.openpos.product.entity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
+import jakarta.persistence.Version
 import java.util.UUID
 
 /**
@@ -26,4 +27,9 @@ class CategoryEntity : BaseEntity() {
 
     @Column(name = "display_order", nullable = false)
     var displayOrder: Int = 0
+
+    /** 楽観ロック用バージョン */
+    @Version
+    @Column(name = "version", nullable = false)
+    var version: Long = 0
 }
