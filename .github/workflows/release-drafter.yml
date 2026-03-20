@@ -5,15 +5,20 @@ on:
     branches:
       - main
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
 jobs:
   update_release_draft:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - uses: release-drafter/release-drafter@139054aeaa9adc52ab36ddf67437541f039b88e2 # v7
+      - uses: release-drafter/release-drafter@b1476f4e02b2b32e9af6aef58b40e5a5d0306503 # v7
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,13 +1,18 @@
 name: CD Pipeline
 
 on:
-  push:
+  workflow_run:
+    workflows: ['CI']
     branches: [main]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
   contents: read
-  packages: write
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -15,12 +20,14 @@ env:
 
 jobs:
   version:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       semver: ${{ steps.version.outputs.semver }}
       short_sha: ${{ steps.version.outputs.short_sha }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -40,6 +47,10 @@ jobs:
   build-and-push:
     needs: version
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         service:
@@ -50,20 +61,20 @@ jobs:
           - inventory-service
           - analytics-service
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v4
 
       - name: Build and push
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198e362a7d2c83 # v7
         with:
           context: .
           file: infra/docker/Dockerfile.service
@@ -79,42 +90,37 @@ jobs:
   deploy-staging:
     needs: [version, build-and-push]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: staging
-    permissions:
-      contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
 
       - name: Set up kubectl
-        uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
+        uses: azure/setup-kubectl@3e0aec4d80787158d308d7b364cb1b702e7feb7f # v4
 
       - name: Configure kubeconfig
         run: |
           mkdir -p "$HOME/.kube"
           echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
 
       - name: Update image tags in manifests
         run: |
           IMAGE_TAG="${{ needs.version.outputs.semver }}"
           SERVICES=(api-gateway product-service store-service pos-service inventory-service analytics-service)
           for SERVICE in "${SERVICES[@]}"; do
-            sed -i "s|image: ghcr.io/akaitigo/open-pos/${SERVICE}:.*|image: ${{ env.IMAGE_PREFIX }}/${SERVICE}:${IMAGE_TAG}|" \
+            sed -i "s|image: ${{ env.IMAGE_PREFIX }}/${SERVICE}:.*|image: ${{ env.IMAGE_PREFIX }}/${SERVICE}:${IMAGE_TAG}|" \
               "infra/k8s/${SERVICE}.yaml"
           done
 
       - name: Apply Kubernetes manifests
         run: |
+          # namespace と network-policy を先に適用（他リソースの依存先）
           kubectl apply -f infra/k8s/namespace.yaml
           kubectl apply -f infra/k8s/network-policy.yaml
           kubectl apply -f infra/k8s/ingress.yaml
+          # 全マニフェストを適用（上記含む。kubectl apply は冪等）
           kubectl apply -f infra/k8s/
-
-      - name: Rollout restart deployments
-        run: |
-          SERVICES=(api-gateway product-service store-service pos-service inventory-service analytics-service)
-          for SERVICE in "${SERVICES[@]}"; do
-            kubectl rollout restart deployment/"${SERVICE}" -n openpos
-          done
 
       - name: Wait for rollout completion
         run: |
@@ -130,7 +136,3 @@ jobs:
           echo "Commit SHA: ${{ github.sha }}"
           kubectl get deployments -n openpos
           kubectl get pods -n openpos
-
-      - name: Cleanup kubeconfig
-        if: always()
-        run: rm -f "$HOME/.kube/config"
