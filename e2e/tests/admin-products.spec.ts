@@ -3,9 +3,10 @@ import { AdminPage } from '../pages/admin-page'
 
 function summaryCardValue(page: Page, title: string) {
   return page
-    .getByText(title)
+    .getByText(title, { exact: true })
     .locator('xpath=ancestor::div[contains(@class,"rounded-xl")]')
     .locator('.text-2xl.font-bold')
+    .first()
 }
 
 async function summaryCardNumber(page: Page, title: string) {
@@ -26,9 +27,7 @@ test.describe('Admin Smoke', () => {
     await expect(summaryCardValue(page, '商品数')).toHaveText('40')
     await expect(summaryCardValue(page, '店舗数')).toHaveText('2')
     await expect(summaryCardValue(page, 'スタッフ数')).toHaveText('3')
-    await expect
-      .poll(() => summaryCardNumber(page, '取引数'))
-      .toBeGreaterThanOrEqual(10)
+    await expect.poll(() => summaryCardNumber(page, '取引数')).toBeGreaterThanOrEqual(10)
   })
 
   test('products page shows seeded products and supports search', async () => {
