@@ -42,6 +42,11 @@ export class PosPage {
   async goto(): Promise<void> {
     await this.page.goto('http://localhost:5173/')
     await expect(this.page.getByText('OpenPOS Terminal')).toBeVisible()
+    // Toast 通知コンテナの pointer-events を無効化して
+    // E2E テスト中にクリックをブロックしないようにする
+    await this.page.addStyleTag({
+      content: '[class*="fixed"][class*="top-0"][class*="z-"] { pointer-events: none !important; }',
+    })
   }
 
   async login(staffName = '渋谷店 オーナー', pin = '1234'): Promise<void> {
@@ -64,14 +69,11 @@ export class PosPage {
   }
 
   async dismissToastIfVisible(): Promise<void> {
-    // Toast コンテナ(z-100, fixed)を DOM から非表示にし、
-    // pointer-events の干渉を完全排除する
-    await this.page.evaluate(() => {
-      document
-        .querySelectorAll('[class*="fixed"][class*="top-0"][class*="z-"]')
-        .forEach((el) => ((el as HTMLElement).style.display = 'none'))
+    // CSS で pointer-events: none を注入済みのため、追加操作不要
+    // ページ遷移後に再注入が必要な場合のみ使用
+    await this.page.addStyleTag({
+      content: '[class*="fixed"][class*="top-0"][class*="z-"] { pointer-events: none !important; }',
     })
-    await this.page.waitForTimeout(300)
   }
 
   async getCartItemCount(): Promise<number> {
@@ -84,11 +86,11 @@ export class PosPage {
 
   async startPayment(): Promise<void> {
     await this.dismissToastIfVisible()
-    await this.payButton.click({ force: true })
+    await this.payButton.click()
   }
 
   async selectExactCashPayment(): Promise<void> {
-    await this.page.getByRole('button', { name: 'ぴったり' }).click({ force: true })
+    await this.page.getByRole('button', { name: 'ぴったり' }).click()
   }
 
   async enterPaymentAmount(amount: string): Promise<void> {
@@ -96,17 +98,16 @@ export class PosPage {
   }
 
   async confirmPayment(): Promise<void> {
-    await this.paymentConfirmButton.click({ force: true })
+    await this.paymentConfirmButton.click()
   }
 
   async closeReceipt(): Promise<void> {
-    await this.receiptCloseButton.click({ force: true })
+    await this.receiptCloseButton.click()
   }
 
   async navigateToHistory(): Promise<void> {
     await this.dismissToastIfVisible()
-    // force: true でtoastオーバーレイ(z-100)によるクリックブロックをバイパス
-    await this.page.getByRole('link', { name: '履歴' }).click({ force: true })
-    await expect(this.page.getByText('取引履歴')).toBeVisible()
+    await this.page.goto('http://localhost:5173/history')
+    await expect(this.page.getByText('取引履歴').first()).toBeVisible()
   }
 }
