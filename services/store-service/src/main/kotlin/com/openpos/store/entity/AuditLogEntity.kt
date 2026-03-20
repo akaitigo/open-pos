@@ -1,5 +1,6 @@
 package com.openpos.store.entity
 
+import com.openpos.store.entity.annotation.PersonalData
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -42,6 +43,8 @@ class AuditLogEntity {
     @Column(name = "details", nullable = false, columnDefinition = "jsonb")
     var details: String = "{}"
 
+    /** @PII クライアント IP アドレス */
+    @PersonalData(category = "IP_ADDRESS", description = "操作元IPアドレス（マスク済み）")
     @Column(name = "ip_address", length = 45)
     var ipAddress: String? = null
 
