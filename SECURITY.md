@@ -1,43 +1,43 @@
-# Security Policy
+# セキュリティポリシー
 
-## Supported Versions
+## サポート対象バージョン
 
-| Version | Supported          |
+| バージョン | サポート状況       |
 | ------- | ------------------ |
 | 1.0.x   | :white_check_mark: |
 | 0.1.x   | :x:                |
 
-## Reporting a Vulnerability
+## 脆弱性の報告
 
-If you discover a security vulnerability in open-pos, please report it responsibly.
+open-pos にセキュリティ脆弱性を発見した場合は、責任ある方法で報告してください。
 
-**DO NOT open a public GitHub issue for security vulnerabilities.**
+**セキュリティ脆弱性について公開 GitHub Issue を作成しないでください。**
 
-Use [GitHub's private vulnerability reporting](https://github.com/akaitigo/open-pos/security/advisories/new).
+[GitHub のプライベート脆弱性報告機能](https://github.com/akaitigo/open-pos/security/advisories/new) を使用してください。
 
-This is currently the only supported private reporting channel for security issues.
+これがセキュリティ Issue の唯一の対応するプライベート報告チャネルです。
 
-### What to include
+### 含めるべき情報
 
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
-- Suggested fix (if any)
+- 脆弱性の説明
+- 再現手順
+- 潜在的な影響
+- 修正の提案（ある場合）
 
-### Response timeline
+### 対応タイムライン
 
-- **Acknowledgment**: Within 48 hours
-- **Initial assessment**: Within 7 days
-- **Fix or mitigation**: Depends on severity, typically within 30 days
+- **確認**: 48 時間以内
+- **初期評価**: 7 日以内
+- **修正または軽減**: 重大度に応じて、通常 30 日以内
 
-### Disclosure policy
+### 開示ポリシー
 
-- We follow [coordinated disclosure](https://en.wikipedia.org/wiki/Coordinated_vulnerability_disclosure).
-- We will credit reporters unless they prefer to remain anonymous.
-- We will publish a security advisory once a fix is available.
+- [協調的な開示](https://en.wikipedia.org/wiki/Coordinated_vulnerability_disclosure) に従います。
+- 報告者が匿名を希望しない限り、クレジットを記載します。
+- 修正が利用可能になったらセキュリティアドバイザリを公開します。
 
-## Current Security Status
+## 現在のセキュリティ状況
 
-Authentication and authorization are implemented via ORY Hydra v2.2 (OIDC/PKCE) with role-based access control (Owner / Manager / Cashier). REST API endpoints enforce JWT validation and tenant isolation through the api-gateway.
+認証・認可は ORY Hydra v2.2（OIDC/PKCE）によるロールベースのアクセス制御（Owner / Manager / Cashier）で実装されています。REST API エンドポイントは api-gateway を通じて JWT 検証とテナント分離を強制します。
 
-See [README.md](README.md) for the current development status.
+現在の開発状況については [README.md](README.md) を参照してください。

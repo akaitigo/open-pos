@@ -1,147 +1,147 @@
-# Contributing to open-pos
+# open-pos へのコントリビューション
 
-Thank you for your interest in contributing to open-pos! This guide will help you get started.
+open-pos への貢献に興味を持っていただきありがとうございます！このガイドでは開発の始め方を説明します。
 
-## Development Setup
+## 開発環境セットアップ
 
-### Prerequisites
+### 前提条件
 
-- Java 21 (GraalVM CE recommended)
-- Node.js 22+ with pnpm
-- Docker with `docker compose`
-- buf CLI (for Protocol Buffers)
+- Java 21（GraalVM CE 推奨）
+- Node.js 22+ と pnpm
+- Docker と `docker compose`
+- buf CLI（Protocol Buffers 用）
 - curl
 - jq
 
-### Getting Started
+### はじめに
 
 ```bash
-# Clone the repository
+# リポジトリをクローン
 git clone https://github.com/akaitigo/open-pos.git
 cd open-pos
 
 mise install
 make doctor
 
-# Install frontend dependencies
+# フロントエンドの依存関係をインストール
 pnpm install
 
-# Recommended local verification path
+# 推奨ローカル検証パス
 make local-demo
 pnpm dev:admin
 pnpm dev:pos
 ```
 
-### Running Locally
+### ローカル実行
 
 ```bash
-# Host-run local backend (recommended for day-to-day work)
+# ホスト上でバックエンドを実行（日常開発に推奨）
 make local-demo
 
-# Containerized local backend (useful for release verification)
+# コンテナ化されたバックエンド（リリース検証に有用）
 make docker-demo
 
-# Restart only the supported backend mode you are using
+# 使用中のバックエンドモードのみ再起動
 make local-up-fast
 make docker-up-core
 ```
 
-## How to Contribute
+## コントリビューション方法
 
-### Reporting Issues
+### Issue の報告
 
-- Check [existing issues](https://github.com/akaitigo/open-pos/issues) to avoid duplicates.
-- Use the appropriate issue template.
-- Include reproduction steps and environment details.
+- 重複を避けるため、[既存の Issue](https://github.com/akaitigo/open-pos/issues) を確認してください。
+- 適切な Issue テンプレートを使用してください。
+- 再現手順と環境の詳細を含めてください。
 
-### Submitting Changes
+### 変更の提出
 
-1. **Fork** the repository and create a feature branch:
+1. リポジトリを **フォーク** し、機能ブランチを作成:
    ```bash
    git checkout -b feature/<issue-number>-short-description
    ```
 
-2. **Make your changes** following the coding conventions below.
+2. 以下のコーディング規約に従って **変更を実装**。
 
-3. **Run the local checks** before submitting:
+3. 提出前に **ローカルチェックを実行**:
    ```bash
-   make doctor        # Tooling sanity check
-   make verify        # typecheck + lint + backend/frontend unit-functional tests
-   make local-smoke   # Optional: seeded API smoke test if the demo stack is running
-   pnpm e2e:install   # One-time Playwright browser install
-   make verify-full   # Optional: full release-style verification including Playwright
+   make doctor        # ツールの健全性チェック
+   make verify        # 型チェック + lint + バックエンド/フロントエンド単体・機能テスト
+   make local-smoke   # 任意: デモスタック実行中の場合、シード済み API スモークテスト
+   pnpm e2e:install   # 一度きりの Playwright ブラウザインストール
+   make verify-full   # 任意: Playwright を含む完全なリリーススタイル検証
    ```
 
-4. **Create a Pull Request** with:
-   - A clear title and description
-   - `Closes #<issue-number>` in the description
-   - Passing CI checks
+4. 以下を含む **プルリクエストを作成**:
+   - 明確なタイトルと説明
+   - 説明に `Closes #<issue-number>` を記載
+   - CI チェックが通過していること
 
-### Branch Naming
+### ブランチ命名
 
 ```
 feature/123-add-product-search
 fix/456-fix-price-calculation
 ```
 
-## Coding Conventions
+## コーディング規約
 
-### Backend (Kotlin / Quarkus)
+### バックエンド（Kotlin / Quarkus）
 
-- Follow [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html)
-- No `!!` (non-null assertions) — use `?.let {}`, `?: throw`, or `requireNotNull()`
-- Use `@ApplicationScoped` by default for CDI beans
-- All monetary amounts in **sen** (1/100 of yen) as `Long`/`BIGINT`
-- All tables must have `organization_id` for multi-tenant isolation
+- [Kotlin コーディング規約](https://kotlinlang.org/docs/coding-conventions.html) に従う
+- `!!`（非null断言）禁止 — `?.let {}`、`?: throw`、または `requireNotNull()` を使用
+- CDI Bean のデフォルトスコープに `@ApplicationScoped` を使用
+- 全金額は **銭単位**（1/100 円）の `Long`/`BIGINT`
+- 全テーブルにマルチテナント分離のための `organization_id` が必要
 
-### Frontend (TypeScript / React)
+### フロントエンド（TypeScript / React）
 
-- No `any` type — use `unknown` + type guards or generics
-- Function components + hooks only (no class components)
-- Use shared types from `@shared-types/openpos`
-- Format amounts with `formatMoney()` from shared-types
+- `any` 型禁止 — `unknown` + 型ガードまたはジェネリクスを使用
+- 関数コンポーネント + hooks のみ（クラスコンポーネント禁止）
+- `@shared-types/openpos` の共有型を使用
+- `formatMoney()` で金額をフォーマット（shared-types）
 
 ### Protocol Buffers
 
-- Run `buf lint` and `buf format -w` after editing `.proto` files
-- Never reuse field numbers — mark removed fields as `reserved`
-- Comment all messages, fields, and RPCs
+- `.proto` ファイル編集後に `buf lint` と `buf format -w` を実行
+- フィールド番号の再利用禁止 — 削除したフィールドは `reserved` でマーク
+- 全 message、field、RPC にコメントを記述
 
-### Testing
+### テスト
 
-All features must include tests:
+全機能にはテストが必要です:
 
-| Level | Backend | Frontend |
+| レベル | バックエンド | フロントエンド |
 |-------|---------|----------|
-| Unit | JUnit 5 + `@InjectMock` | Vitest + RTL |
-| Functional | `@QuarkusTest` | Vitest + RTL |
-| Integration | `@QuarkusTest` + Testcontainers | — |
+| 単体テスト | JUnit 5 + `@InjectMock` | Vitest + RTL |
+| 機能テスト | `@QuarkusTest` | Vitest + RTL |
+| 結合テスト | `@QuarkusTest` + Testcontainers | — |
 | E2E | Playwright | Playwright |
 
-- Follow AAA pattern (Arrange-Act-Assert)
-- New code must have 80%+ line coverage
-- E2E tests use `data-testid` and Page Object Model
+- AAA パターン（Arrange-Act-Assert）に従う
+- 新規コードの行カバレッジ 80% 以上
+- E2E テストは `data-testid` と Page Object Model を使用
 
-## Architecture
+## アーキテクチャ
 
-### Layer Dependencies (top-down only)
+### レイヤー依存関係（上から下のみ）
 
 ```
 Proto -> Config/Filter -> Entity -> Repository -> Service -> gRPC Handler
 ```
 
-- Entities must NOT reference Services
-- gRPC Handlers must NOT call Repositories directly
-- Services communicate via RabbitMQ events only (no direct service-to-service calls)
+- Entity は Service を参照してはならない
+- gRPC Handler は Repository を直接呼び出してはならない
+- サービス間の通信は RabbitMQ イベント経由のみ（直接のサービス間呼び出し禁止）
 
-## Code of Conduct
+## 行動規範
 
-Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
+参加前に [行動規範](CODE_OF_CONDUCT.md) を読んでください。
 
-## Support
+## サポート
 
-If you are blocked on setup or day-to-day usage, start with [SUPPORT.md](SUPPORT.md), include the output of `make doctor`, and prefer GitHub Discussions for open-ended questions before opening a bug.
+セットアップや日常利用で困った場合は、[SUPPORT.md](SUPPORT.md) から始めて `make doctor` の出力を添えてください。バグを起票する前に、オープンエンドな質問には GitHub Discussions をご利用ください。
 
-## License
+## ライセンス
 
-By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+コントリビューションにより、あなたの貢献が [MIT License](LICENSE) の下でライセンスされることに同意します。

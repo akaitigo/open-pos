@@ -1,62 +1,62 @@
-# Governance
+# ガバナンス
 
-`open-pos` is a maintainer-led OSS project.
+`open-pos` はメンテナー主導の OSS プロジェクトです。
 
-## Principles
+## 原則
 
-- Decisions happen in public GitHub artifacts whenever practical: issues, pull requests, discussions, ADRs, and release notes.
-- Small changes should stay lightweight. The process should scale with risk, not with ceremony.
-- Significant product, architecture, and security decisions should leave a durable written record.
+- 意思決定は可能な限り公開の GitHub アーティファクト（Issue、プルリクエスト、Discussions、ADR、リリースノート）で行います。
+- 小さな変更は軽量に。プロセスはセレモニーではなくリスクに応じてスケールすべきです。
+- 重要なプロダクト、アーキテクチャ、セキュリティの意思決定は、永続的な文書記録を残すべきです。
 
-## Roles
+## 役割
 
-### Maintainers
+### メンテナー
 
-Maintainers are listed in [MAINTAINERS.md](MAINTAINERS.md). They are responsible for:
+メンテナーは [MAINTAINERS.md](MAINTAINERS.md) に記載されています。以下の責務を担います:
 
-- triage and roadmap curation
-- reviewing and merging pull requests
-- release management
-- CI, dependency, and security hygiene
-- documenting important decisions
+- トリアージとロードマップの管理
+- プルリクエストのレビューとマージ
+- リリース管理
+- CI、依存関係、セキュリティの衛生管理
+- 重要な意思決定の文書化
 
-### Contributors
+### コントリビューター
 
-Contributors can propose code, docs, design, and process improvements through issues, pull requests, and discussions.
+コントリビューターは Issue、プルリクエスト、Discussions を通じてコード、ドキュメント、設計、プロセスの改善を提案できます。
 
-### Reporters and users
+### レポーターとユーザー
 
-Users can ask questions in Discussions, file bugs, and provide feedback on supported development flows.
+ユーザーは Discussions で質問し、バグを報告し、対応する開発フローに関するフィードバックを提供できます。
 
-## Decision Process
+## 意思決定プロセス
 
-### Routine changes
+### 日常的な変更
 
-Routine fixes and scoped improvements are handled through the normal pull request flow. A maintainer merge is the decision point.
+日常的な修正やスコープ限定の改善は、通常のプルリクエストフローで処理されます。メンテナーのマージが決定ポイントです。
 
-### Significant changes
+### 重要な変更
 
-Use a linked GitHub issue or discussion when a change affects one or more of the following:
+以下に影響する変更の場合、関連する GitHub Issue または Discussion を使用してください:
 
-- service boundaries or public API contracts
-- offline or multi-tenant behavior
-- security posture or reporting policy
-- release process or contributor workflow
+- サービス境界やパブリック API 契約
+- オフラインまたはマルチテナントの動作
+- セキュリティ態勢や報告ポリシー
+- リリースプロセスやコントリビューターワークフロー
 
-If the decision is architectural or long-lived, capture it in `docs/adr/` or another durable project document before or with the merge.
+アーキテクチャ上の、または長期的な意思決定の場合は、マージ前またはマージと同時に `docs/adr/` やその他の永続的なプロジェクトドキュメントに記録してください。
 
-### Security and release exceptions
+### セキュリティおよびリリースの例外
 
-Maintainers may act immediately on security or release-blocking issues. When that happens, the public rationale should be backfilled afterward in the relevant pull request, advisory, changelog entry, or ADR.
+メンテナーはセキュリティやリリースブロッキングの Issue に対して即座に対応することがあります。その場合、公開の根拠は関連するプルリクエスト、アドバイザリ、CHANGELOG エントリ、または ADR に事後的に記録してください。
 
-## Maintainer Changes
+## メンテナーの変更
 
-- New maintainers are added by the current maintainer set.
-- Maintainer additions or removals should be reflected in [MAINTAINERS.md](MAINTAINERS.md).
-- If the project becomes inactive, the current maintainer set may archive the repository rather than leave support expectations ambiguous.
+- 新規メンテナーは現在のメンテナーセットによって追加されます。
+- メンテナーの追加・削除は [MAINTAINERS.md](MAINTAINERS.md) に反映してください。
+- プロジェクトが非アクティブになった場合、サポートの期待を曖昧にするよりも、現在のメンテナーセットがリポジトリをアーカイブすることがあります。
 
-## Escalation Path
+## エスカレーションパス
 
-- Setup and usage questions: [SUPPORT.md](SUPPORT.md) and GitHub Discussions
-- Bugs and scoped feature requests: GitHub Issues
-- Security vulnerabilities: [SECURITY.md](SECURITY.md)
+- セットアップと利用に関する質問: [SUPPORT.md](SUPPORT.md) と GitHub Discussions
+- バグとスコープ限定の機能要望: GitHub Issues
+- セキュリティ脆弱性: [SECURITY.md](SECURITY.md)
