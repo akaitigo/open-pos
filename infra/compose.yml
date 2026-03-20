@@ -158,7 +158,6 @@ services:
       INVENTORY_SERVICE_PORT: 9000
       ANALYTICS_SERVICE_HOST: analytics-service
       ANALYTICS_SERVICE_PORT: 9000
-      OTEL_ENDPOINT: http://jaeger:4317
     depends_on:
       redis:
         condition: service_healthy
@@ -168,7 +167,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -190,7 +189,8 @@ services:
     environment:
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
-      DB_URL: jdbc:postgresql://pgbouncer:6432/openpos
+      QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
+      DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
@@ -198,9 +198,8 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
       RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
-      OTEL_ENDPOINT: http://jaeger:4317
     depends_on:
-      pgbouncer:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -210,7 +209,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -232,7 +231,8 @@ services:
     environment:
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
-      DB_URL: jdbc:postgresql://pgbouncer:6432/openpos
+      QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
+      DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
@@ -242,9 +242,8 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
       RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
-      OTEL_ENDPOINT: http://jaeger:4317
     depends_on:
-      pgbouncer:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -254,7 +253,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -276,7 +275,8 @@ services:
     environment:
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
-      DB_URL: jdbc:postgresql://pgbouncer:6432/openpos
+      QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
+      DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
@@ -286,9 +286,8 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
       RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
-      OTEL_ENDPOINT: http://jaeger:4317
     depends_on:
-      pgbouncer:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -298,7 +297,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -320,7 +319,8 @@ services:
     environment:
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
-      DB_URL: jdbc:postgresql://pgbouncer:6432/openpos
+      QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
+      DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
@@ -328,9 +328,8 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
       RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
-      OTEL_ENDPOINT: http://jaeger:4317
     depends_on:
-      pgbouncer:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -340,7 +339,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -362,7 +361,8 @@ services:
     environment:
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
-      DB_URL: jdbc:postgresql://pgbouncer:6432/openpos
+      QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
+      DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
@@ -370,9 +370,8 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
       RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
-      OTEL_ENDPOINT: http://jaeger:4317
     depends_on:
-      pgbouncer:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -382,7 +381,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -392,23 +391,6 @@ services:
       - openpos-net
 
   # === Observability ===
-  jaeger:
-    image: jaegertracing/all-in-one:1.65
-    container_name: openpos-jaeger
-    ports:
-      - '14317:4317'
-      - '14318:4318'
-      - '16686:16686'
-    environment:
-      COLLECTOR_OTLP_ENABLED: 'true'
-    healthcheck:
-      test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:16686/ || exit 1']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - openpos-net
-
   loki:
     image: grafana/loki:3.4.2
     container_name: openpos-loki
