@@ -109,15 +109,17 @@ jobs:
           IMAGE_TAG="${{ needs.version.outputs.semver }}"
           SERVICES=(api-gateway product-service store-service pos-service inventory-service analytics-service)
           for SERVICE in "${SERVICES[@]}"; do
-            sed -i "s|image: ghcr.io/akaitigo/open-pos/${SERVICE}:.*|image: ${{ env.IMAGE_PREFIX }}/${SERVICE}:${IMAGE_TAG}|" \
+            sed -i "s|image: ${{ env.IMAGE_PREFIX }}/${SERVICE}:.*|image: ${{ env.IMAGE_PREFIX }}/${SERVICE}:${IMAGE_TAG}|" \
               "infra/k8s/${SERVICE}.yaml"
           done
 
       - name: Apply Kubernetes manifests
         run: |
+          # namespace と network-policy を先に適用（他リソースの依存先）
           kubectl apply -f infra/k8s/namespace.yaml
           kubectl apply -f infra/k8s/network-policy.yaml
           kubectl apply -f infra/k8s/ingress.yaml
+          # 全マニフェストを適用（上記含む。kubectl apply は冪等）
           kubectl apply -f infra/k8s/
 
       - name: Wait for rollout completion
