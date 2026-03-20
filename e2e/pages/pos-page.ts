@@ -36,7 +36,7 @@ export class PosPage {
     this.notificationCloseButton = page.getByRole('button', { name: 'Close notification' }).last()
 
     this.receiptDialog = page.getByRole('dialog').filter({ hasText: 'レシート' })
-    this.receiptCloseButton = page.getByRole('button', { name: '次のお客様へ' })
+    this.receiptCloseButton = page.getByRole('button', { name: '閉じる' })
   }
 
   async goto(): Promise<void> {
