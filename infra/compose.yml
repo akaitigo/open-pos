@@ -167,7 +167,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -208,7 +208,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -251,7 +251,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -294,7 +294,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -335,7 +335,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
@@ -376,7 +376,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/live || exit 1',
+          'wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1',
         ]
       interval: 10s
       timeout: 5s
