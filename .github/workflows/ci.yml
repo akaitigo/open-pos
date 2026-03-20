@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -17,8 +18,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      proto: ${{ steps.filter.outputs.proto }}
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      e2e: ${{ steps.filter.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        id: filter
+        with:
+          filters: |
+            proto:
+              - 'proto/**'
+              - 'buf.yaml'
+              - 'buf.gen.yaml'
+            backend:
+              - 'services/**'
+              - 'proto/**'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
+              - 'gradle/**'
+            frontend:
+              - 'apps/**'
+              - 'packages/**'
+              - 'pnpm-lock.yaml'
+              - 'package.json'
+              - 'pnpm-workspace.yaml'
+            e2e:
+              - 'apps/**'
+              - 'packages/**'
+              - 'services/**'
+              - 'proto/**'
+              - 'infra/**'
+              - 'e2e/**'
+              - 'Makefile'
+
   proto-lint:
     name: Proto Lint
+    needs: [changes]
+    if: ${{ needs.changes.outputs.proto == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -39,7 +86,10 @@ jobs:
 
   backend:
     name: Backend Build & Test
+    needs: [changes]
+    if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
@@ -49,7 +99,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
       - name: Build
         run: >-
-          ./gradlew
+          ./gradlew --parallel
           :services:api-gateway:build
           :services:product-service:build
           :services:store-service:build
@@ -59,58 +109,38 @@ jobs:
           -x test
       - name: Unit & Functional Test
         run: >-
-          ./gradlew
+          ./gradlew --parallel
           :services:api-gateway:test
           :services:product-service:test
           :services:store-service:test
           :services:pos-service:test
           :services:inventory-service:test
           :services:analytics-service:test
-      - name: JaCoCo Coverage Report
-        run: >-
-          ./gradlew
-          :services:api-gateway:jacocoTestReport
-          :services:product-service:jacocoTestReport
-          :services:store-service:jacocoTestReport
-          :services:pos-service:jacocoTestReport
-          :services:inventory-service:jacocoTestReport
-          :services:analytics-service:jacocoTestReport
-        if: ${{ !cancelled() }}
-      - name: JaCoCo Coverage Verification
-        run: >-
-          ./gradlew
           :services:api-gateway:jacocoTestCoverageVerification
           :services:product-service:jacocoTestCoverageVerification
           :services:store-service:jacocoTestCoverageVerification
           :services:pos-service:jacocoTestCoverageVerification
           :services:inventory-service:jacocoTestCoverageVerification
+          # analytics-service は jacocoTestCoverageVerification タスク未定義のため除外
       - name: Upload Coverage Reports
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: backend-coverage
           path: services/*/build/reports/jacoco/
         if: ${{ !cancelled() }}
-
-  backend-integration:
-    name: Backend Integration Test
-    runs-on: ubuntu-latest
-    needs: [backend]
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
-        with:
-          distribution: temurin
-          java-version: '21'
-      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
       - name: Integration Test (Testcontainers)
         run: >-
-          ./gradlew
+          ./gradlew --parallel
           :services:product-service:test
           -Dquarkus.test.profile=integration
+        if: ${{ !cancelled() }}
 
   frontend:
     name: Frontend Build, Lint & Test
+    needs: [changes]
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -122,20 +152,29 @@ jobs:
       - run: pnpm -r typecheck
       - run: pnpm -r lint
       - name: Unit & Functional Test with Coverage
-        run: pnpm --filter pos-terminal test:coverage && pnpm --filter admin-dashboard test:coverage
+        run: |
+          set -uo pipefail
+          pnpm --filter pos-terminal test:coverage &
+          PID1=$!
+          pnpm --filter admin-dashboard test:coverage &
+          PID2=$!
+          FAIL=0
+          wait $PID1 || FAIL=1
+          wait $PID2 || FAIL=1
+          exit $FAIL
       - run: pnpm -r build
       - name: Upload Coverage Reports
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: frontend-coverage
           path: apps/*/coverage/
-        if: always()
+        if: ${{ !cancelled() }}
 
   e2e:
     name: E2E Test (Playwright)
-    if: ${{ github.event_name != 'pull_request' || !startsWith(github.event.pull_request.title, 'docs:') }}
+    needs: [changes]
+    if: ${{ needs.changes.outputs.e2e == 'true' && (github.event_name != 'pull_request' || !startsWith(github.event.pull_request.title, 'docs:')) }}
     runs-on: ubuntu-latest
-    needs: [backend, frontend]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -147,8 +186,18 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Start full demo stack
         run: make docker-demo
+      - name: Cache Playwright Browsers
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package.json') }}
       - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter e2e exec playwright install --with-deps chromium
+      - name: Install Playwright system deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter e2e exec playwright install-deps chromium
       - name: Run E2E Tests
         run: pnpm --filter e2e test
       - name: Upload E2E Results
@@ -160,3 +209,45 @@ jobs:
       - name: Stop demo stack
         run: docker compose -f infra/compose.yml down -v
         if: always()
+
+  ci-success:
+    name: CI Success
+    if: always()
+    needs: [changes, proto-lint, backend, frontend, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify all jobs passed or were skipped
+        run: |
+          results=("${{ needs.changes.result }}" "${{ needs.proto-lint.result }}" "${{ needs.backend.result }}" "${{ needs.frontend.result }}" "${{ needs.e2e.result }}")
+          for r in "${results[@]}"; do
+            if [[ "$r" != "success" && "$r" != "skipped" ]]; then
+              echo "::error::Job failed with result: $r"
+              exit 1
+            fi
+          done
+          echo "All CI checks passed or were correctly skipped."
+      - name: Notify on main branch failure
+        if: failure() && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "ci: main ブランチの CI が失敗 ($(date -u +%Y-%m-%d))" \
+            --label "type:bug,infra" \
+            --body "## CI 失敗通知
+
+          **ワークフロー**: [${{ github.workflow }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          **コミット**: [\`${GITHUB_SHA::7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+          **実行者**: @${{ github.actor }}
+
+          ### ジョブ結果
+          | ジョブ | 結果 |
+          |--------|------|
+          | changes | \`${{ needs.changes.result }}\` |
+          | proto-lint | \`${{ needs.proto-lint.result }}\` |
+          | backend | \`${{ needs.backend.result }}\` |
+          | frontend | \`${{ needs.frontend.result }}\` |
+          | e2e | \`${{ needs.e2e.result }}\` |
+
+          [ワークフロー実行を確認](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
