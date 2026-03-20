@@ -546,7 +546,15 @@ ensure_product() {
 
   category_id="${CATEGORY_IDS[$category_name]}"
   tax_rate_id="${TAX_RATE_IDS[$tax_key]}"
-  image_url="https://placehold.co/600x400/png?text=$image_slug"
+
+  # Use bundled demo-safe SVG images instead of external placeholders
+  case "$category_name" in
+    食品)   image_url="/demo-images/food.svg" ;;
+    飲料)   image_url="/demo-images/beverage.svg" ;;
+    日用品) image_url="/demo-images/daily.svg" ;;
+    衣類)   image_url="/demo-images/clothing.svg" ;;
+    *)      image_url="/demo-images/daily.svg" ;;
+  esac
 
   if api_get_optional "/api/products/barcode/$barcode"; then
     payload="$(
