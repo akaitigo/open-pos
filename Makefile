@@ -1,10 +1,10 @@
 .PHONY: help doctor verify verify-full up up-all up-dev down logs logs-pos \
-       dev-gateway dev-product dev-store dev-pos dev-inventory dev-analytics dev-backend \
+       dev-gateway dev-product dev-store dev-pos dev-inventory dev-analytics dev-backend dev-backend-stop \
        local-build local-up local-up-fast local-down local-seed local-smoke local-demo reset \
        docker-build docker-build-core docker-up-core docker-down-core docker-smoke docker-demo \
        demo-up demo-down \
        build build-apps build-services \
-       test test-apps test-backend test-frontend test-e2e test-all grpc-test \
+       test test-apps test-backend test-frontend test-e2e test-all grpc-test load-test \
        lint proto proto-lint proto-breaking seed db-backup db-restore clean
 
 help: ## Show this help
@@ -59,13 +59,17 @@ dev-inventory: ## Start inventory-service in dev mode
 dev-analytics: ## Start analytics-service in dev mode
 	cd services/analytics-service && ../../gradlew quarkusDev
 
-dev-backend: ## Start all backend services in dev mode (background)
-	cd services/product-service && ../../gradlew quarkusDev &
-	cd services/store-service && ../../gradlew quarkusDev &
-	cd services/pos-service && ../../gradlew quarkusDev &
-	cd services/inventory-service && ../../gradlew quarkusDev &
-	cd services/analytics-service && ../../gradlew quarkusDev &
-	cd services/api-gateway && ../../gradlew quarkusDev &
+dev-backend: ## Start all backend services in dev mode (managed, Ctrl+C to stop all)
+	bash scripts/dev-backend.sh
+
+dev-backend-stop: ## Stop dev-backend services started by scripts/dev-backend.sh
+	@for f in .local/pids/dev/*.pid; do \
+		[ -e "$$f" ] || continue; \
+		pid=$$(cat "$$f"); \
+		kill -TERM "$$pid" 2>/dev/null || true; \
+		rm -f "$$f"; \
+	done
+	@echo "dev-backend services stopped."
 
 local-build: ## Build the supported local backend services locally for reliable dev startup
 	./gradlew \
@@ -161,6 +165,9 @@ test-all: test-backend test-frontend ## Run backend + frontend unit/functional t
 
 grpc-test: ## Run grpcurl-based health checks against the running backend gRPC services
 	bash scripts/grpc-test.sh
+
+load-test: ## Run k6 load tests against the running local stack (requires k6)
+	bash scripts/run-k6.sh
 
 # === Lint ===
 lint: ## Lint proto and frontend
