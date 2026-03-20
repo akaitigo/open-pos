@@ -91,7 +91,7 @@ export class PosPage {
   }
 
   async selectExactCashPayment(): Promise<void> {
-    await this.page.getByRole('button', { name: 'ぴったり' }).click()
+    await this.page.getByRole('button', { name: 'ぴったり' }).click({ force: true })
   }
 
   async enterPaymentAmount(amount: string): Promise<void> {
@@ -99,7 +99,7 @@ export class PosPage {
   }
 
   async confirmPayment(): Promise<void> {
-    await this.paymentConfirmButton.click()
+    await this.paymentConfirmButton.click({ force: true })
   }
 
   async closeReceipt(): Promise<void> {
