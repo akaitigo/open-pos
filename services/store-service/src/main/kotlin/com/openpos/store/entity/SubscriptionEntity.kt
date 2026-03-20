@@ -7,6 +7,9 @@ import jakarta.persistence.Id
 import jakarta.persistence.PrePersist
 import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
+import org.hibernate.annotations.Filter
+import org.hibernate.annotations.FilterDef
+import org.hibernate.annotations.ParamDef
 import java.time.Instant
 import java.util.UUID
 
@@ -14,9 +17,16 @@ import java.util.UUID
  * サブスクリプションエンティティ。
  * テナント（組織）のプラン契約状態を管理する。
  * ステータス遷移: TRIAL -> ACTIVE -> CANCELLED / EXPIRED
+ *
+ * BaseEntity を継承しないが、organizationId による RLS フィルターを適用する。
  */
 @Entity
 @Table(name = "subscriptions", schema = "store_schema")
+@FilterDef(
+    name = "organizationFilter",
+    parameters = [ParamDef(name = "organizationId", type = UUID::class)],
+)
+@Filter(name = "organizationFilter", condition = "organization_id = :organizationId")
 class SubscriptionEntity {
     @Id
     @GeneratedValue
