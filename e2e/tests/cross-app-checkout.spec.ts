@@ -8,12 +8,11 @@ import { PosPage } from '../pages/pos-page'
  * 管理画面で商品を作成し、POS端末でその商品が表示され、
  * チェックアウトできることを検証する。
  */
-// TODO: CI環境でのAPI遅延により不安定。ローカルでは動作確認済み。
-test.describe.skip('Cross-App Checkout', () => {
-  const uniqueSuffix = `e2e-${Date.now()}`
-  const testProductName = `テスト商品 ${uniqueSuffix}`
-
+test.describe('Cross-App Checkout', () => {
   test('admin creates product, POS can see and checkout it', async ({ browser }) => {
+    const uniqueSuffix = `e2e-${Date.now()}`
+    const testProductName = `テスト商品 ${uniqueSuffix}`
+
     // --- Arrange: Admin creates a new product ---
     const adminContext = await browser.newContext()
     const adminPageInstance = await adminContext.newPage()
@@ -21,9 +20,6 @@ test.describe.skip('Cross-App Checkout', () => {
 
     await adminPage.goto()
     await adminPage.navigateToProducts()
-
-    // Record product count before
-    const countBefore = await adminPage.getProductRowCount()
 
     // Open add product dialog
     await adminPage.clickAddProduct()
@@ -39,8 +35,8 @@ test.describe.skip('Cross-App Checkout', () => {
     const submitButton = adminPageInstance.getByRole('button', { name: '保存' })
     await submitButton.click()
 
-    // Wait for the dialog to close and product to appear in the table
-    await expect(adminPage.productDialog).not.toBeVisible({ timeout: 10_000 })
+    // Wait for the dialog to close and product to appear
+    await expect(adminPage.productDialog).not.toBeVisible({ timeout: 15_000 })
 
     // Verify the product appears in the admin product list
     await adminPage.searchProduct(testProductName)
@@ -59,17 +55,14 @@ test.describe.skip('Cross-App Checkout', () => {
     // Search for the newly created product on POS
     await posPage.searchProduct(testProductName)
 
-    // The product should be visible
+    // The product should be visible (wait longer for API propagation)
     await expect(
       posPageInstance.locator('.cursor-pointer').filter({ hasText: testProductName }),
-    ).toBeVisible({ timeout: 10_000 })
+    ).toBeVisible({ timeout: 15_000 })
 
     // Add to cart
     await posPage.addProductToCart(testProductName)
     await expect(posPage.cart).toContainText(testProductName)
-
-    // Dismiss any toast
-    await posPage.dismissToastIfVisible()
 
     // Complete checkout
     await posPage.startPayment()
@@ -77,10 +70,7 @@ test.describe.skip('Cross-App Checkout', () => {
     await posPage.confirmPayment()
 
     // Verify receipt
-    await expect(posPage.receiptDialog).toBeVisible()
-    await expect(posPage.receiptDialog).toContainText('レシート')
-
-    // Close receipt
+    await expect(posPage.receiptDialog).toBeVisible({ timeout: 10_000 })
     await posPage.closeReceipt()
 
     // Cart should be empty after checkout

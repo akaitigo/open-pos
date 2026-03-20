@@ -1,37 +1,37 @@
-# Production Deployment Guide
+# 本番デプロイガイド
 
-This guide covers deploying open-pos to a Kubernetes cluster on GCP.
+このガイドでは、open-pos を GCP 上の Kubernetes クラスターにデプロイする手順を説明します。
 
-## Prerequisites
+## 前提条件
 
-- GKE cluster (1.28+) or compatible K8s environment
-- `kubectl` configured for the target cluster
-- Cloud SQL (PostgreSQL 17) instance provisioned
-- Memorystore (Redis 7) instance provisioned
-- Container registry access (ghcr.io/akaitigo/open-pos or your own)
-- ORY Hydra v2.2 deployed and configured
-- RabbitMQ 4 cluster (CloudAMQP or self-managed)
-- `buf` CLI for proto code generation (build time only)
+- GKE クラスター (1.28+) または互換性のある K8s 環境
+- 対象クラスターに接続済みの `kubectl`
+- Cloud SQL (PostgreSQL 17) インスタンスがプロビジョニング済み
+- Memorystore (Redis 7) インスタンスがプロビジョニング済み
+- コンテナレジストリへのアクセス (ghcr.io/akaitigo/open-pos または独自レジストリ)
+- ORY Hydra v2.2 がデプロイ・設定済み
+- RabbitMQ 4 クラスター (CloudAMQP またはセルフマネージド)
+- `buf` CLI (Proto コード生成用、ビルド時のみ必要)
 
-## Deployment Order
+## デプロイ順序
 
-Apply manifests in this order to satisfy dependency chains:
+依存関係を満たすため、以下の順序でマニフェストを適用してください。
 
 ```bash
 # 1. Namespace
 kubectl apply -f infra/k8s/namespace.yaml
 
-# 2. Secrets (DB credentials, Hydra secrets, RabbitMQ credentials)
+# 2. Secrets (DB 認証情報、Hydra シークレット、RabbitMQ 認証情報)
 kubectl apply -f infra/k8s/secrets.yaml
 
-# 3. ConfigMaps (per-service environment overrides)
+# 3. ConfigMaps (サービスごとの環境変数オーバーライド)
 kubectl apply -f infra/k8s/configmaps.yaml
 
-# 4. Database migrations (Flyway Jobs - must complete before services start)
+# 4. データベースマイグレーション (Flyway Job — サービス起動前に完了が必要)
 kubectl apply -f infra/k8s/flyway-job.yaml
 kubectl wait --for=condition=complete --timeout=300s job/flyway-migrate -n openpos
 
-# 5. Backend services (gRPC services first, then api-gateway)
+# 5. バックエンドサービス (gRPC サービスを先に、次に api-gateway)
 kubectl apply -f infra/k8s/product-service.yaml
 kubectl apply -f infra/k8s/store-service.yaml
 kubectl apply -f infra/k8s/pos-service.yaml
@@ -39,13 +39,13 @@ kubectl apply -f infra/k8s/inventory-service.yaml
 kubectl apply -f infra/k8s/analytics-service.yaml
 kubectl apply -f infra/k8s/api-gateway.yaml
 
-# 6. Ingress (expose api-gateway and frontends)
+# 6. Ingress (api-gateway とフロントエンドを外部公開)
 kubectl apply -f infra/k8s/ingress.yaml
 ```
 
-## Database Migration with Flyway
+## Flyway によるデータベースマイグレーション
 
-Each backend service runs Flyway migrations at startup (`quarkus.flyway.migrate-at-start=true`). For production deployments, use a dedicated Kubernetes Job to run migrations before the services start:
+各バックエンドサービスは起動時に Flyway マイグレーションを実行します (`quarkus.flyway.migrate-at-start=true`)。本番デプロイでは、サービス起動前にマイグレーションを実行する専用の Kubernetes Job を使用してください。
 
 ```yaml
 apiVersion: batch/v1
@@ -79,13 +79,13 @@ spec:
   backoffLimit: 3
 ```
 
-Migration files are located at:
+マイグレーションファイルの配置場所:
 
 ```
 services/{service}/src/main/resources/db/migration/V{N}__{description}.sql
 ```
 
-Schemas per service:
+サービスごとのスキーマ:
 
 | Service | Schema |
 |---------|--------|
@@ -95,25 +95,25 @@ Schemas per service:
 | analytics-service | `analytics_schema` |
 | store-service | `store_schema` |
 
-## Secrets Management
+## シークレット管理
 
-For production, use GCP Secret Manager. Each service's `application.properties` supports `${ENV_VAR}` placeholders:
+本番環境では GCP Secret Manager を使用してください。各サービスの `application.properties` は `${ENV_VAR}` プレースホルダーに対応しています。
 
-| Secret | Used By | Description |
-|--------|---------|-------------|
-| `DB_URL` | All services | JDBC connection string |
-| `DB_USER` | All services | Database username |
-| `DB_PASSWORD` | All services | Database password |
-| `REDIS_URL` | All services | Redis connection URI |
-| `RABBITMQ_HOST` | pos, inventory, analytics | RabbitMQ hostname |
-| `RABBITMQ_PORT` | pos, inventory, analytics | RabbitMQ AMQP port |
-| `RABBITMQ_USER` | pos, inventory, analytics | RabbitMQ username |
-| `RABBITMQ_PASS` | pos, inventory, analytics | RabbitMQ password |
-| `HYDRA_JWKS_URL` | api-gateway | Hydra JWKS endpoint |
-| `HYDRA_ISSUER` | api-gateway | Hydra token issuer URL |
-| `OTEL_ENDPOINT` | All services | OpenTelemetry collector |
+| Secret | 使用サービス | 説明 |
+|--------|-------------|------|
+| `DB_URL` | 全サービス | JDBC 接続文字列 |
+| `DB_USER` | 全サービス | データベースユーザー名 |
+| `DB_PASSWORD` | 全サービス | データベースパスワード |
+| `REDIS_URL` | 全サービス | Redis 接続 URI |
+| `RABBITMQ_HOST` | pos, inventory, analytics | RabbitMQ ホスト名 |
+| `RABBITMQ_PORT` | pos, inventory, analytics | RabbitMQ AMQP ポート |
+| `RABBITMQ_USER` | pos, inventory, analytics | RabbitMQ ユーザー名 |
+| `RABBITMQ_PASS` | pos, inventory, analytics | RabbitMQ パスワード |
+| `HYDRA_JWKS_URL` | api-gateway | Hydra JWKS エンドポイント |
+| `HYDRA_ISSUER` | api-gateway | Hydra トークン発行者 URL |
+| `OTEL_ENDPOINT` | 全サービス | OpenTelemetry Collector |
 
-Create a Kubernetes Secret:
+Kubernetes Secret の作成:
 
 ```bash
 kubectl create secret generic openpos-secrets \
@@ -126,26 +126,26 @@ kubectl create secret generic openpos-secrets \
   --from-literal=rabbitmq-pass='RABBITMQ_PASSWORD'
 ```
 
-## Health Check Verification
+## ヘルスチェックの確認
 
-After deployment, verify all services are healthy:
+デプロイ後、すべてのサービスが正常であることを確認してください。
 
 ```bash
-# Check pod status
+# Pod の状態を確認
 kubectl get pods -n openpos
 
-# api-gateway health (HTTP)
+# api-gateway のヘルスチェック (HTTP)
 kubectl port-forward svc/api-gateway 8080:80 -n openpos &
 curl http://localhost:8080/api/health/live
 
-# gRPC services health (via grpcurl)
+# gRPC サービスのヘルスチェック (grpcurl 使用)
 kubectl port-forward svc/product-service 9001:9001 -n openpos &
 grpcurl -plaintext localhost:9001 grpc.health.v1.Health/Check
 
-# All services should report SERVING or UP
+# すべてのサービスが SERVING または UP と報告されるはずです
 ```
 
-K8s readiness and liveness probes are configured in each service manifest:
+K8s の readiness probe と liveness probe は各サービスマニフェストで設定されています。
 
 | Service | Health Path | Port |
 |---------|-----------|------|
@@ -156,72 +156,72 @@ K8s readiness and liveness probes are configured in each service manifest:
 | inventory-service | `/health` | HTTP aux port |
 | analytics-service | `/health` | HTTP aux port |
 
-## Rollback Procedures
+## ロールバック手順
 
-### Application rollback
+### アプリケーションのロールバック
 
 ```bash
-# Roll back a Deployment to the previous revision
+# Deployment を前のリビジョンにロールバック
 kubectl rollout undo deployment/api-gateway -n openpos
 kubectl rollout undo deployment/product-service -n openpos
-# ... repeat for each service
+# ... 各サービスについて繰り返す
 
-# Verify rollback
+# ロールバックの確認
 kubectl rollout status deployment/api-gateway -n openpos
 ```
 
-### Database rollback
+### データベースのロールバック
 
-Flyway does not support automatic rollback for SQL migrations. To revert:
+Flyway は SQL マイグレーションの自動ロールバックをサポートしていません。元に戻すには以下の手順を実施してください。
 
-1. **Identify the target version**: check `flyway_schema_history` table in each schema
-2. **Apply a corrective migration**: create a new `V{N+1}__revert_{description}.sql`
-3. **Never delete or modify existing migration files** already applied in production
+1. **対象バージョンを特定**: 各スキーマの `flyway_schema_history` テーブルを確認
+2. **修正マイグレーションを適用**: 新しい `V{N+1}__revert_{description}.sql` を作成
+3. **本番環境で適用済みのマイグレーションファイルは削除・修正しない**
 
-For emergency rollback:
+緊急ロールバックの場合:
 
 ```bash
-# Restore from a database backup (Cloud SQL)
+# データベースバックアップから復元 (Cloud SQL)
 gcloud sql backups restore BACKUP_ID --restore-instance=INSTANCE_NAME
 
-# Or restore from manual backup
+# または手動バックアップから復元
 psql -h CLOUD_SQL_IP -U openpos -d openpos < backup.sql
 ```
 
-### Full rollback checklist
+### 完全ロールバックチェックリスト
 
-1. Scale down all services: `kubectl scale deployment --all --replicas=0 -n openpos`
-2. Restore database if schema changes were applied
-3. Deploy the previous container image tags
-4. Scale back up: `kubectl scale deployment --all --replicas=2 -n openpos`
-5. Verify health checks pass
-6. Notify the team and create a postmortem
+1. すべてのサービスをスケールダウン: `kubectl scale deployment --all --replicas=0 -n openpos`
+2. スキーマ変更が適用された場合はデータベースを復元
+3. 前バージョンのコンテナイメージタグをデプロイ
+4. スケールバックアップ: `kubectl scale deployment --all --replicas=2 -n openpos`
+5. ヘルスチェックが通ることを確認
+6. チームに通知し、ポストモーテムを作成
 
-## Monitoring
+## モニタリング
 
-- **Prometheus**: All services expose `/q/metrics` (Micrometer)
-- **OpenTelemetry**: Distributed tracing via `OTEL_ENDPOINT`
-- **Structured logging**: JSON format in production (`%prod.quarkus.log.console.json=true`)
-- **Grafana dashboards**: Pre-configured in `infra/grafana/`
+- **Prometheus**: すべてのサービスが `/q/metrics` を公開 (Micrometer)
+- **OpenTelemetry**: `OTEL_ENDPOINT` 経由の分散トレーシング
+- **構造化ログ**: 本番環境では JSON 形式 (`%prod.quarkus.log.console.json=true`)
+- **Grafana ダッシュボード**: `infra/grafana/` に事前設定済み
 
-## Frontend Deployment
+## フロントエンドのデプロイ
 
-Build the SPA frontends and deploy to Cloud CDN or a static hosting service:
+SPA フロントエンドをビルドし、Cloud CDN または静的ホスティングサービスにデプロイします。
 
 ```bash
 pnpm install
 VITE_API_URL=https://api.your-domain.com pnpm build
 
-# Upload to Cloud Storage
+# Cloud Storage にアップロード
 gsutil -m rsync -r apps/pos-terminal/dist gs://your-bucket/pos-terminal
 gsutil -m rsync -r apps/admin-dashboard/dist gs://your-bucket/admin-dashboard
 ```
 
-Set the following build-time environment variables:
+以下のビルド時環境変数を設定してください。
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_URL` | Production api-gateway URL |
-| `VITE_HYDRA_PUBLIC_URL` | Production Hydra public endpoint |
-| `VITE_OIDC_CLIENT_ID` | OAuth2 client ID per app |
-| `VITE_OIDC_REDIRECT_URI` | OAuth2 callback URL per app |
+| 変数 | 説明 |
+|------|------|
+| `VITE_API_URL` | 本番 api-gateway の URL |
+| `VITE_HYDRA_PUBLIC_URL` | 本番 Hydra パブリックエンドポイント |
+| `VITE_OIDC_CLIENT_ID` | アプリごとの OAuth2 クライアント ID |
+| `VITE_OIDC_REDIRECT_URI` | アプリごとの OAuth2 コールバック URL |

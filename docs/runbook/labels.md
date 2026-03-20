@@ -1,18 +1,18 @@
-# Label Taxonomy
+# ラベル分類体系
 
-This runbook documents the label groups used in `open-pos` and how maintainers should apply them.
+この Runbook では、`open-pos` で使用するラベルグループと、メンテナーがラベルを適用する方法を定義します。
 
-## Goals
+## 目的
 
-- keep issue and pull request triage predictable
-- make ownership and affected surfaces visible at a glance
-- preserve useful release notes and roadmap hygiene
+- Issue と Pull Request のトリアージを予測可能にする
+- オーナーシップと影響範囲を一目で把握できるようにする
+- リリースノートとロードマップの整合性を維持する
 
-## Label Groups
+## ラベルグループ
 
-### Work Shape
+### 作業種別
 
-Use one `type:*` label to describe the primary shape of the change:
+変更の主要な種別を示すために、`type:*` ラベルを一つ付与してください。
 
 - `type:feature`
 - `type:bug`
@@ -21,35 +21,35 @@ Use one `type:*` label to describe the primary shape of the change:
 - `type:test`
 - `type:epic`
 
-These labels are still maintainer-curated. Do not rely on file paths alone to decide them.
+これらのラベルはメンテナーが手動で管理します。ファイルパスだけで判断しないでください。
 
-### Affected Surface
+### 影響範囲
 
-Use `svc:*`, `app:*`, `pkg:*`, `infra`, or `proto` to show what part of the repository is affected.
+リポジトリのどの部分が影響を受けるかを示すために、`svc:*`、`app:*`、`pkg:*`、`infra`、または `proto` を使用してください。
 
-| Label | Intended Surface | Auto-applied on PRs |
-|-------|------------------|---------------------|
-| `svc:api-gateway` | `services/api-gateway/**` | yes |
-| `svc:pos` | `services/pos-service/**` | yes |
-| `svc:product` | `services/product-service/**` | yes |
-| `svc:analytics` | `services/analytics-service/**` | yes |
-| `svc:inventory` | `services/inventory-service/**` | yes |
-| `svc:store` | `services/store-service/**` | yes |
-| `app:pos-terminal` | `apps/pos-terminal/**` | yes |
-| `app:admin` | `apps/admin-dashboard/**` | yes |
-| `pkg:shared-types` | `packages/shared-types/**` | yes |
-| `proto` | `proto/**` | yes |
-| `infra` | CI, Compose, scripts, toolchain, root build config | yes |
+| Label | 対象範囲 | PR での自動適用 |
+|-------|---------|----------------|
+| `svc:api-gateway` | `services/api-gateway/**` | あり |
+| `svc:pos` | `services/pos-service/**` | あり |
+| `svc:product` | `services/product-service/**` | あり |
+| `svc:analytics` | `services/analytics-service/**` | あり |
+| `svc:inventory` | `services/inventory-service/**` | あり |
+| `svc:store` | `services/store-service/**` | あり |
+| `app:pos-terminal` | `apps/pos-terminal/**` | あり |
+| `app:admin` | `apps/admin-dashboard/**` | あり |
+| `pkg:shared-types` | `packages/shared-types/**` | あり |
+| `proto` | `proto/**` | あり |
+| `infra` | CI, Compose, scripts, toolchain, ルートビルド設定 | あり |
 
-Automation is defined in [../../.github/labeler.yml](../../.github/labeler.yml) and runs via [../../.github/workflows/labeler.yml](../../.github/workflows/labeler.yml).
+自動化は [../../.github/labeler.yml](../../.github/labeler.yml) で定義され、[../../.github/workflows/labeler.yml](../../.github/workflows/labeler.yml) のワークフローで実行されます。
 
-If a change is cross-cutting, keep all relevant surface labels instead of forcing a single one.
+変更が横断的な場合は、一つに絞らず関連する影響範囲ラベルをすべて付与してください。
 
-### Product and Technical Concerns
+### プロダクト・技術関心事
 
-Use `area:*` labels when the change maps to a domain concern rather than a repository boundary.
+変更がリポジトリ境界ではなくドメイン上の関心事に対応する場合、`area:*` ラベルを使用してください。
 
-Current `area:*` labels include:
+現在の `area:*` ラベル一覧:
 
 - `area:auth`
 - `area:payment`
@@ -69,30 +69,30 @@ Current `area:*` labels include:
 - `area:report`
 - `area:loyalty`
 
-These are maintainer-applied and should reflect the user-facing or architectural concern, not only the file path.
+これらはメンテナーが手動で付与し、ファイルパスだけでなくユーザー向けまたはアーキテクチャ上の関心事を反映すべきです。
 
-### Priority
+### 優先度
 
-Use `P0:*` to `P3:*` when priority should be visible in the tracker:
+優先度をトラッカー上で明示する必要がある場合、`P0:*` から `P3:*` を使用してください。
 
 - `P0:critical`
 - `P1:high`
 - `P2:medium`
 - `P3:low`
 
-Priority labels are not added automatically.
+優先度ラベルは自動付与されません。
 
-## Maintainer Guidance
+## メンテナー向けガイダンス
 
-For pull requests:
+Pull Request の場合:
 
-1. Let the PR Labeler apply the obvious surface labels first.
-2. Verify the auto-applied labels are still correct for the final diff.
-3. Add or adjust `type:*`, `area:*`, and priority labels manually when they matter.
-4. Remove misleading labels on cross-cutting or reshaped PRs before merge.
+1. まず PR Labeler に明白な影響範囲ラベルを自動付与させる。
+2. 最終的な差分に対して自動付与されたラベルが正しいか確認する。
+3. 必要に応じて `type:*`、`area:*`、優先度ラベルを手動で追加・調整する。
+4. マージ前に、横断的な変更やリシェイプされた PR では誤解を招くラベルを削除する。
 
-For issues:
+Issue の場合:
 
-- labels are always maintainer-applied
-- prefer the smallest useful set of labels
-- avoid using labels as a substitute for a clear issue title or description
+- ラベルは常にメンテナーが手動で付与する
+- 必要最小限のラベルセットを選択する
+- ラベルを明確な Issue タイトルや説明の代替として使わない
