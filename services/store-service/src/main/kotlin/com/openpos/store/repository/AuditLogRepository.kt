@@ -52,4 +52,6 @@ class AuditLogRepository : PanacheRepositoryBase<AuditLogEntity, UUID> {
         organizationId: UUID,
         action: String,
     ): Long = count("organizationId = ?1 AND action = ?2", organizationId, action)
+
+    fun findAllByOrganizationId(organizationId: UUID): List<AuditLogEntity> = find("organizationId = ?1", organizationId).list()
 }
