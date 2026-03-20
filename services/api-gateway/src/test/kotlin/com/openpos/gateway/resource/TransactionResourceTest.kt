@@ -216,12 +216,43 @@ class TransactionResourceTest {
             val body = FinalizeBody(payments = listOf(PaymentInputBody(method = "CASH", amount = 33000, received = 50000)))
 
             // Act
-            val result = resource.finalize(txId, body)
+            val result = resource.finalize(txId, null, body)
 
             // Assert
             assertEquals(true, result.containsKey("transaction"))
             assertEquals(true, result.containsKey("receipt"))
             verify(cache).invalidatePattern("openpos:gateway:transaction:*")
+        }
+
+        @Test
+        fun `冪等性キー付きで取引確定`() {
+            // Arrange
+            val tx = buildTransaction().toBuilder().setStatus(TransactionStatus.TRANSACTION_STATUS_COMPLETED).build()
+            val receipt =
+                Receipt
+                    .newBuilder()
+                    .setId(UUID.randomUUID().toString())
+                    .setTransactionId(txId)
+                    .setReceiptData("receipt data")
+                    .setCreatedAt("2026-01-01T00:00:00Z")
+                    .build()
+            whenever(stub.finalizeTransaction(any())).thenReturn(
+                FinalizeTransactionResponse
+                    .newBuilder()
+                    .setTransaction(tx)
+                    .setReceipt(receipt)
+                    .build(),
+            )
+            val idempotencyKey = UUID.randomUUID().toString()
+            whenever(grpc.withIdempotencyKey(stub, idempotencyKey)).thenReturn(stub)
+            val body = FinalizeBody(payments = listOf(PaymentInputBody(method = "CASH", amount = 33000, received = 50000)))
+
+            // Act
+            val result = resource.finalize(txId, idempotencyKey, body)
+
+            // Assert
+            assertEquals(true, result.containsKey("transaction"))
+            verify(grpc).withIdempotencyKey(stub, idempotencyKey)
         }
     }
 

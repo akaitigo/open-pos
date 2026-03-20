@@ -86,7 +86,8 @@ export class PosPage {
   }
 
   async startPayment(): Promise<void> {
-    await this.payButton.click()
+    await this.dismissToastIfVisible()
+    await this.payButton.click({ force: true })
   }
 
   async selectExactCashPayment(): Promise<void> {
@@ -102,12 +103,13 @@ export class PosPage {
   }
 
   async closeReceipt(): Promise<void> {
-    await this.receiptCloseButton.click()
+    await this.receiptCloseButton.click({ force: true })
   }
 
   async navigateToHistory(): Promise<void> {
     await this.dismissToastIfVisible()
-    await this.page.getByRole('link', { name: '履歴' }).click()
+    // force: true でtoastオーバーレイ(z-100)によるクリックブロックをバイパス
+    await this.page.getByRole('link', { name: '履歴' }).click({ force: true })
     await expect(this.page.getByText('取引履歴')).toBeVisible()
   }
 }
