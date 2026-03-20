@@ -77,15 +77,13 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'openpos-auth',
-      // トークンは localStorage に保存しない（セキュリティ要件）
+      // トークンと認証状態は localStorage に保存しない（セキュリティ要件）
+      // isAuthenticated を persist すると共有端末でブラウザ再起動後に
+      // 認証なしでアクセス可能になるため、起動時は必ず未認証状態から開始する
       partialize: (state) => ({
-        isAuthenticated: state.isAuthenticated,
-        staff: state.staff,
         storeId: state.storeId,
         storeName: state.storeName,
         terminalId: state.terminalId,
-        sessionStartedAt: state.sessionStartedAt,
-        lastActivityAt: state.lastActivityAt,
       }),
     },
   ),

@@ -62,7 +62,7 @@ test.describe('POS Transaction - Void', () => {
 
     // Navigate to history
     await posPage.navigateToHistory()
-    await expect(posPage.page.getByText('取引履歴')).toBeVisible()
+    await expect(posPage.page.getByRole('heading', { name: '取引履歴' })).toBeVisible()
 
     // Verify there are completed transactions in the list
     await expect(posPage.page.getByText('完了').first()).toBeVisible()
@@ -143,7 +143,7 @@ test.describe('POS Transaction - History View', () => {
 
   test('transaction history page shows table headers', async () => {
     await posPage.navigateToHistory()
-    await expect(posPage.page.getByText('取引履歴')).toBeVisible()
+    await expect(posPage.page.getByRole('heading', { name: '取引履歴' })).toBeVisible()
     await expect(posPage.page.getByText('取引番号')).toBeVisible()
     await expect(posPage.page.getByText('日時')).toBeVisible()
     await expect(posPage.page.getByText('合計').first()).toBeVisible()
