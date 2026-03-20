@@ -64,17 +64,14 @@ export class PosPage {
   }
 
   async dismissToastIfVisible(): Promise<void> {
-    // Wait briefly for any toast animation to appear
-    await this.page.waitForTimeout(500)
-    const toastContainer = this.page.locator('.fixed.right-0.top-0.z-100')
-    if (await toastContainer.isVisible().catch(() => false)) {
-      // Try clicking the close button, or wait for auto-dismiss
-      if (await this.notificationCloseButton.isVisible().catch(() => false)) {
-        await this.notificationCloseButton.click()
-      }
-      // Wait for toast to disappear
-      await toastContainer.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
-    }
+    // Toast コンテナ(z-100, fixed)を DOM から非表示にし、
+    // pointer-events の干渉を完全排除する
+    await this.page.evaluate(() => {
+      document
+        .querySelectorAll('[class*="fixed"][class*="top-0"][class*="z-"]')
+        .forEach((el) => ((el as HTMLElement).style.display = 'none'))
+    })
+    await this.page.waitForTimeout(300)
   }
 
   async getCartItemCount(): Promise<number> {
