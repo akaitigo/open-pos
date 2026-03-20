@@ -29,7 +29,7 @@ describe('OnboardingPage', () => {
     // Assert
     expect(screen.getByTestId('onboarding-wizard')).toBeInTheDocument()
     expect(screen.getByTestId('input-org-name')).toBeInTheDocument()
-    expect(screen.getByText('組織情報')).toBeInTheDocument()
+    expect(screen.getAllByText('組織情報').length).toBeGreaterThanOrEqual(1)
   })
 
   it('disables next button when orgName is empty', () => {
