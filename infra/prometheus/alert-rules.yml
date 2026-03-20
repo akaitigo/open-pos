@@ -1,0 +1,46 @@
+groups:
+  - name: openpos-alerts
+    rules:
+      # critical: サービスダウン
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'サービスダウン: {{ $labels.instance }}'
+          description: '{{ $labels.job }} ({{ $labels.instance }}) が1分以上応答していません。'
+
+      # critical: DB コネクションプール枯渇
+      - alert: DBConnectionPoolExhausted
+        expr: agroal_active_count / agroal_max_size >= 0.95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'DB コネクションプール枯渇: {{ $labels.job }}'
+          description: '{{ $labels.job }} の DB コネクションプール使用率が 95% 以上です（現在値: {{ $value | humanizePercentage }}）。'
+
+      # warning: p95 レイテンシ > 500ms
+      - alert: HighP95Latency
+        expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, job)) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'p95 レイテンシ高騰: {{ $labels.job }}'
+          description: '{{ $labels.job }} の p95 レイテンシが 500ms を超えています（現在値: {{ $value | humanizeDuration }}）。'
+
+      # warning: エラーレート > 5%
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) by (job)
+          /
+          sum(rate(http_server_requests_seconds_count[5m])) by (job)
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'エラーレート高騰: {{ $labels.job }}'
+          description: '{{ $labels.job }} の 5xx エラーレートが 5% を超えています（現在値: {{ $value | humanizePercentage }}）。'
