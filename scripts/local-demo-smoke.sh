@@ -247,20 +247,27 @@ smoke_finalize_json="$(api_post "/api/transactions/$smoke_txn_id/finalize" "$fin
 [[ "$(jq -r '.transaction.status' <<<"$smoke_finalize_json")" == "COMPLETED" ]] || fail "smoke transaction finalize failed"
 pass "smoke transaction finalized"
 
-# Verify inventory decreased (allow a short delay for async processing)
-sleep 2
-stock_after_json="$(api_get "/api/inventory/stocks?storeId=$shibuya_store_id&page=1&pageSize=200")"
-stock_after="$(jq -r --arg pid "$smoke_product_id" '.data[] | select(.productId == $pid) | .quantity' <<<"$stock_after_json")"
-[[ -n "$stock_after" ]] || fail "could not read inventory after transaction"
-
+# Verify inventory decreased (retry with backoff for async RabbitMQ processing)
 expected_stock=$((stock_before - 2))
-if [[ "$stock_after" -eq "$expected_stock" ]]; then
+inventory_ok=false
+for attempt in 1 2 3 4 5; do
+  sleep "$((attempt * 2))"
+  stock_after_json="$(api_get "/api/inventory/stocks?storeId=$shibuya_store_id&page=1&pageSize=200")"
+  stock_after="$(jq -r --arg pid "$smoke_product_id" '.data[] | select(.productId == $pid) | .quantity' <<<"$stock_after_json")"
+  [[ -n "$stock_after" ]] || continue
+  if [[ "$stock_after" -le "$expected_stock" ]]; then
+    inventory_ok=true
+    break
+  fi
+  echo "  inventory check attempt $attempt: before=$stock_before after=$stock_after expected=$expected_stock"
+done
+
+if $inventory_ok; then
   pass "inventory decreased: $stock_before -> $stock_after (expected $expected_stock)"
-elif [[ "$stock_after" -lt "$stock_before" ]]; then
-  # Inventory decreased but might be off due to concurrent operations
+elif [[ -n "$stock_after" && "$stock_after" -lt "$stock_before" ]]; then
   echo "WARN inventory changed: $stock_before -> $stock_after (expected $expected_stock, close enough)"
 else
-  fail "inventory did not decrease after transaction: before=$stock_before after=$stock_after expected=$expected_stock"
+  fail "inventory did not decrease after transaction: before=$stock_before after=${stock_after:-unknown} expected=$expected_stock"
 fi
 
 echo "Local demo smoke passed."
