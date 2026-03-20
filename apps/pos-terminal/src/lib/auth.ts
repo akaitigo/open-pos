@@ -62,6 +62,7 @@ const OAuthTokenResponseSchema = z.object({
 
 const TOKEN_STORAGE_KEY = 'openpos-tokens'
 const VERIFIER_STORAGE_KEY = 'openpos-pkce-verifier'
+const STATE_STORAGE_KEY = 'openpos-pkce-state'
 
 /** Current retry count for token refresh */
 let refreshRetryCount = 0
@@ -91,6 +92,7 @@ export function getStoredTokens(): TokenData | null {
 export function clearTokens(): void {
   sessionStorage.removeItem(TOKEN_STORAGE_KEY)
   sessionStorage.removeItem(VERIFIER_STORAGE_KEY)
+  sessionStorage.removeItem(STATE_STORAGE_KEY)
   refreshRetryCount = 0
 }
 
@@ -148,8 +150,10 @@ export function isRefreshTokenExpired(refreshToken: string): boolean {
 export async function startAuthFlow(): Promise<void> {
   const verifier = generateCodeVerifier()
   const challenge = await generateCodeChallenge(verifier)
+  const state = crypto.randomUUID()
 
   sessionStorage.setItem(VERIFIER_STORAGE_KEY, verifier)
+  sessionStorage.setItem(STATE_STORAGE_KEY, state)
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -158,14 +162,33 @@ export async function startAuthFlow(): Promise<void> {
     scope: 'openid offline_access',
     code_challenge: challenge,
     code_challenge_method: 'S256',
-    state: crypto.randomUUID(),
+    state,
   })
 
   window.location.href = `${HYDRA_PUBLIC_URL}/oauth2/auth?${params.toString()}`
 }
 
+/**
+ * Validate the OAuth2 state parameter returned from the authorization server.
+ * Prevents CSRF attacks by comparing the callback state with the stored value.
+ */
+export function validateState(callbackState: string): void {
+  const savedState = sessionStorage.getItem(STATE_STORAGE_KEY)
+  if (!savedState) {
+    throw new Error('OAuth state not found in session — possible CSRF attack')
+  }
+  if (callbackState !== savedState) {
+    sessionStorage.removeItem(STATE_STORAGE_KEY)
+    throw new Error('OAuth state mismatch — possible CSRF attack')
+  }
+  sessionStorage.removeItem(STATE_STORAGE_KEY)
+}
+
 /** Exchange authorization code for tokens */
-export async function exchangeCodeForTokens(code: string): Promise<TokenData> {
+export async function exchangeCodeForTokens(code: string, state: string): Promise<TokenData> {
+  // Validate state parameter before proceeding (CSRF protection)
+  validateState(state)
+
   const verifier = sessionStorage.getItem(VERIFIER_STORAGE_KEY)
   if (!verifier) throw new Error('PKCE verifier not found')
 
