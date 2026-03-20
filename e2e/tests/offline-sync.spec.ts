@@ -12,7 +12,7 @@ test.describe('Offline Sync E2E', () => {
 
   test('creates transaction while offline and syncs when back online', async ({ context }) => {
     // Verify product list is visible (online)
-    await expect(posPage.page.getByText('ドリップコーヒー')).toBeVisible()
+    await expect(posPage.page.getByText('ドリップコーヒー', { exact: true })).toBeVisible()
 
     // Go offline
     await context.setOffline(true)
@@ -44,6 +44,6 @@ test.describe('Offline Sync E2E', () => {
     await posPage.page.waitForTimeout(500)
 
     // Product list should still be visible (cached)
-    await expect(posPage.page.getByText('ドリップコーヒー')).toBeVisible()
+    await expect(posPage.page.getByText('ドリップコーヒー', { exact: true })).toBeVisible()
   })
 })
