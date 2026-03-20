@@ -84,9 +84,9 @@ ensure_rabbitmq_user() {
   fi
 
   docker exec "$RABBITMQ_CONTAINER" rabbitmqctl add_user "$RABBITMQ_USER" "$RABBITMQ_PASS" >/dev/null 2>&1 || true
-  docker exec "$RABBITMQ_CONTAINER" rabbitmqctl change_password "$RABBITMQ_USER" "$RABBITMQ_PASS" >/dev/null
-  docker exec "$RABBITMQ_CONTAINER" rabbitmqctl set_user_tags "$RABBITMQ_USER" administrator >/dev/null
-  docker exec "$RABBITMQ_CONTAINER" rabbitmqctl set_permissions -p / "$RABBITMQ_USER" ".*" ".*" ".*" >/dev/null
+  docker exec "$RABBITMQ_CONTAINER" rabbitmqctl change_password "$RABBITMQ_USER" "$RABBITMQ_PASS" >/dev/null 2>&1
+  docker exec "$RABBITMQ_CONTAINER" rabbitmqctl set_user_tags "$RABBITMQ_USER" administrator >/dev/null 2>&1
+  docker exec "$RABBITMQ_CONTAINER" rabbitmqctl set_permissions -p / "$RABBITMQ_USER" ".*" ".*" ".*" >/dev/null 2>&1
 }
 
 stop_if_running() {
@@ -154,36 +154,40 @@ ensure_rabbitmq_user
 
 start_service \
   product-service \
-  "http://localhost:8081/q/health" \
+  "http://localhost:8081/q/health/live" \
   QUARKUS_HTTP_PORT=8081 \
   QUARKUS_GRPC_SERVER_PORT=9001 \
+  QUARKUS_OTEL_ENABLED=false \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
   RABBITMQ_PORT="$RABBITMQ_PORT" \
   RABBITMQ_USER="$RABBITMQ_USER" \
   RABBITMQ_PASS="$RABBITMQ_PASS"
 start_service \
   store-service \
-  "http://localhost:8082/q/health" \
+  "http://localhost:8082/q/health/live" \
   QUARKUS_HTTP_PORT=8082 \
   QUARKUS_GRPC_SERVER_PORT=9002 \
+  QUARKUS_OTEL_ENABLED=false \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
   RABBITMQ_PORT="$RABBITMQ_PORT" \
   RABBITMQ_USER="$RABBITMQ_USER" \
   RABBITMQ_PASS="$RABBITMQ_PASS"
 start_service \
   pos-service \
-  "http://localhost:8083/q/health" \
+  "http://localhost:8083/q/health/live" \
   QUARKUS_HTTP_PORT=8083 \
   QUARKUS_GRPC_SERVER_PORT=9003 \
+  QUARKUS_OTEL_ENABLED=false \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
   RABBITMQ_PORT="$RABBITMQ_PORT" \
   RABBITMQ_USER="$RABBITMQ_USER" \
   RABBITMQ_PASS="$RABBITMQ_PASS"
 start_service \
   inventory-service \
-  "http://localhost:8084/q/health" \
+  "http://localhost:8084/q/health/live" \
   QUARKUS_HTTP_PORT=8084 \
   QUARKUS_GRPC_SERVER_PORT=9004 \
+  QUARKUS_OTEL_ENABLED=false \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
   RABBITMQ_PORT="$RABBITMQ_PORT" \
   RABBITMQ_USER="$RABBITMQ_USER" \
@@ -192,6 +196,7 @@ start_service \
   api-gateway \
   "http://localhost:8080/api/health" \
   QUARKUS_HTTP_PORT=8080 \
+  QUARKUS_OTEL_ENABLED=false \
   OPENPOS_AUTH_ENABLED="${OPENPOS_AUTH_ENABLED:-false}" \
   PRODUCT_SERVICE_HOST=localhost \
   PRODUCT_SERVICE_PORT=9001 \
