@@ -1,40 +1,40 @@
-# Changelog
+# 変更履歴
 
-All notable changes to this project will be documented in this file.
+本プロジェクトの注目すべき変更はすべてこのファイルに記録されます。
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows Semantic Versioning.
+フォーマットは [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) に基づいており、本プロジェクトはセマンティックバージョニングに従います。
 
 ## [Unreleased]
 
-### Added
+### 追加
 
-- Added `GOVERNANCE.md` and `docs/runbook/triage.md` to make maintainer decision-making and issue triage explicit.
-- Added PR component auto-labeling and a label taxonomy runbook for maintainer triage consistency.
-- Added `make doctor`, `make verify`, and `make verify-full` as supported local quality gates.
-- Added developer Makefile helpers for PostgreSQL backup/restore, demo reset, `pos-service` log tailing, and grpcurl-based gRPC health checks.
-- Added maintainer-facing release guidance in [docs/runbook/release.md](docs/runbook/release.md).
-- Added a documentation index in [docs/README.md](docs/README.md).
-- Added [SUPPORT.md](SUPPORT.md) and [MAINTAINERS.md](MAINTAINERS.md) for public OSS operations.
-- Added GitHub issue contact links and release note categorization.
-- Added `.mise.toml`, `CITATION.cff`, and Release Drafter configuration for reproducible setup and release metadata.
-- Added an idempotent demo seed dataset with two stores, per-store terminals/staff, inventory, and sample transactions.
+- メンテナーの意思決定と Issue トリアージを明確にするため `GOVERNANCE.md` と `docs/runbook/triage.md` を追加。
+- メンテナーのトリアージ一貫性のため、PR コンポーネント自動ラベリングとラベル分類 Runbook を追加。
+- ローカル品質ゲートとして `make doctor`、`make verify`、`make verify-full` を追加。
+- PostgreSQL バックアップ/リストア、デモリセット、`pos-service` ログテール、grpcurl ベースの gRPC ヘルスチェック用の開発者 Makefile ヘルパーを追加。
+- メンテナー向けリリースガイダンスを [docs/runbook/release.md](docs/runbook/release.md) に追加。
+- ドキュメントインデックスを [docs/README.md](docs/README.md) に追加。
+- 公開 OSS 運用のため [SUPPORT.md](SUPPORT.md) と [MAINTAINERS.md](MAINTAINERS.md) を追加。
+- GitHub Issue の連絡先リンクとリリースノートのカテゴリ分類を追加。
+- 再現可能なセットアップとリリースメタデータのため `.mise.toml`、`CITATION.cff`、Release Drafter 設定を追加。
+- 2 店舗、店舗ごとの端末/スタッフ、在庫、サンプル取引を含む冪等なデモシードデータセットを追加。
 
-### Changed
+### 変更
 
-- Added GitHub CodeQL scanning and tightened the documented security reporting path to GitHub private advisories only.
-- Expanded the POS terminal cart flow with a reusable cart panel, direct quantity editing, per-item subtotals, tax-rate breakdowns, and a dedicated `/cart` page for full-screen review.
-- Enhanced the POS terminal catalog with hierarchical category tabs, client-side product search/pagination, stock-aware product tiles, and retryable loading/error states.
-- Tightened contributor setup docs around actual required tools (`curl`, `jq`, `bc`) and the supported verification flow.
-- Rewrote the local development runbook to match the supported `make local-demo` / `make docker-demo` flows, generated runtime config files, and current troubleshooting steps.
-- Added clearer prerequisite checks to local helper scripts.
-- Expanded the documented local development command set to include `make docker-build`, `make reset`, `make db-backup`, `make db-restore`, `make logs-pos`, and `make grpc-test`.
-- Expanded the supported local demo path to include `inventory-service` so seeded inventory and transaction history are available immediately.
-- Fixed the Docker-based startup flow to wait on `hydra` health instead of the one-shot `hydra-migrate` container.
-- Shifted open-ended setup and usage questions toward GitHub Discussions, keeping Issues focused on bugs and feature work.
-- Enabled GitHub Discussions, branch protection on `main`, auto-merge support, and GitHub-native secret scanning / push protection.
+- GitHub CodeQL スキャンを追加し、文書化されたセキュリティ報告パスを GitHub プライベートアドバイザリのみに厳格化。
+- 再利用可能なカートパネル、直接数量編集、明細ごとの小計、税率区分別内訳、全画面レビュー用 `/cart` ページを含む POS 端末のカートフローを拡張。
+- 階層的カテゴリタブ、クライアント側商品検索/ページネーション、在庫状況対応の商品タイル、リトライ可能なローディング/エラー状態を含む POS 端末カタログを強化。
+- 実際に必要なツール（`curl`、`jq`、`bc`）と対応する検証フローに関するコントリビューターセットアップドキュメントを厳格化。
+- 対応する `make local-demo` / `make docker-demo` フロー、生成されるランタイム設定ファイル、現在のトラブルシューティング手順に合わせてローカル開発 Runbook を書き直し。
+- ローカルヘルパースクリプトにより明確な前提条件チェックを追加。
+- `make docker-build`、`make reset`、`make db-backup`、`make db-restore`、`make logs-pos`、`make grpc-test` を含む文書化されたローカル開発コマンドセットを拡張。
+- シード済み在庫と取引履歴がすぐに利用可能になるよう、対応するローカルデモパスに `inventory-service` を含めるよう拡張。
+- ワンショット `hydra-migrate` コンテナではなく `hydra` ヘルスを待機するよう Docker ベースの起動フローを修正。
+- オープンエンドなセットアップと利用の質問を GitHub Discussions に移行し、Issues はバグと機能作業に集中させるよう変更。
+- `main` ブランチ保護、自動マージ対応、GitHub ネイティブのシークレットスキャン / プッシュ保護、GitHub Discussions を有効化。
 
-## [0.1.0] - Initial development series
+## [0.1.0] - 初期開発シリーズ
 
-### Added
+### 追加
 
-- Initial public repository structure, local demo flow, CI, security scanning, and core architecture docs.
+- 初期公開リポジトリ構造、ローカルデモフロー、CI、セキュリティスキャン、コアアーキテクチャドキュメント。

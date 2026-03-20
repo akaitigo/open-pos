@@ -1,32 +1,32 @@
-# Support
+# サポート
 
-Use this guide to decide where to ask for help or report a problem.
+ヘルプの求め方や問題の報告先を決めるためにこのガイドを使用してください。
 
-## Before Opening Anything
+## 何かを開く前に
 
-1. Read [README.md](README.md) and [docs/README.md](docs/README.md).
-2. Run `make doctor` to confirm your local prerequisites.
-3. If you are working on the demo flow, run `make local-demo` or `make docker-demo` first.
+1. [README.md](README.md) と [docs/README.md](docs/README.md) を読む。
+2. `make doctor` を実行してローカルの前提条件を確認する。
+3. デモフローを使用している場合は、まず `make local-demo` または `make docker-demo` を実行する。
 
-## Where to Report What
+## 何をどこに報告するか
 
-- **Confirmed bug**: open a GitHub issue with the bug template.
-- **Feature request**: open a GitHub issue with the feature template.
-- **Setup or usage problem**: start a [GitHub Discussion](https://github.com/akaitigo/open-pos/discussions) for questions or unclear behavior, and include the output of `make doctor`, the command you ran, and the exact error.
-- **Security vulnerability**: do **not** open a public issue. Use [GitHub private vulnerability reporting](https://github.com/akaitigo/open-pos/security/advisories/new).
+- **確認済みのバグ**: バグテンプレートで GitHub Issue を作成する。
+- **機能要望**: 機能テンプレートで GitHub Issue を作成する。
+- **セットアップや利用の問題**: 質問や不明確な動作については [GitHub Discussion](https://github.com/akaitigo/open-pos/discussions) を開始し、`make doctor` の出力、実行したコマンド、正確なエラーを含める。
+- **セキュリティ脆弱性**: 公開 Issue を作成 **しない** でください。[GitHub プライベート脆弱性報告](https://github.com/akaitigo/open-pos/security/advisories/new) を使用してください。
 
-## What to Include
+## 含めるべき情報
 
-- Your OS and version
+- OS とバージョン
 - `java -version`
 - `node -v`
 - `pnpm -v`
-- The command you ran
-- The exact error output
-- Whether you used `make local-demo` or `make docker-demo`
+- 実行したコマンド
+- 正確なエラー出力
+- `make local-demo` と `make docker-demo` のどちらを使用したか
 
-## Response Expectations
+## 対応について
 
-- This is currently a maintainer-led project with best-effort support.
-- Security reports follow the SLA in [SECURITY.md](SECURITY.md).
-- Discussions, bug reports, and contribution questions are handled asynchronously through GitHub.
+- 現在はメンテナー主導のプロジェクトであり、ベストエフォートのサポートです。
+- セキュリティ報告は [SECURITY.md](SECURITY.md) の SLA に従います。
+- Discussions、バグ報告、コントリビューションに関する質問は GitHub を通じて非同期で対応します。
