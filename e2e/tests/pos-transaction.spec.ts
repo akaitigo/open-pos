@@ -171,6 +171,6 @@ test.describe('POS Transaction - History View', () => {
     await posPage.page.getByRole('button', { name: 'レシート' }).first().click()
 
     await expect(posPage.page.getByRole('dialog').filter({ hasText: 'レシート' })).toBeVisible()
-    await expect(posPage.page.getByRole('button', { name: '次のお客様へ' })).toBeVisible()
+    await expect(posPage.page.getByRole('button', { name: '閉じる' })).toBeVisible()
   })
 })
