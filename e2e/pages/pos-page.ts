@@ -107,7 +107,9 @@ export class PosPage {
 
   async navigateToHistory(): Promise<void> {
     await this.dismissToastIfVisible()
-    await this.page.goto('http://localhost:5173/history')
-    await expect(this.page.getByText('取引履歴').first()).toBeVisible()
+    // page.goto() はフルリロードで認証状態が失われるため、
+    // SPA 内リンクをクリックしてクライアントサイドルーティングで遷移する
+    await this.page.getByRole('link', { name: '履歴' }).click({ timeout: 10_000 })
+    await expect(this.page.getByText('取引履歴').first()).toBeVisible({ timeout: 10_000 })
   }
 }
