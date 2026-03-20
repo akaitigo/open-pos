@@ -1,11 +1,13 @@
 package com.openpos.store.grpc
 
 import at.favre.lib.crypto.bcrypt.BCrypt
+import com.openpos.store.entity.DataProcessingConsentEntity
 import com.openpos.store.entity.OrganizationEntity
 import com.openpos.store.entity.StaffEntity
 import com.openpos.store.entity.StoreEntity
 import com.openpos.store.entity.TerminalEntity
 import com.openpos.store.service.AuditLogService
+import com.openpos.store.service.GdprService
 import com.openpos.store.service.OrganizationService
 import com.openpos.store.service.StaffService
 import com.openpos.store.service.StoreService
@@ -15,6 +17,10 @@ import io.quarkus.grpc.GrpcService
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
 import openpos.common.v1.PaginationResponse
+import openpos.store.v1.AnonymizeCustomerDataRequest
+import openpos.store.v1.AnonymizeCustomerDataResponse
+import openpos.store.v1.AnonymizeStaffDataRequest
+import openpos.store.v1.AnonymizeStaffDataResponse
 import openpos.store.v1.AuthenticateByPinRequest
 import openpos.store.v1.AuthenticateByPinResponse
 import openpos.store.v1.CreateOrganizationRequest
@@ -23,6 +29,11 @@ import openpos.store.v1.CreateStaffRequest
 import openpos.store.v1.CreateStaffResponse
 import openpos.store.v1.CreateStoreRequest
 import openpos.store.v1.CreateStoreResponse
+import openpos.store.v1.DataProcessingConsent
+import openpos.store.v1.DeleteOrganizationDataRequest
+import openpos.store.v1.DeleteOrganizationDataResponse
+import openpos.store.v1.GetConsentRequest
+import openpos.store.v1.GetConsentResponse
 import openpos.store.v1.GetOrganizationRequest
 import openpos.store.v1.GetOrganizationResponse
 import openpos.store.v1.GetStaffRequest
@@ -36,6 +47,8 @@ import openpos.store.v1.ListStoresResponse
 import openpos.store.v1.ListTerminalsRequest
 import openpos.store.v1.ListTerminalsResponse
 import openpos.store.v1.Organization
+import openpos.store.v1.RecordConsentRequest
+import openpos.store.v1.RecordConsentResponse
 import openpos.store.v1.RegisterTerminalRequest
 import openpos.store.v1.RegisterTerminalResponse
 import openpos.store.v1.Staff
@@ -74,6 +87,9 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
 
     @Inject
     lateinit var auditLogService: AuditLogService
+
+    @Inject
+    lateinit var gdprService: GdprService
 
     @Inject
     lateinit var tenantHelper: GrpcTenantHelper
@@ -424,7 +440,162 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         responseObserver.onCompleted()
     }
 
+    // === GDPR / 個人情報保護 ===
+
+    override fun deleteOrganizationData(
+        request: DeleteOrganizationDataRequest,
+        responseObserver: io.grpc.stub.StreamObserver<DeleteOrganizationDataResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        val orgId = request.organizationId.toUUID()
+        val callerId = requireNotNull(tenantHelper.currentOrganizationId()) { "organizationId is not set" }
+        if (orgId != callerId) {
+            throw Status.PERMISSION_DENIED
+                .withDescription("Cannot delete data belonging to another tenant")
+                .asRuntimeException()
+        }
+        try {
+            gdprService.deleteOrganizationData(orgId)
+            auditLogService.log(
+                organizationId = orgId,
+                action = "GDPR_DELETE",
+                entityType = "ORGANIZATION",
+                entityId = orgId.toString(),
+                details = """{"action":"organization_data_deleted"}""",
+            )
+            responseObserver.onNext(
+                DeleteOrganizationDataResponse
+                    .newBuilder()
+                    .setSuccess(true)
+                    .setMessage("テナントデータの削除が完了しました")
+                    .build(),
+            )
+        } catch (e: IllegalArgumentException) {
+            throw Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
+        }
+        responseObserver.onCompleted()
+    }
+
+    override fun anonymizeStaffData(
+        request: AnonymizeStaffDataRequest,
+        responseObserver: io.grpc.stub.StreamObserver<AnonymizeStaffDataResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        val orgId = request.organizationId.toUUID()
+        val callerId = requireNotNull(tenantHelper.currentOrganizationId()) { "organizationId is not set" }
+        if (orgId != callerId) {
+            throw Status.PERMISSION_DENIED
+                .withDescription("Cannot anonymize data belonging to another tenant")
+                .asRuntimeException()
+        }
+        val count = gdprService.anonymizeStaffData(orgId)
+        auditLogService.log(
+            organizationId = orgId,
+            action = "GDPR_ANONYMIZE",
+            entityType = "STAFF",
+            details = """{"anonymized_count":$count}""",
+        )
+        responseObserver.onNext(
+            AnonymizeStaffDataResponse.newBuilder().setAnonymizedCount(count).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun anonymizeCustomerData(
+        request: AnonymizeCustomerDataRequest,
+        responseObserver: io.grpc.stub.StreamObserver<AnonymizeCustomerDataResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        val orgId = request.organizationId.toUUID()
+        val callerId = requireNotNull(tenantHelper.currentOrganizationId()) { "organizationId is not set" }
+        if (orgId != callerId) {
+            throw Status.PERMISSION_DENIED
+                .withDescription("Cannot anonymize data belonging to another tenant")
+                .asRuntimeException()
+        }
+        val count = gdprService.anonymizeCustomerData(orgId)
+        auditLogService.log(
+            organizationId = orgId,
+            action = "GDPR_ANONYMIZE",
+            entityType = "CUSTOMER",
+            details = """{"anonymized_count":$count}""",
+        )
+        responseObserver.onNext(
+            AnonymizeCustomerDataResponse.newBuilder().setAnonymizedCount(count).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun recordConsent(
+        request: RecordConsentRequest,
+        responseObserver: io.grpc.stub.StreamObserver<RecordConsentResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        val orgId = request.organizationId.toUUID()
+        val callerId = requireNotNull(tenantHelper.currentOrganizationId()) { "organizationId is not set" }
+        if (orgId != callerId) {
+            throw Status.PERMISSION_DENIED
+                .withDescription("Cannot manage consent for another tenant")
+                .asRuntimeException()
+        }
+        val entity =
+            gdprService.recordConsent(
+                organizationId = orgId,
+                consentType = request.consentType,
+                granted = request.granted,
+                grantedBy = request.grantedBy.ifBlank { null }?.let { UUID.fromString(it) },
+                policyVersion = request.policyVersion,
+                ipAddress = request.ipAddress.ifBlank { null },
+            )
+        responseObserver.onNext(
+            RecordConsentResponse.newBuilder().setConsent(entity.toConsentProto()).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun getConsent(
+        request: GetConsentRequest,
+        responseObserver: io.grpc.stub.StreamObserver<GetConsentResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        val orgId = request.organizationId.toUUID()
+        val callerId = requireNotNull(tenantHelper.currentOrganizationId()) { "organizationId is not set" }
+        if (orgId != callerId) {
+            throw Status.PERMISSION_DENIED
+                .withDescription("Cannot view consent for another tenant")
+                .asRuntimeException()
+        }
+        val consents =
+            if (request.consentType.isBlank()) {
+                gdprService.getConsents(orgId)
+            } else {
+                val consent = gdprService.getConsent(orgId, request.consentType)
+                if (consent != null) listOf(consent) else emptyList()
+            }
+        responseObserver.onNext(
+            GetConsentResponse
+                .newBuilder()
+                .addAllConsents(consents.map { it.toConsentProto() })
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
     // === Mapper Extensions ===
+
+    private fun DataProcessingConsentEntity.toConsentProto(): DataProcessingConsent =
+        DataProcessingConsent
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setConsentType(consentType)
+            .setGranted(granted)
+            .setGrantedAt(grantedAt?.toString().orEmpty())
+            .setRevokedAt(revokedAt?.toString().orEmpty())
+            .setPolicyVersion(policyVersion)
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .build()
 
     private fun OrganizationEntity.toProto(): Organization =
         Organization
