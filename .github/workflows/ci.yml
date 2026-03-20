@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -120,6 +121,7 @@ jobs:
           :services:store-service:jacocoTestCoverageVerification
           :services:pos-service:jacocoTestCoverageVerification
           :services:inventory-service:jacocoTestCoverageVerification
+          # analytics-service は jacocoTestCoverageVerification タスク未定義のため除外
       - name: Upload Coverage Reports
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
@@ -225,3 +227,27 @@ jobs:
             fi
           done
           echo "All CI checks passed or were correctly skipped."
+      - name: Notify on main branch failure
+        if: failure() && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "ci: main ブランチの CI が失敗 ($(date -u +%Y-%m-%d))" \
+            --label "type:bug,infra" \
+            --body "## CI 失敗通知
+
+          **ワークフロー**: [${{ github.workflow }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          **コミット**: [\`${GITHUB_SHA::7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+          **実行者**: @${{ github.actor }}
+
+          ### ジョブ結果
+          | ジョブ | 結果 |
+          |--------|------|
+          | changes | \`${{ needs.changes.result }}\` |
+          | proto-lint | \`${{ needs.proto-lint.result }}\` |
+          | backend | \`${{ needs.backend.result }}\` |
+          | frontend | \`${{ needs.frontend.result }}\` |
+          | e2e | \`${{ needs.e2e.result }}\` |
+
+          [ワークフロー実行を確認](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
