@@ -92,6 +92,7 @@ export function getStoredTokens(): TokenData | null {
 export function clearTokens(): void {
   sessionStorage.removeItem(TOKEN_STORAGE_KEY)
   sessionStorage.removeItem(VERIFIER_STORAGE_KEY)
+  sessionStorage.removeItem(STATE_STORAGE_KEY)
   refreshRetryCount = 0
 }
 
@@ -150,7 +151,10 @@ export async function startAuthFlow(): Promise<void> {
   const verifier = generateCodeVerifier()
   const challenge = await generateCodeChallenge(verifier)
 
+  const state = crypto.randomUUID()
+
   sessionStorage.setItem(VERIFIER_STORAGE_KEY, verifier)
+  sessionStorage.setItem(STATE_STORAGE_KEY, state)
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -159,14 +163,26 @@ export async function startAuthFlow(): Promise<void> {
     scope: 'openid offline_access',
     code_challenge: challenge,
     code_challenge_method: 'S256',
-    state: crypto.randomUUID(),
+    state,
   })
 
   window.location.href = `${HYDRA_PUBLIC_URL}/oauth2/auth?${params.toString()}`
 }
 
+/** Validate the OAuth2 state parameter to prevent CSRF attacks */
+export function validateState(returnedState: string): boolean {
+  const storedState = sessionStorage.getItem(STATE_STORAGE_KEY)
+  if (!storedState || storedState !== returnedState) return false
+  sessionStorage.removeItem(STATE_STORAGE_KEY)
+  return true
+}
+
 /** Exchange authorization code for tokens */
-export async function exchangeCodeForTokens(code: string): Promise<TokenData> {
+export async function exchangeCodeForTokens(code: string, state: string): Promise<TokenData> {
+  if (!validateState(state)) {
+    throw new Error('Invalid OAuth2 state parameter (possible CSRF attack)')
+  }
+
   const verifier = sessionStorage.getItem(VERIFIER_STORAGE_KEY)
   if (!verifier) throw new Error('PKCE verifier not found')
 
