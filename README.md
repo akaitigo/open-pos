@@ -111,11 +111,13 @@ See [docs/guides/demo-assets.md](docs/guides/demo-assets.md) for the repeatable 
 ### Prerequisites
 
 - Java 21 (GraalVM CE recommended)
-- Node.js 22+ with pnpm
+- Node.js 22+
+- **pnpm 10.30.3** -- pinned in `package.json` `"packageManager"` and `.mise.toml`; `mise install` or `corepack enable` will set the exact version automatically
 - Docker & Docker Compose
 - buf CLI
 - curl
 - jq
+- bash 4+ (macOS ships 3.2; `brew install bash` for seed scripts)
 - grpcurl (optional, for `make grpc-test`)
 
 ### Quick Start

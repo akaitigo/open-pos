@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
+# Requires bash 4+ (associative arrays). macOS ships bash 3.2 by default;
+# install bash 4+ via Homebrew: brew install bash
 set -euo pipefail
+
+if (( BASH_VERSINFO[0] < 4 )); then
+  echo "ERROR: bash 4+ is required (found ${BASH_VERSION})." >&2
+  echo "On macOS: brew install bash, then run with /usr/local/bin/bash or add it to PATH." >&2
+  exit 1
+fi
 
 API_URL="${API_URL:-http://localhost:8080}"
 TARGET_STOCK_QUANTITY="${TARGET_STOCK_QUANTITY:-100}"
