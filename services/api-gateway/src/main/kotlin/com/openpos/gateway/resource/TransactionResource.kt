@@ -10,6 +10,7 @@ import jakarta.inject.Inject
 import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.DefaultValue
 import jakarta.ws.rs.GET
+import jakarta.ws.rs.HeaderParam
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
@@ -201,6 +202,7 @@ class TransactionResource {
     @Path("/{id}/finalize")
     fun finalize(
         @PathParam("id") id: String,
+        @HeaderParam("Idempotency-Key") idempotencyKey: String?,
         body: FinalizeBody,
     ): Map<String, Any?> {
         val request =
@@ -219,7 +221,14 @@ class TransactionResource {
                             }.build()
                     },
                 ).build()
-        val response = grpc.withTenant(stub).finalizeTransaction(request)
+        val tenantStub = grpc.withTenant(stub)
+        val finalStub =
+            if (!idempotencyKey.isNullOrBlank()) {
+                grpc.withIdempotencyKey(tenantStub, idempotencyKey)
+            } else {
+                tenantStub
+            }
+        val response = finalStub.finalizeTransaction(request)
         cache.invalidatePattern("openpos:gateway:transaction:*")
         return mapOf(
             "transaction" to response.transaction.toMap(),
