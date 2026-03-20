@@ -128,8 +128,12 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         responseObserver: io.grpc.stub.StreamObserver<ListProductsResponse>,
     ) {
         tenantHelper.setupTenantContext()
-        val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+        val page = if (request.hasPagination()) (request.pagination.page - 1).coerceAtLeast(0) else 0
+        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) {
+                request.pagination.pageSize.coerceIn(1, 100)
+            } else {
+                20
+            }
         val (products, totalCount) =
             productService.search(
                 query = request.search.ifBlank { null },

@@ -365,8 +365,12 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         responseObserver: StreamObserver<ListTransactionsResponse>,
     ) {
         tenantHelper.setupTenantContext()
-        val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+        val page = if (request.hasPagination()) (request.pagination.page - 1).coerceAtLeast(0) else 0
+        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) {
+                request.pagination.pageSize.coerceIn(1, 100)
+            } else {
+                20
+            }
 
         val statusFilter =
             when (request.status) {
@@ -404,8 +408,20 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         responseObserver.onNext(
             ListTransactionsResponse
                 .newBuilder()
-                .addAllTransactions(transactions.map { it.toFullProto() })
-                .setPagination(
+                .addAllTransactions(
+                    run {
+                        val txIds = transactions.map { it.id }
+                        val relations = transactionService.batchLoadRelations(txIds)
+                        transactions.map { tx ->
+                            tx.toFullProtoWithRelations(
+                                items = relations.items[tx.id].orEmpty(),
+                                payments = relations.payments[tx.id].orEmpty(),
+                                discounts = relations.discounts[tx.id].orEmpty(),
+                                taxSummaries = relations.taxSummaries[tx.id].orEmpty(),
+                            )
+                        }
+                    },
+                ).setPagination(
                     PaginationResponse
                         .newBuilder()
                         .setPage(page + 1)
@@ -450,8 +466,12 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         responseObserver: StreamObserver<ListJournalEntriesResponse>,
     ) {
         tenantHelper.setupTenantContext()
-        val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+        val page = if (request.hasPagination()) (request.pagination.page - 1).coerceAtLeast(0) else 0
+        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) {
+                request.pagination.pageSize.coerceIn(1, 100)
+            } else {
+                20
+            }
 
         val typeFilter = request.type.ifBlank { null }
         val startDate =
@@ -608,8 +628,16 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         val payments = transactionService.getTransactionPayments(id)
         val discounts = transactionService.getTransactionDiscounts(id)
         val taxSummaries = transactionService.getTransactionTaxSummaries(id)
+        return toFullProtoWithRelations(items, payments, discounts, taxSummaries)
+    }
 
-        return Transaction
+    private fun TransactionEntity.toFullProtoWithRelations(
+        items: List<TransactionItemEntity>,
+        payments: List<PaymentEntity>,
+        discounts: List<TransactionDiscountEntity>,
+        taxSummaries: List<TaxSummaryEntity>,
+    ): Transaction =
+        Transaction
             .newBuilder()
             .setId(id.toString())
             .setOrganizationId(organizationId.toString())
@@ -633,7 +661,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             .setUpdatedAt(updatedAt.toString())
             .setCompletedAt(completedAt?.toString().orEmpty())
             .build()
-    }
 
     private fun TransactionItemEntity.toProto(): TransactionItem =
         TransactionItem
