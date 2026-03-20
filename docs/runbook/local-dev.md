@@ -1,12 +1,12 @@
-# Local Development Runbook
+# ローカル開発 Runbook
 
-This runbook describes the supported day-to-day development flows for `open-pos`.
+この Runbook では、`open-pos` の日常的な開発フローについて説明します。
 
-## Recommended Modes
+## 推奨モード
 
-### Host-run local backend
+### ホスト実行のローカルバックエンド
 
-Use this for normal development. Infrastructure runs in Docker, while the supported local backend runs on the host as built Quarkus jars.
+通常の開発にはこちらを使用してください。インフラは Docker で動作し、バックエンドはホスト上でビルド済みの Quarkus jar として実行されます。
 
 ```bash
 make local-demo
@@ -14,17 +14,17 @@ pnpm dev:admin   # http://localhost:5174
 pnpm dev:pos     # http://localhost:5173
 ```
 
-`make local-demo` performs all of the following:
+`make local-demo` は以下のすべてを実行します:
 
-- starts infrastructure via Docker Compose
-- builds and starts `product-service`, `store-service`, `pos-service`, `inventory-service`, and `api-gateway` on the host
-- seeds idempotent demo data
-- writes frontend runtime config files
-- runs the API smoke check
+- Docker Compose でインフラを起動
+- `product-service`、`store-service`、`pos-service`、`inventory-service`、`api-gateway` をホスト上でビルド・起動
+- 冪等なデモデータを投入
+- フロントエンドのランタイム設定ファイルを書き出し
+- API スモークチェックを実行
 
-### Containerized local backend
+### コンテナ実行のローカルバックエンド
 
-Use this when you want the supported local backend to match the containerized CI/release-style path more closely.
+コンテナ化された CI/リリースパスにより近い環境で動作確認したい場合にこちらを使用してください。
 
 ```bash
 make docker-demo
@@ -32,48 +32,48 @@ pnpm dev:admin
 pnpm dev:pos
 ```
 
-When switching from the host-run path, stop the local backend first:
+ホスト実行モードから切り替える場合は、先にローカルバックエンドを停止してください。
 
 ```bash
 make local-down
 make docker-up-core
 ```
 
-## Common Commands
+## よく使うコマンド
 
-### Infrastructure only
+### インフラのみ
 
 ```bash
 make up       # PostgreSQL, Redis, RabbitMQ, Hydra
-make up-dev   # infra + pgAdmin + Redis Commander
+make up-dev   # インフラ + pgAdmin + Redis Commander
 make down
-make logs     # Docker Compose logs
+make logs     # Docker Compose ログ
 ```
 
-### Host-run backend
+### ホスト実行バックエンド
 
 ```bash
-make local-up       # rebuild and start the local backend
-make local-up-fast  # start without rebuilding
+make local-up       # リビルドして起動
+make local-up-fast  # リビルドせずに起動
 make local-down
-make logs-pos       # tail .local/logs/pos-service.log while host-run mode is active
+make logs-pos       # ホスト実行モード中に .local/logs/pos-service.log を tail
 ```
 
-Logs and PIDs for the host-run backend are written to:
+ホスト実行バックエンドのログと PID は以下に書き出されます:
 
 - `.local/logs/`
 - `.local/pids/`
 
-### Containerized backend
+### コンテナ実行バックエンド
 
 ```bash
-make docker-build        # all backend images
+make docker-build        # 全バックエンドイメージ
 make docker-build-core
 make docker-up-core
 make docker-down-core
 ```
 
-### Seed and smoke
+### シードとスモークテスト
 
 ```bash
 make local-seed
@@ -85,24 +85,24 @@ make db-restore FILE=.local/backups/openpos-YYYYmmdd-HHMMSS.sql
 make reset
 ```
 
-`make reset` recreates the PostgreSQL data volume, restores the last detected supported backend mode, and reseeds the demo data. If no supported backend mode was running, it starts the host-run local backend before reseeding.
+`make reset` は PostgreSQL のデータボリュームを再作成し、最後に検出されたバックエンドモードを復元した上で、デモデータを再投入します。バックエンドモードが実行されていなかった場合は、ホスト実行のローカルバックエンドを起動してから再投入します。
 
-The seeded dataset contains:
+投入されるデモデータ:
 
 - `テスト株式会社` (`T1234567890123`)
-- stores `渋谷店` and `新宿店`
-- owner / manager / cashier staff in each store (`1234` / `2345` / `3456`)
-- 4 categories, 40 products, and inventory normalized to `100`
-- 10 sample transactions (`COMPLETED 3 / VOIDED 1 / DRAFT 6`)
+- 店舗: `渋谷店` と `新宿店`
+- 各店舗に owner / manager / cashier スタッフ (`1234` / `2345` / `3456`)
+- 4 カテゴリ、40 商品、在庫は `100` に正規化
+- 10 件のサンプル取引 (`COMPLETED 3 / VOIDED 1 / DRAFT 6`)
 
-### Frontend dev servers
+### フロントエンド開発サーバー
 
 ```bash
 pnpm dev:admin
 pnpm dev:pos
 ```
 
-### Verification
+### 検証
 
 ```bash
 make doctor
@@ -111,36 +111,36 @@ pnpm e2e:install
 make verify-full
 ```
 
-`make doctor` warns if `grpcurl` is missing, because `make grpc-test` depends on it.
+`make doctor` は `grpcurl` が未インストールの場合に警告を出します。`make grpc-test` が `grpcurl` に依存しているためです。
 
-## Runtime Config Files
+## ランタイム設定ファイル
 
-`scripts/seed.sh` writes both environment files and runtime config files:
+`scripts/seed.sh` は環境ファイルとランタイム設定ファイルの両方を書き出します:
 
 - `apps/admin-dashboard/.env.development.local`
 - `apps/pos-terminal/.env.development.local`
 - `apps/admin-dashboard/public/demo-config.json`
 - `apps/pos-terminal/public/demo-config.json`
 
-The frontend apps read `public/demo-config.json` at runtime, so a browser reload is enough after reseeding. You usually do not need to restart the Vite dev servers.
+フロントエンドアプリは実行時に `public/demo-config.json` を読み込むため、再シード後はブラウザをリロードするだけで反映されます。通常、Vite 開発サーバーの再起動は不要です。
 
-## Health Checks and Useful Endpoints
+## ヘルスチェックと便利なエンドポイント
 
-| Service | URL | Notes |
-|---------|-----|-------|
-| API Gateway | http://localhost:8080/api/health | Main smoke target |
-| Product Service | http://localhost:8081/health | Host-run mode |
-| Store Service | http://localhost:8082/health | Host-run mode |
-| POS Service | http://localhost:8083/health | Host-run mode |
+| Service | URL | 備考 |
+|---------|-----|------|
+| API Gateway | http://localhost:8080/api/health | メインのスモークテスト対象 |
+| Product Service | http://localhost:8081/health | ホスト実行モード |
+| Store Service | http://localhost:8082/health | ホスト実行モード |
+| POS Service | http://localhost:8083/health | ホスト実行モード |
 | PostgreSQL | localhost:15432/openpos | `openpos` / `openpos_dev` |
-| Redis | localhost:16379 | no auth |
+| Redis | localhost:16379 | 認証なし |
 | RabbitMQ UI | http://localhost:15673 | `openpos` / `openpos_dev` |
-| Hydra Public | http://localhost:14444 | OAuth/OIDC public endpoint |
-| Hydra Admin | http://localhost:14445 | Hydra admin API |
-| pgAdmin | http://localhost:15080 | available via `make up-dev` |
-| Redis Commander | http://localhost:18081 | available via `make up-dev` |
+| Hydra Public | http://localhost:14444 | OAuth/OIDC パブリックエンドポイント |
+| Hydra Admin | http://localhost:14445 | Hydra 管理 API |
+| pgAdmin | http://localhost:15080 | `make up-dev` で利用可能 |
+| Redis Commander | http://localhost:18081 | `make up-dev` で利用可能 |
 
-Useful checks:
+動作確認に便利なコマンド:
 
 ```bash
 docker compose -f infra/compose.yml ps
@@ -149,31 +149,31 @@ docker compose -f infra/compose.yml logs -f postgres
 docker compose -f infra/compose.yml logs -f rabbitmq
 ```
 
-## Troubleshooting
+## トラブルシューティング
 
-### Port conflicts
+### ポートの競合
 
-`open-pos` intentionally uses non-default local ports for shared infra:
+`open-pos` は共有インフラにデフォルトではないローカルポートを意図的に使用しています:
 
 - PostgreSQL: `15432`
 - Redis: `16379`
 - RabbitMQ AMQP/UI: `15672` / `15673`
 - Hydra Public/Admin: `14444` / `14445`
 
-If another local stack is already using those ports, stop it before running `make local-demo` or `make docker-demo`.
+別のローカルスタックがこれらのポートを使用中の場合は、`make local-demo` や `make docker-demo` を実行する前に停止してください。
 
-### Host-run backend fails to start
+### ホスト実行バックエンドが起動しない
 
-Check the per-service logs under `.local/logs/`. If you recently changed dependencies or build outputs, rebuild:
+`.local/logs/` 配下のサービスごとのログを確認してください。依存関係やビルド成果物を最近変更した場合は、リビルドしてください。
 
 ```bash
 make local-down
 make local-up
 ```
 
-### Container stack is unhealthy
+### コンテナスタックが異常
 
-Inspect the relevant service logs, then do a full reset if necessary:
+該当サービスのログを確認し、必要に応じてフルリセットを行ってください。
 
 ```bash
 docker compose -f infra/compose.yml logs postgres
@@ -182,31 +182,31 @@ docker compose -f infra/compose.yml down -v
 make up
 ```
 
-### Demo IDs or config are missing
+### デモ ID や設定が見つからない
 
-If `demo-config.json` or `.env.development.local` files are missing, reseed:
+`demo-config.json` や `.env.development.local` ファイルが見つからない場合は、再シードしてください。
 
 ```bash
 make local-seed
 make local-smoke
 ```
 
-If the frontend still shows old data, reload the browser tab.
+フロントエンドに古いデータが表示される場合は、ブラウザタブをリロードしてください。
 
-### Smoke check fails after switching modes
+### モード切替後にスモークチェックが失敗する
 
-Make sure only one supported backend mode is active at a time:
+一度に一つのバックエンドモードのみが稼働していることを確認してください。
 
 ```bash
 make local-down
 make docker-down-core
 ```
 
-Then start the mode you actually want to use.
+その後、実際に使用したいモードを起動してください。
 
-### Playwright E2E fails locally
+### Playwright E2E がローカルで失敗する
 
-Install the browser bundle once, then use the supported full verification path:
+ブラウザバンドルを一度インストールしてから、フル検証パスを使用してください。
 
 ```bash
 pnpm e2e:install
