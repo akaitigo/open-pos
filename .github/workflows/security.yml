@@ -15,17 +15,28 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   gitleaks:
     name: Secret Scanning (gitleaks)
     runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: '8.30.0'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
+      - name: Cache gitleaks
+        id: cache-gitleaks
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/bin/gitleaks
+          key: gitleaks-${{ env.GITLEAKS_VERSION }}-linux-x64
       - name: Install gitleaks
-        env:
-          GITLEAKS_VERSION: '8.30.0'
+        if: steps.cache-gitleaks.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           curl -fsSLo gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
@@ -94,7 +105,10 @@ jobs:
 
   container-scan:
     name: Container Security Scan (Trivy)
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
+    env:
+      TRIVY_VERSION: '0.69.3'
     strategy:
       matrix:
         service:
@@ -119,9 +133,14 @@ jobs:
             --build-arg SERVICE_NAME="${SERVICE_NAME}" \
             -t "openpos-${SERVICE_NAME}:scan" \
             -f infra/docker/Dockerfile.service .
+      - name: Cache Trivy
+        id: cache-trivy
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/bin/trivy
+          key: trivy-${{ env.TRIVY_VERSION }}-linux-x64
       - name: Install Trivy
-        env:
-          TRIVY_VERSION: '0.69.3'
+        if: steps.cache-trivy.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           curl -fsSLo trivy.tar.gz "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
