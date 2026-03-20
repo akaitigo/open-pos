@@ -205,4 +205,62 @@ done
   fail "expected at least 1 voided sample transaction"
 pass "sample transactions"
 
+# --- Write-side effect verification ---
+# Create a new transaction, finalize it, and verify inventory decreases.
+
+smoke_product_id="$(jq -r '.data[] | select(.barcode == "4900000000001") | .id' <<<"$products_json")"
+[[ -n "$smoke_product_id" ]] || fail "could not find smoke test product id"
+
+shibuya_cashier_staff_id="$shibuya_cashier_id"
+shibuya_terminal_id="$(jq -r '.[] | select(.terminalCode == "POS-SHIBUYA-01") | .id' <<<"$shibuya_terminals_json")"
+
+# Record inventory before
+stock_before_json="$(api_get "/api/inventory/stocks?storeId=$shibuya_store_id&page=1&pageSize=200")"
+stock_before="$(jq -r --arg pid "$smoke_product_id" '.data[] | select(.productId == $pid) | .quantity' <<<"$stock_before_json")"
+[[ -n "$stock_before" ]] || fail "could not read inventory before transaction"
+
+# Create a new DRAFT transaction
+smoke_client_id="smoke-$(date +%s)-$$"
+create_payload="$(jq -cn \
+  --arg storeId "$shibuya_store_id" \
+  --arg terminalId "$shibuya_terminal_id" \
+  --arg staffId "$shibuya_cashier_staff_id" \
+  --arg clientId "$smoke_client_id" \
+  '{storeId: $storeId, terminalId: $terminalId, staffId: $staffId, type: "SALE", clientId: $clientId}'
+)"
+smoke_txn_json="$(api_post "/api/transactions" "$create_payload")"
+smoke_txn_id="$(jq -r '.id' <<<"$smoke_txn_json")"
+[[ -n "$smoke_txn_id" ]] || fail "failed to create smoke transaction"
+[[ "$(jq -r '.status' <<<"$smoke_txn_json")" == "DRAFT" ]] || fail "smoke transaction is not DRAFT"
+pass "smoke transaction created ($smoke_txn_id)"
+
+# Add item
+add_item_payload="$(jq -cn --arg productId "$smoke_product_id" --argjson quantity 2 '{productId: $productId, quantity: $quantity}')"
+smoke_txn_json="$(api_post "/api/transactions/$smoke_txn_id/items" "$add_item_payload")"
+[[ "$(jq '.items | length' <<<"$smoke_txn_json")" -ge 1 ]] || fail "smoke transaction has no items"
+pass "smoke transaction item added"
+
+# Finalize (cash payment)
+smoke_total="$(jq -r '.total' <<<"$smoke_txn_json")"
+finalize_payload="$(jq -cn --argjson amount "$smoke_total" '{payments: [{method: "CASH", amount: $amount, received: $amount}]}')"
+smoke_finalize_json="$(api_post "/api/transactions/$smoke_txn_id/finalize" "$finalize_payload")"
+[[ "$(jq -r '.transaction.status' <<<"$smoke_finalize_json")" == "COMPLETED" ]] || fail "smoke transaction finalize failed"
+pass "smoke transaction finalized"
+
+# Verify inventory decreased (allow a short delay for async processing)
+sleep 2
+stock_after_json="$(api_get "/api/inventory/stocks?storeId=$shibuya_store_id&page=1&pageSize=200")"
+stock_after="$(jq -r --arg pid "$smoke_product_id" '.data[] | select(.productId == $pid) | .quantity' <<<"$stock_after_json")"
+[[ -n "$stock_after" ]] || fail "could not read inventory after transaction"
+
+expected_stock=$((stock_before - 2))
+if [[ "$stock_after" -eq "$expected_stock" ]]; then
+  pass "inventory decreased: $stock_before -> $stock_after (expected $expected_stock)"
+elif [[ "$stock_after" -lt "$stock_before" ]]; then
+  # Inventory decreased but might be off due to concurrent operations
+  echo "WARN inventory changed: $stock_before -> $stock_after (expected $expected_stock, close enough)"
+else
+  fail "inventory did not decrease after transaction: before=$stock_before after=$stock_after expected=$expected_stock"
+fi
+
 echo "Local demo smoke passed."

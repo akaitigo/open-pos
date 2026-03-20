@@ -4,19 +4,28 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FAILURES=0
 WARNINGS=0
+CHECKS=0
+
+section() {
+  echo
+  printf '=== %s ===\n' "$*"
+}
 
 pass() {
-  printf 'OK   %s\n' "$*"
+  printf '  \033[32mPASS\033[0m  %s\n' "$*"
+  CHECKS=$((CHECKS + 1))
 }
 
 warn() {
-  printf 'WARN %s\n' "$*"
+  printf '  \033[33mWARN\033[0m  %s\n' "$*"
   WARNINGS=$((WARNINGS + 1))
+  CHECKS=$((CHECKS + 1))
 }
 
 fail() {
-  printf 'FAIL %s\n' "$*" >&2
+  printf '  \033[31mFAIL\033[0m  %s\n' "$*" >&2
   FAILURES=$((FAILURES + 1))
+  CHECKS=$((CHECKS + 1))
 }
 
 extract_version() {
@@ -90,6 +99,19 @@ check_version() {
 
   fail "$label $actual is too old (required >= $minimum)"
   return 1
+}
+
+check_bash() {
+  local version
+  version="${BASH_VERSION%%(*}"
+  version="${version%%[^0-9.]*}"
+
+  if [[ -z "$version" ]]; then
+    fail "Could not determine bash version"
+    return
+  fi
+
+  check_version "bash" "$version" "4"
 }
 
 check_java() {
@@ -178,20 +200,38 @@ check_workspace_state() {
 }
 
 echo "open-pos doctor"
-echo
 
+section "Shell"
+check_bash
+
+section "Languages & Runtimes"
 check_java
 check_node
+
+section "Package Managers"
 check_pnpm
+
+section "Toolchain"
 check_buf
+
+section "Container"
 check_docker
+
+section "Utilities"
 check_utilities
+
+section "Workspace"
 check_workspace_state
 
 echo
+printf '%d check(s) completed: ' "$CHECKS"
 if [[ "$FAILURES" -gt 0 ]]; then
-  printf 'Doctor found %d failure(s) and %d warning(s).\n' "$FAILURES" "$WARNINGS" >&2
+  printf '\033[31m%d failure(s)\033[0m, \033[33m%d warning(s)\033[0m\n' "$FAILURES" "$WARNINGS" >&2
   exit 1
 fi
 
-printf 'Doctor passed with %d warning(s).\n' "$WARNINGS"
+if [[ "$WARNINGS" -gt 0 ]]; then
+  printf '\033[32mall passed\033[0m with \033[33m%d warning(s)\033[0m\n' "$WARNINGS"
+else
+  printf '\033[32mall passed\033[0m\n'
+fi
