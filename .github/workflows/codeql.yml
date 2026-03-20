@@ -24,7 +24,8 @@ jobs:
   analyze:
     name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-latest
-    # java-kotlin CodeQL は Kotlin 2.3 未対応のため non-blocking（Trivy/gitleaks でカバー）
+    # java-kotlin: Kotlin 2.3 未対応のため PR では無効化。main push + schedule のみ実行。
+    # CodeQL の Kotlin 2.3 対応リリース時に再有効化すること。
     continue-on-error: ${{ matrix.language == 'java-kotlin' }}
     strategy:
       fail-fast: false
@@ -35,12 +36,15 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Skip heavy Java/Kotlin CodeQL for docs PRs
-        if: ${{ github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, 'docs:') && matrix.language == 'java-kotlin' }}
-        run: echo "Skipping java-kotlin CodeQL for docs-only pull requests."
+      - name: Skip Java/Kotlin CodeQL on PRs
+        if: ${{ matrix.language == 'java-kotlin' && github.event_name == 'pull_request' }}
+        run: |
+          echo "::notice::Skipping java-kotlin CodeQL on PRs (Kotlin 2.3 unsupported)"
+          echo "Kotlin 2.3 is not yet supported by CodeQL. Skipping on PRs to save ~5-10 min."
+          echo "java-kotlin analysis still runs on push to main and weekly schedule."
 
       - name: Set up Java
-        if: ${{ matrix.language == 'java-kotlin' && (github.event_name != 'pull_request' || !startsWith(github.event.pull_request.title, 'docs:')) }}
+        if: ${{ matrix.language == 'java-kotlin' && github.event_name != 'pull_request' }}
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
         with:
           distribution: temurin
@@ -54,18 +58,18 @@ jobs:
           build-mode: none
 
       - name: Initialize CodeQL (java-kotlin)
-        if: ${{ matrix.language == 'java-kotlin' && (github.event_name != 'pull_request' || !startsWith(github.event.pull_request.title, 'docs:')) }}
+        if: ${{ matrix.language == 'java-kotlin' && github.event_name != 'pull_request' }}
         uses: github/codeql-action/init@b1bff81932f5cdfc8695c7752dcee935dcd061c8 # v4
         with:
           languages: ${{ matrix.language }}
           build-mode: autobuild
 
       - name: Autobuild
-        if: ${{ matrix.language == 'java-kotlin' && (github.event_name != 'pull_request' || !startsWith(github.event.pull_request.title, 'docs:')) }}
+        if: ${{ matrix.language == 'java-kotlin' && github.event_name != 'pull_request' }}
         uses: github/codeql-action/autobuild@b1bff81932f5cdfc8695c7752dcee935dcd061c8 # v4
 
       - name: Analyze
-        if: ${{ matrix.language != 'java-kotlin' || github.event_name != 'pull_request' || !startsWith(github.event.pull_request.title, 'docs:') }}
+        if: ${{ matrix.language != 'java-kotlin' || github.event_name != 'pull_request' }}
         uses: github/codeql-action/analyze@b1bff81932f5cdfc8695c7752dcee935dcd061c8 # v4
         with:
           category: /language:${{ matrix.language }}
