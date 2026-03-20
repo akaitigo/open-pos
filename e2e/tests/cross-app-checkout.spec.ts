@@ -9,6 +9,9 @@ import { PosPage } from '../pages/pos-page'
  * チェックアウトできることを検証する。
  */
 test.describe('Cross-App Checkout', () => {
+  // 2アプリ間操作のため通常より長いタイムアウトを設定
+  test.setTimeout(120_000)
+
   test('admin creates product, POS can see and checkout it', async ({ browser }) => {
     const uniqueSuffix = `e2e-${Date.now()}`
     const testProductName = `テスト商品 ${uniqueSuffix}`
