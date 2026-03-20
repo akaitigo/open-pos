@@ -189,6 +189,7 @@ services:
     environment:
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
+      QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
@@ -230,6 +231,7 @@ services:
     environment:
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
+      QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
@@ -273,6 +275,7 @@ services:
     environment:
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
+      QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
@@ -316,6 +319,7 @@ services:
     environment:
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
+      QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
@@ -357,6 +361,7 @@ services:
     environment:
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
+      QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
