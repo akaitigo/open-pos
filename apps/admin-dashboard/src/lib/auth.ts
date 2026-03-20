@@ -62,6 +62,7 @@ const OAuthTokenResponseSchema = z.object({
 
 const TOKEN_STORAGE_KEY = 'openpos-admin-tokens'
 const VERIFIER_STORAGE_KEY = 'openpos-admin-pkce-verifier'
+const STATE_STORAGE_KEY = 'openpos-admin-pkce-state'
 
 /** Current retry count for token refresh */
 let refreshRetryCount = 0
