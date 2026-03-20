@@ -2,6 +2,7 @@
        dev-gateway dev-product dev-store dev-pos dev-inventory dev-analytics dev-backend \
        local-build local-up local-up-fast local-down local-seed local-smoke local-demo reset \
        docker-build docker-build-core docker-up-core docker-down-core docker-smoke docker-demo \
+       demo-up demo-down \
        build build-apps build-services \
        test test-apps test-backend test-frontend test-e2e test-all grpc-test \
        lint proto proto-lint proto-breaking seed db-backup db-restore clean
@@ -92,6 +93,12 @@ local-smoke: ## Verify the seeded local demo data via the API gateway
 
 local-demo: up local-up local-seed local-smoke ## Start infra, local backend, seed demo data, and verify the API path
 	@echo "Demo data is ready. Reload the browser to pick up the latest demo-config.json."
+
+demo-up: local-demo ## Alias: start the full local demo (infra + backend + seed + smoke)
+	@echo "Run 'pnpm dev:pos' and 'pnpm dev:admin' to open the frontends."
+
+demo-down: local-down down ## Alias: stop the local demo (backend + infra)
+	@echo "Demo stopped."
 
 reset: ## Reset PostgreSQL data, restart the supported backend mode, and reseed the demo data
 	bash scripts/reset.sh
