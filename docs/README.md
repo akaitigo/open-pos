@@ -14,6 +14,7 @@ This directory contains the project design, runbooks, product requirements, and 
 ## Setup and Daily Development
 
 - [guides/setup.md](guides/setup.md): local environment setup and supported startup flows
+- [guides/local-development.md](guides/local-development.md): quarkusDev / local-demo / docker-demo モードの比較と使い分け
 - [guides/demo-assets.md](guides/demo-assets.md): regenerate README screenshots and GIFs from the supported local demo flow
 - [runbook/local-dev.md](runbook/local-dev.md): supported local modes, runtime config outputs, and troubleshooting
 - [guides/contributing.md](guides/contributing.md): lightweight contribution workflow

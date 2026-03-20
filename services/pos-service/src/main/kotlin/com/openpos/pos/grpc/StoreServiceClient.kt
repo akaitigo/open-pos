@@ -13,6 +13,7 @@ import jakarta.inject.Inject
 import openpos.store.v1.GetOrganizationRequest
 import openpos.store.v1.StoreServiceGrpc
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /**
  * store-service の gRPC クライアント。
@@ -24,6 +25,11 @@ class StoreServiceClient {
     @GrpcClient("store-service")
     lateinit var channel: Channel
 
+    companion object {
+        /** gRPC 呼び出しのデフォルトタイムアウト（秒） */
+        private const val GRPC_DEADLINE_SECONDS = 5L
+    }
+
     /**
      * 組織のインボイス登録番号を取得する。
      * 未設定の場合は null を返す。
@@ -32,6 +38,7 @@ class StoreServiceClient {
         val stub =
             StoreServiceGrpc
                 .newBlockingStub(channel)
+                .withDeadlineAfter(GRPC_DEADLINE_SECONDS, TimeUnit.SECONDS)
                 .withInterceptors(TenantHeaderInterceptor(organizationId))
 
         val response =

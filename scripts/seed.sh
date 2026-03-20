@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
+# Requires bash 4+ (associative arrays). macOS ships bash 3.2 by default;
+# install bash 4+ via Homebrew: brew install bash
 set -euo pipefail
+
+if (( BASH_VERSINFO[0] < 4 )); then
+  echo "ERROR: bash 4+ is required (found ${BASH_VERSION})." >&2
+  echo "On macOS: brew install bash, then run with /usr/local/bin/bash or add it to PATH." >&2
+  exit 1
+fi
 
 API_URL="${API_URL:-http://localhost:8080}"
 TARGET_STOCK_QUANTITY="${TARGET_STOCK_QUANTITY:-100}"
@@ -560,7 +568,15 @@ ensure_product() {
 
   category_id="${CATEGORY_IDS[$category_name]}"
   tax_rate_id="${TAX_RATE_IDS[$tax_key]}"
-  image_url="https://placehold.co/600x400/png?text=$image_slug"
+
+  # Use bundled demo-safe SVG images instead of external placeholders
+  case "$category_name" in
+    食品)   image_url="/demo-images/food.svg" ;;
+    飲料)   image_url="/demo-images/beverage.svg" ;;
+    日用品) image_url="/demo-images/daily.svg" ;;
+    衣類)   image_url="/demo-images/clothing.svg" ;;
+    *)      image_url="/demo-images/daily.svg" ;;
+  esac
 
   if api_get_optional "/api/products/barcode/$barcode"; then
     payload="$(

@@ -43,6 +43,7 @@ class OutboxProcessorTest {
     ): OutboxEventEntity =
         OutboxEventEntity().apply {
             this.id = UUID.randomUUID()
+            this.organizationId = UUID.randomUUID()
             this.eventType = eventType
             this.payload = payload
             this.status = "PENDING"

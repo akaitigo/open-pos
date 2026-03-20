@@ -72,6 +72,7 @@ class EventPublisherTest {
         verify(outboxRepository).persist(captor.capture())
 
         val savedEvent = captor.firstValue
+        assertEquals(orgId, savedEvent.organizationId)
         assertEquals("sale.completed", savedEvent.eventType)
         assertEquals("PENDING", savedEvent.status)
         assertEquals(0, savedEvent.retryCount)

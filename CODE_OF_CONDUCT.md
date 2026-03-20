@@ -1,49 +1,49 @@
-# Code of Conduct
+# 行動規範
 
-## Our Standard
+## 私たちの基準
 
-We want `open-pos` to be a practical, respectful OSS project for people building and operating POS systems.
+`open-pos` を、POS システムを構築・運用する人々にとって実践的で敬意ある OSS プロジェクトにしたいと考えています。
 
-Examples of behavior that contribute to a healthy community include:
+健全なコミュニティに貢献する行動の例:
 
-- being respectful in discussion, review, and disagreement
-- giving actionable technical feedback instead of personal attacks
-- assuming good intent while still being precise about problems
-- sharing context, repro steps, and evidence when reporting issues
-- focusing criticism on code, behavior, and decisions, not on people
+- 議論、レビュー、意見の相違において敬意を持つこと
+- 個人攻撃ではなく、実行可能な技術的フィードバックを提供すること
+- 問題について正確であることを維持しつつ、善意を想定すること
+- Issue 報告時にコンテキスト、再現手順、証拠を共有すること
+- 批判はコード、振る舞い、意思決定に対して行い、人に対しては行わないこと
 
-Examples of unacceptable behavior include:
+容認できない行動の例:
 
-- harassment, threats, or discriminatory language
-- insulting, demeaning, or hostile comments
-- publishing private information without consent
-- bad-faith issue spam, trolling, or repeated disruption
-- retaliating against people who report misconduct
+- ハラスメント、脅迫、差別的な言語
+- 侮辱的、見下した、または敵対的なコメント
+- 同意なく個人情報を公開すること
+- 悪意のある Issue スパム、荒らし、繰り返しの妨害
+- 不正行為を報告した人に対する報復
 
-## Scope
+## 適用範囲
 
-This applies in GitHub issues, pull requests, discussions, review comments, and other project-managed spaces.
+本規範は GitHub Issue、プルリクエスト、Discussions、レビューコメント、その他のプロジェクト管理スペースに適用されます。
 
-## Enforcement
+## 執行
 
-Project maintainers may remove, edit, or reject comments, commits, issues, and pull requests that do not align with this Code of Conduct.
+プロジェクトメンテナーは、本行動規範に沿わないコメント、コミット、Issue、プルリクエストを削除、編集、または却下することがあります。
 
-Possible enforcement actions include:
+可能な執行措置:
 
-- a private warning
-- temporary moderation of participation
-- temporary suspension from project spaces
-- permanent ban from project spaces
+- 非公開の警告
+- 参加の一時的な制限
+- プロジェクトスペースからの一時的な停止
+- プロジェクトスペースからの永久追放
 
-## Reporting
+## 報告
 
-If you experience or witness unacceptable behavior, contact the repository owner privately before opening any public issue.
+容認できない行動を経験または目撃した場合は、公開 Issue を作成する前にリポジトリオーナーに非公開で連絡してください。
 
-When reporting, include:
+報告時に以下を含めてください:
 
-- what happened
-- links or screenshots if available
-- timestamps and context
-- whether there is an immediate safety concern
+- 何が起きたか
+- 利用可能な場合はリンクまたはスクリーンショット
+- タイムスタンプとコンテキスト
+- 即座の安全上の懸念があるかどうか
 
-Reports will be reviewed as confidentially as practical.
+報告は実際的に可能な限り機密として取り扱います。

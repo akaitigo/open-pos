@@ -1,5 +1,6 @@
 package com.openpos.store.entity
 
+import com.openpos.store.entity.annotation.PersonalData
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
@@ -19,9 +20,13 @@ class StoreEntity : BaseEntity() {
     @Column(name = "name", nullable = false, length = 255)
     lateinit var name: String
 
+    /** @PII 店舗所在地 */
+    @PersonalData(category = "ADDRESS", description = "店舗住所")
     @Column(name = "address")
     var address: String? = null
 
+    /** @PII 店舗電話番号 */
+    @PersonalData(category = "PHONE", description = "店舗電話番号")
     @Column(name = "phone", length = 20)
     var phone: String? = null
 

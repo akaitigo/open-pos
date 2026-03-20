@@ -1,8 +1,10 @@
 package com.openpos.analytics.grpc
 
 import com.openpos.analytics.repository.DailySalesRepository
+import com.openpos.analytics.repository.HourlySalesRepository
 import com.openpos.analytics.repository.ProductSalesRepository
 import com.openpos.analytics.service.AnalyticsQueryService
+import com.openpos.analytics.service.AnalyticsService
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import io.quarkus.grpc.GrpcService
@@ -49,6 +51,12 @@ class AnalyticsGrpcService : AnalyticsServiceGrpc.AnalyticsServiceImplBase() {
 
     @Inject
     lateinit var analyticsQueryService: AnalyticsQueryService
+
+    @Inject
+    lateinit var analyticsService: AnalyticsService
+
+    @Inject
+    lateinit var hourlySalesRepository: HourlySalesRepository
 
     // === Daily Sales ===
 
@@ -151,14 +159,23 @@ class AnalyticsGrpcService : AnalyticsServiceGrpc.AnalyticsServiceImplBase() {
         responseObserver: StreamObserver<GetHourlySalesResponse>,
     ) {
         tenantHelper.setupTenantContext()
-        // Return empty hourly data (24 hours) as placeholder
+        val storeId = request.storeId.toUUID()
+        val saleDate =
+            try {
+                LocalDate.parse(request.date)
+            } catch (e: Exception) {
+                throw Status.INVALID_ARGUMENT.withDescription("Invalid date: ${request.date}").asRuntimeException()
+            }
+
+        val hourlyResults = analyticsService.getHourlySales(storeId, saleDate)
+
         val hourlyList =
-            (0..23).map { hour ->
+            hourlyResults.map { result ->
                 HourlySales
                     .newBuilder()
-                    .setHour(hour)
-                    .setAmount(0)
-                    .setTransactionCount(0)
+                    .setHour(result.hour)
+                    .setAmount(result.totalSales)
+                    .setTransactionCount(result.transactionCount)
                     .build()
             }
         responseObserver.onNext(

@@ -12,4 +12,6 @@ class CustomerRepository : PanacheRepositoryBase<CustomerEntity, UUID> {
     fun listPaginated(page: Page): List<CustomerEntity> = findAll(Sort.ascending("name")).page(page).list()
 
     fun findByEmail(email: String): CustomerEntity? = find("email", email).firstResult()
+
+    fun findAllByOrganizationId(organizationId: UUID): List<CustomerEntity> = find("organizationId = ?1", organizationId).list()
 }
