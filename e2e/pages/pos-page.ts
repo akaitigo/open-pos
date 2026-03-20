@@ -64,8 +64,16 @@ export class PosPage {
   }
 
   async dismissToastIfVisible(): Promise<void> {
-    if (await this.notificationCloseButton.isVisible().catch(() => false)) {
-      await this.notificationCloseButton.click()
+    // Wait briefly for any toast animation to appear
+    await this.page.waitForTimeout(500)
+    const toastContainer = this.page.locator('.fixed.right-0.top-0.z-100')
+    if (await toastContainer.isVisible().catch(() => false)) {
+      // Try clicking the close button, or wait for auto-dismiss
+      if (await this.notificationCloseButton.isVisible().catch(() => false)) {
+        await this.notificationCloseButton.click()
+      }
+      // Wait for toast to disappear
+      await toastContainer.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
     }
   }
 
@@ -98,6 +106,7 @@ export class PosPage {
   }
 
   async navigateToHistory(): Promise<void> {
+    await this.dismissToastIfVisible()
     await this.page.getByRole('link', { name: '履歴' }).click()
     await expect(this.page.getByText('取引履歴')).toBeVisible()
   }
