@@ -92,6 +92,24 @@ export function hasPosRuntimeConfig(): boolean {
   return Boolean(runtimeConfig.organizationId && runtimeConfig.storeId && runtimeConfig.terminalId)
 }
 
+/**
+ * 店舗と端末を動的に設定する（#438 店舗/端末選択UI用）。
+ * organizationId が設定済みかつ storeId/terminalId が未設定の場合に使う。
+ */
+export function updateStoreTerminal(storeId: string, terminalId: string): void {
+  runtimeConfig = { ...runtimeConfig, storeId, terminalId }
+}
+
+/**
+ * organizationId は設定済みだが storeId / terminalId が未設定の状態かどうか。
+ * 店舗/端末選択画面の表示判定に使用する。
+ */
+export function needsStoreTerminalSelection(): boolean {
+  return (
+    Boolean(runtimeConfig.organizationId) && (!runtimeConfig.storeId || !runtimeConfig.terminalId)
+  )
+}
+
 export function resetRuntimeConfigForTests(config?: Partial<PosRuntimeConfig>) {
   initializationPromise = null
   runtimeConfig = {

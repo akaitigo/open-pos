@@ -6,6 +6,9 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
 import jakarta.persistence.PrePersist
 import jakarta.persistence.Table
+import org.hibernate.annotations.Filter
+import org.hibernate.annotations.FilterDef
+import org.hibernate.annotations.ParamDef
 import java.time.Instant
 import java.util.UUID
 
@@ -13,9 +16,17 @@ import java.util.UUID
  * 商品アラートエンティティ。
  * 売れ筋変動・在庫異常を検出して記録する。
  * alertType: TRENDING（急上昇）、DECLINING（急降下）、ANOMALY（異常検知）
+ *
+ * BaseEntity を継承しないが、organizationId による RLS フィルターを適用する。
+ * （updatedAt 不要のため独自管理）
  */
 @Entity
 @Table(name = "product_alerts", schema = "analytics_schema")
+@FilterDef(
+    name = "organizationFilter",
+    parameters = [ParamDef(name = "organizationId", type = UUID::class)],
+)
+@Filter(name = "organizationFilter", condition = "organization_id = :organizationId")
 class ProductAlertEntity {
     @Id
     @GeneratedValue

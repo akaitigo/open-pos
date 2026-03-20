@@ -22,6 +22,7 @@ import openpos.product.v1.TaxRate
 import openpos.product.v1.ValidateCouponRequest
 import org.jboss.logging.Logger
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /**
  * product-service の gRPC クライアント。
@@ -46,6 +47,9 @@ class ProductServiceClient {
     companion object {
         const val PRODUCT_SNAPSHOT_TTL_SECONDS = 3600L
         private const val PREFIX = "openpos:pos-service"
+
+        /** gRPC 呼び出しのデフォルトタイムアウト（秒） */
+        private const val GRPC_DEADLINE_SECONDS = 5L
     }
 
     fun getProductSnapshot(
@@ -76,6 +80,7 @@ class ProductServiceClient {
         val stub =
             ProductServiceGrpc
                 .newBlockingStub(channel)
+                .withDeadlineAfter(GRPC_DEADLINE_SECONDS, TimeUnit.SECONDS)
                 .withInterceptors(TenantHeaderInterceptor(organizationId))
 
         val productResponse =
@@ -111,6 +116,7 @@ class ProductServiceClient {
         val stub =
             ProductServiceGrpc
                 .newBlockingStub(channel)
+                .withDeadlineAfter(GRPC_DEADLINE_SECONDS, TimeUnit.SECONDS)
                 .withInterceptors(TenantHeaderInterceptor(organizationId))
 
         val response =
@@ -145,6 +151,7 @@ class ProductServiceClient {
         val stub =
             ProductServiceGrpc
                 .newBlockingStub(channel)
+                .withDeadlineAfter(GRPC_DEADLINE_SECONDS, TimeUnit.SECONDS)
                 .withInterceptors(TenantHeaderInterceptor(organizationId))
 
         val response =
@@ -179,6 +186,7 @@ class ProductServiceClient {
         val stub =
             ProductServiceGrpc
                 .newBlockingStub(channel)
+                .withDeadlineAfter(GRPC_DEADLINE_SECONDS, TimeUnit.SECONDS)
                 .withInterceptors(TenantHeaderInterceptor(organizationId))
 
         // 税率一覧を 1 回だけ取得

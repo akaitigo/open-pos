@@ -44,6 +44,19 @@ service StoreService {
   rpc UpdateStaff(UpdateStaffRequest) returns (UpdateStaffResponse);
   // PIN で認証する（POS 画面のスタッフログイン）
   rpc AuthenticateByPin(AuthenticateByPinRequest) returns (AuthenticateByPinResponse);
+
+  // === GDPR / 個人情報保護 ===
+
+  // テナントの全データを削除する（GDPR 忘れられる権利）
+  rpc DeleteOrganizationData(DeleteOrganizationDataRequest) returns (DeleteOrganizationDataResponse);
+  // スタッフデータを匿名化する（完了済み取引のスタッフ名等）
+  rpc AnonymizeStaffData(AnonymizeStaffDataRequest) returns (AnonymizeStaffDataResponse);
+  // 顧客データを匿名化する
+  rpc AnonymizeCustomerData(AnonymizeCustomerDataRequest) returns (AnonymizeCustomerDataResponse);
+  // データ処理同意を記録する
+  rpc RecordConsent(RecordConsentRequest) returns (RecordConsentResponse);
+  // データ処理同意を取得する
+  rpc GetConsent(GetConsentRequest) returns (GetConsentResponse);
 }
 
 // スタッフロール
@@ -487,4 +500,102 @@ message DeleteSystemSettingRequest {
 message DeleteSystemSettingResponse {
   // 削除成功フラグ
   bool success = 1;
+}
+
+// === GDPR / 個人情報保護 ===
+
+// テナントデータ削除リクエスト（忘れられる権利）
+message DeleteOrganizationDataRequest {
+  // 削除対象の組織ID（必須）
+  string organization_id = 1;
+}
+
+// テナントデータ削除レスポンス
+message DeleteOrganizationDataResponse {
+  // 削除成功フラグ
+  bool success = 1;
+  // 削除処理のメッセージ
+  string message = 2;
+}
+
+// スタッフデータ匿名化リクエスト
+message AnonymizeStaffDataRequest {
+  // 対象組織ID（必須）
+  string organization_id = 1;
+}
+
+// スタッフデータ匿名化レスポンス
+message AnonymizeStaffDataResponse {
+  // 匿名化されたスタッフ数
+  int32 anonymized_count = 1;
+}
+
+// 顧客データ匿名化リクエスト
+message AnonymizeCustomerDataRequest {
+  // 対象組織ID（必須）
+  string organization_id = 1;
+}
+
+// 顧客データ匿名化レスポンス
+message AnonymizeCustomerDataResponse {
+  // 匿名化された顧客数
+  int32 anonymized_count = 1;
+}
+
+// データ処理同意
+message DataProcessingConsent {
+  // 同意ID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 同意種別（DATA_PROCESSING, MARKETING, ANALYTICS）
+  string consent_type = 3;
+  // 同意ステータス
+  bool granted = 4;
+  // 同意付与日時（ISO 8601）
+  string granted_at = 5;
+  // 同意撤回日時（ISO 8601）
+  string revoked_at = 6;
+  // プライバシーポリシーバージョン
+  string policy_version = 7;
+  // 作成日時（ISO 8601）
+  string created_at = 8;
+  // 更新日時（ISO 8601）
+  string updated_at = 9;
+}
+
+// 同意記録リクエスト
+message RecordConsentRequest {
+  // 組織ID（必須）
+  string organization_id = 1;
+  // 同意種別（必須）
+  string consent_type = 2;
+  // 同意の有無（必須）
+  bool granted = 3;
+  // 同意を付与したスタッフID
+  string granted_by = 4;
+  // プライバシーポリシーバージョン（必須）
+  string policy_version = 5;
+  // IPアドレス
+  string ip_address = 6;
+}
+
+// 同意記録レスポンス
+message RecordConsentResponse {
+  // 記録された同意
+  DataProcessingConsent consent = 1;
+}
+
+// 同意取得リクエスト
+message GetConsentRequest {
+  // 組織ID（必須）
+  string organization_id = 1;
+  // 同意種別（省略時は全件取得）
+  string consent_type = 2;
+}
+
+// 同意取得レスポンス
+message GetConsentResponse {
+  // 同意リスト
+  repeated DataProcessingConsent consents = 1;
 }

@@ -35,4 +35,21 @@ class HourlySalesRepository : PanacheRepositoryBase<HourlySalesEntity, UUID> {
             storeId,
             saleDate,
         ).list()
+
+    /**
+     * 店舗×日付範囲の時間帯別売上を集計する（時間帯でグルーピング）。
+     * 複数日にまたがる場合は同じ時間帯の売上を合算する。
+     */
+    fun listByStoreAndDateRange(
+        storeId: UUID,
+        startDate: LocalDate,
+        endDate: LocalDate,
+    ): List<HourlySalesEntity> =
+        find(
+            "storeId = ?1 AND saleDate >= ?2 AND saleDate <= ?3",
+            Sort.ascending("hour"),
+            storeId,
+            startDate,
+            endDate,
+        ).list()
 }

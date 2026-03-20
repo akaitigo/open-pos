@@ -1,5 +1,6 @@
 package com.openpos.pos.entity
 
+import com.openpos.pos.entity.annotation.PersonalData
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
@@ -20,9 +21,13 @@ class ReservationEntity : BaseEntity() {
     @Column(name = "store_id", nullable = false)
     lateinit var storeId: UUID
 
+    /** @PII 予約顧客名 */
+    @PersonalData(category = "NAME", description = "予約顧客氏名")
     @Column(name = "customer_name", length = 255)
     var customerName: String? = null
 
+    /** @PII 予約顧客電話番号 */
+    @PersonalData(category = "PHONE", description = "予約顧客電話番号")
     @Column(name = "customer_phone", length = 20)
     var customerPhone: String? = null
 
