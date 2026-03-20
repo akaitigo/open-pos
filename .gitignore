@@ -64,3 +64,7 @@ hs_err_pid*.log
 /objects
 /refs
 *.tsbuildinfo
+
+# Local tool caches
+.gradle-home/
+.pnpm-home/
