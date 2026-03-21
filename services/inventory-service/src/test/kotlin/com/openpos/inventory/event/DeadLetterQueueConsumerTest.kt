@@ -2,7 +2,10 @@ package com.openpos.inventory.event
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
+import io.smallrye.reactive.messaging.rabbitmq.OutgoingRabbitMQMetadata
 import org.eclipse.microprofile.reactive.messaging.Emitter
+import org.eclipse.microprofile.reactive.messaging.Message
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -57,7 +60,7 @@ class DeadLetterQueueConsumerTest {
     @Nested
     inner class OnDlqSaleCompleted {
         @Test
-        fun `初回リトライ時はsaleCompletedRetryEmitterに再送する`() {
+        fun `初回リトライ時はメッセージTTL付きで再送する`() {
             // Arrange
             val body = buildMessageBody(retryCount = 0)
             val message = mockMessage(body)
@@ -66,11 +69,18 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleCompleted(message)
 
             // Assert
-            val captor = argumentCaptor<String>()
+            val captor = argumentCaptor<Message<String>>()
             verify(saleCompletedRetryEmitter).send(captor.capture())
 
-            val sentMessage = objectMapper.readValue(captor.firstValue, Map::class.java)
-            assertTrue(sentMessage["retryCount"] == 1)
+            val sentMsg = captor.firstValue
+            val sentBody = objectMapper.readValue(sentMsg.payload, Map::class.java)
+            assertTrue(sentBody["retryCount"] == 1)
+
+            // メッセージに OutgoingRabbitMQMetadata（expiration）が設定されていることを検証
+            val rabbitMetadata = sentMsg.metadata.get(OutgoingRabbitMQMetadata::class.java)
+            assertTrue(rabbitMetadata.isPresent, "OutgoingRabbitMQMetadata should be present")
+            assertEquals("1000", rabbitMetadata.get().expiration)
+
             verify(message).ack()
         }
 
@@ -84,11 +94,11 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleCompleted(message)
 
             // Assert
-            val captor = argumentCaptor<String>()
+            val captor = argumentCaptor<Message<String>>()
             verify(saleCompletedRetryEmitter).send(captor.capture())
 
-            val sentMessage = objectMapper.readValue(captor.firstValue, Map::class.java)
-            assertTrue(sentMessage["retryCount"] == 1)
+            val sentBody = objectMapper.readValue(captor.firstValue.payload, Map::class.java)
+            assertTrue(sentBody["retryCount"] == 1)
             verify(message).ack()
         }
 
@@ -102,12 +112,12 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleCompleted(message)
 
             // Assert
-            verify(saleCompletedRetryEmitter, never()).send(any())
+            verify(saleCompletedRetryEmitter, never()).send(any<Message<String>>())
             verify(message).ack()
         }
 
         @Test
-        fun `2回目のリトライでretryCountが正しくインクリメントされる`() {
+        fun `2回目のリトライでretryCountが正しくインクリメントされTTLが5秒に設定される`() {
             // Arrange
             val body = buildMessageBody(retryCount = 1)
             val message = mockMessage(body)
@@ -116,11 +126,17 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleCompleted(message)
 
             // Assert
-            val captor = argumentCaptor<String>()
+            val captor = argumentCaptor<Message<String>>()
             verify(saleCompletedRetryEmitter).send(captor.capture())
 
-            val sentMessage = objectMapper.readValue(captor.firstValue, Map::class.java)
-            assertTrue(sentMessage["retryCount"] == 2)
+            val sentMsg = captor.firstValue
+            val sentBody = objectMapper.readValue(sentMsg.payload, Map::class.java)
+            assertTrue(sentBody["retryCount"] == 2)
+
+            val rabbitMetadata = sentMsg.metadata.get(OutgoingRabbitMQMetadata::class.java)
+            assertTrue(rabbitMetadata.isPresent)
+            assertEquals("5000", rabbitMetadata.get().expiration)
+
             verify(message).ack()
         }
     }
@@ -128,7 +144,7 @@ class DeadLetterQueueConsumerTest {
     @Nested
     inner class OnDlqSaleVoided {
         @Test
-        fun `初回リトライ時はsaleVoidedRetryEmitterに再送する`() {
+        fun `初回リトライ時はsaleVoidedRetryEmitterにメッセージTTL付きで再送する`() {
             // Arrange
             val body = buildMessageBody(retryCount = 0)
             val message = mockMessage(body)
@@ -137,7 +153,7 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleVoided(message)
 
             // Assert
-            verify(saleVoidedRetryEmitter).send(any())
+            verify(saleVoidedRetryEmitter).send(any<Message<String>>())
             verify(message).ack()
         }
 
@@ -151,7 +167,7 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleVoided(message)
 
             // Assert
-            verify(saleVoidedRetryEmitter, never()).send(any())
+            verify(saleVoidedRetryEmitter, never()).send(any<Message<String>>())
             verify(message).ack()
         }
     }
