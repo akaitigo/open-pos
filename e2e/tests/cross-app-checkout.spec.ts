@@ -20,9 +20,9 @@ test.describe('Cross-App Checkout', () => {
     // seed.sh で作成された商品を検索
     await posPage.searchProduct('北海道おにぎり鮭')
 
-    await expect(
-      posPage.page.locator('.cursor-pointer').filter({ hasText: '北海道おにぎり鮭' }),
-    ).toBeVisible({ timeout: 10_000 })
+    await expect(posPage.productGrid.getByText('北海道おにぎり鮭', { exact: true })).toBeVisible({
+      timeout: 10_000,
+    })
 
     // カートに追加
     await posPage.addProductToCart('北海道おにぎり鮭')
