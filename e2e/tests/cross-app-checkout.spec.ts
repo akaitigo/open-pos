@@ -24,7 +24,7 @@ test.describe('Cross-App Verification', () => {
     const uniqueName = `E2Eテスト商品${Date.now().toString().slice(-6)}`
     await adminPage.fillProductForm({ name: uniqueName, price: '500' })
 
-    await page.getByRole('button', { name: '保存' }).click()
+    await page.getByRole('button', { name: '追加' }).click()
     await expect(adminPage.productDialog).not.toBeVisible({ timeout: 15_000 })
 
     // 商品が追加されたことを確認
