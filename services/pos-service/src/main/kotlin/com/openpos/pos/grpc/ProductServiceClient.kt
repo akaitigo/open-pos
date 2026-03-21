@@ -13,6 +13,7 @@ import io.quarkus.grpc.GrpcClient
 import io.quarkus.redis.datasource.RedisDataSource
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import openpos.product.v1.BatchGetProductsRequest
 import openpos.product.v1.DiscountType
 import openpos.product.v1.GetProductRequest
 import openpos.product.v1.ListDiscountsRequest
@@ -199,29 +200,33 @@ class ProductServiceClient {
         val taxRatesResponse = stub.listTaxRates(ListTaxRatesRequest.getDefaultInstance())
         val taxRatesById = taxRatesResponse.taxRatesList.associateBy { it.id }
 
-        // 各商品を取得してスナップショットを構築
-        return productIds
-            .distinct()
-            .mapNotNull { productId ->
-                try {
-                    val productResponse =
-                        stub.getProduct(
-                            GetProductRequest.newBuilder().setId(productId.toString()).build(),
-                        )
-                    val product = productResponse.product
-                    val matchedTaxRate = taxRatesById[product.taxRateId] ?: return@mapNotNull null
+        // BatchGetProducts で一括取得（N+1 RPC 防止）
+        val distinctIds = productIds.distinct()
+        val batchRequest =
+            BatchGetProductsRequest
+                .newBuilder()
+                .addAllIds(distinctIds.map { it.toString() })
+                .build()
+        val batchResponse = stub.batchGetProducts(batchRequest)
 
-                    productId to
-                        ProductSnapshot(
-                            name = product.name,
-                            price = product.price,
-                            taxRateName = matchedTaxRate.name,
-                            taxRate = matchedTaxRate.rate,
-                            isReduced = matchedTaxRate.isReduced,
-                        )
-                } catch (_: StatusRuntimeException) {
-                    null
-                }
+        return batchResponse.productsList
+            .mapNotNull { product ->
+                val productId =
+                    try {
+                        UUID.fromString(product.id)
+                    } catch (_: IllegalArgumentException) {
+                        return@mapNotNull null
+                    }
+                val matchedTaxRate = taxRatesById[product.taxRateId] ?: return@mapNotNull null
+
+                productId to
+                    ProductSnapshot(
+                        name = product.name,
+                        price = product.price,
+                        taxRateName = matchedTaxRate.name,
+                        taxRate = matchedTaxRate.rate,
+                        isReduced = matchedTaxRate.isReduced,
+                    )
             }.toMap()
     }
 
