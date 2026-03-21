@@ -5,6 +5,12 @@ import { PosPage } from '../pages/pos-page'
  * オフライン同期 E2E テスト (#416)
  *
  * ネットワーク切断時の UI 挙動と、復帰後のデータ整合性を検証する。
+ *
+ * 注意: オフライン中の決済完了（ローカルトランザクション作成）は
+ * POS アプリに未実装のためテスト対象外。
+ * 現時点で検証可能なオフライン機能:
+ * - カート状態のオフライン/オンライン永続化
+ * - 商品リストのオフライン後表示（Service Worker キャッシュ）
  */
 test.describe('Offline Sync', () => {
   let posPage: PosPage
