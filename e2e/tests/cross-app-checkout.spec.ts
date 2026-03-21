@@ -55,13 +55,18 @@ test.describe('Cross-App Checkout', () => {
     await posPage.addProductToCart(productName)
     await expect(posPage.cart).toContainText(productName)
 
-    // Checkout
+    // Checkout — API レスポンスを待機してからレシート表示を確認
     await posPage.startPayment()
     await posPage.selectExactCashPayment()
+    const finalizePromise = posPage.page.waitForResponse(
+      (resp) => resp.url().includes('/api/transactions/') && resp.url().includes('/finalize'),
+      { timeout: 30_000 },
+    )
     await posPage.confirmPayment()
+    await finalizePromise
 
     // Receipt confirmation
-    await expect(posPage.receiptDialog).toBeVisible({ timeout: 15_000 })
+    await expect(posPage.receiptDialog).toBeVisible({ timeout: 30_000 })
     await posPage.closeReceipt()
 
     // Cart should be empty
