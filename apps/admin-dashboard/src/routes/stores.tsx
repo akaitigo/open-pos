@@ -17,6 +17,7 @@ import { api } from '@/lib/api'
 import type { Store, Terminal, PaginatedResponse } from '@shared-types/openpos'
 import { StoreSchema, TerminalSchema, PaginatedStoresSchema } from '@shared-types/openpos'
 import { z } from 'zod'
+import { toast } from '@/hooks/use-toast'
 
 export function StoresPage() {
   const [stores, setStores] = useState<Store[]>([])
@@ -35,7 +36,10 @@ export function StoresPage() {
   }, [page])
 
   useEffect(() => {
-    fetchStores()
+    fetchStores().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : '店舗の取得に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    })
   }, [fetchStores])
 
   function handleCreate() {
@@ -49,13 +53,18 @@ export function StoresPage() {
   }
 
   async function handleSubmit(data: Record<string, unknown>) {
-    if (editingStore) {
-      await api.put(`/api/stores/${editingStore.id}`, data, StoreSchema)
-    } else {
-      await api.post('/api/stores', data, StoreSchema)
+    try {
+      if (editingStore) {
+        await api.put(`/api/stores/${editingStore.id}`, data, StoreSchema)
+      } else {
+        await api.post('/api/stores', data, StoreSchema)
+      }
+      setDialogOpen(false)
+      fetchStores()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '店舗の保存に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
     }
-    setDialogOpen(false)
-    fetchStores()
   }
 
   return (
@@ -252,22 +261,33 @@ function TerminalDialog({ store, onClose }: { store: Store | null; onClose: () =
 
   useEffect(() => {
     if (store) {
-      api.get(`/api/stores/${store.id}/terminals`, z.array(TerminalSchema)).then(setTerminals)
+      api
+        .get(`/api/stores/${store.id}/terminals`, z.array(TerminalSchema))
+        .then(setTerminals)
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : '端末の取得に失敗しました'
+          toast({ title: 'エラー', description: message, variant: 'destructive' })
+        })
     }
   }, [store])
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     if (!store) return
-    await api.post(
-      `/api/stores/${store.id}/terminals`,
-      { terminalCode, name: terminalName },
-      TerminalSchema,
-    )
-    setTerminalCode('')
-    setTerminalName('')
-    const updated = await api.get(`/api/stores/${store.id}/terminals`, z.array(TerminalSchema))
-    setTerminals(updated)
+    try {
+      await api.post(
+        `/api/stores/${store.id}/terminals`,
+        { terminalCode, name: terminalName },
+        TerminalSchema,
+      )
+      setTerminalCode('')
+      setTerminalName('')
+      const updated = await api.get(`/api/stores/${store.id}/terminals`, z.array(TerminalSchema))
+      setTerminals(updated)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '端末の登録に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    }
   }
 
   return (
