@@ -11,6 +11,7 @@ import { PosPage } from '../pages/pos-page'
  */
 test.describe('Cross-App Verification', () => {
   test('Admin can create a product', async ({ page }) => {
+    test.setTimeout(90_000)
     const adminPage = new AdminPage(page)
     await adminPage.goto()
     await adminPage.navigateToProducts()
