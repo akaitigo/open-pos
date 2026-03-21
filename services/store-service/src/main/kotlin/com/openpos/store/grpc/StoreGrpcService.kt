@@ -204,7 +204,7 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize.coerceAtMost(100) else 20
         val (stores, totalCount) = storeService.list(page, pageSize)
         val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
         responseObserver.onNext(
@@ -348,7 +348,14 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         try {
             tenantHelper.setupTenantContext()
             val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-            val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+            val pageSize =
+                if (request.hasPagination() &&
+                    request.pagination.pageSize > 0
+                ) {
+                    request.pagination.pageSize.coerceAtMost(100)
+                } else {
+                    20
+                }
             val (staff, totalCount) = staffService.listByStoreId(request.storeId.toUUID(), page, pageSize)
             val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
             responseObserver.onNext(
