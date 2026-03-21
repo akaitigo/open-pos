@@ -34,9 +34,11 @@ import openpos.pos.v1.TransactionStatus
 import openpos.pos.v1.TransactionType
 import openpos.pos.v1.UpdateTransactionItemRequest
 import openpos.pos.v1.VoidTransactionRequest
+import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/transactions")
 @Blocking
+@Timeout(5000)
 class TransactionResource {
     @Inject
     @GrpcClient("pos-service")

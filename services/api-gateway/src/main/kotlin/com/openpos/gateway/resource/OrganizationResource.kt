@@ -15,9 +15,11 @@ import openpos.store.v1.CreateOrganizationRequest
 import openpos.store.v1.GetOrganizationRequest
 import openpos.store.v1.StoreServiceGrpc
 import openpos.store.v1.UpdateOrganizationRequest
+import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/organizations")
 @Blocking
+@Timeout(5000)
 class OrganizationResource {
     @Inject
     @GrpcClient("store-service")

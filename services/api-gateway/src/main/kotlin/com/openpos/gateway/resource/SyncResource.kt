@@ -12,9 +12,11 @@ import openpos.pos.v1.PaymentInput
 import openpos.pos.v1.PaymentMethod
 import openpos.pos.v1.PosServiceGrpc
 import openpos.pos.v1.SyncOfflineTransactionsRequest
+import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/sync")
 @Blocking
+@Timeout(5000)
 class SyncResource {
     @Inject
     @GrpcClient("pos-service")
