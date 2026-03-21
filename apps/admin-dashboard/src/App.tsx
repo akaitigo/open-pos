@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router'
 
+import { ErrorBoundary } from '@/components/error-boundary'
 import { Layout } from '@/routes/layout'
 import { DashboardPage } from '@/routes/dashboard'
 
@@ -38,8 +39,9 @@ function RouteLoading() {
 
 export function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />
           <Route
@@ -115,7 +117,8 @@ export function App() {
             }
           />
         </Route>
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }

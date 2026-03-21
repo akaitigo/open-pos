@@ -24,7 +24,15 @@ function interpolate(template: string, vars?: Record<string, string | number>): 
   )
 }
 
-let currentLocale: Locale = (localStorage.getItem('openpos-locale') as Locale) ?? 'ja'
+function isLocale(value: unknown): value is Locale {
+  return value === 'ja' || value === 'en'
+}
+
+function toLocale(value: unknown): Locale {
+  return isLocale(value) ? value : 'ja'
+}
+
+let currentLocale: Locale = toLocale(localStorage.getItem('openpos-locale'))
 const listeners = new Set<() => void>()
 
 export function getLocale(): Locale {

@@ -21,6 +21,7 @@ import {
   formatMoney,
 } from '@shared-types/openpos'
 import type { PurchaseOrder, PaginatedResponse, Product } from '@shared-types/openpos'
+import { toast } from '@/hooks/use-toast'
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: '下書き',
@@ -69,20 +70,31 @@ export function PurchaseOrdersPage() {
   }, [storeId, page])
 
   useEffect(() => {
-    fetchProducts()
+    fetchProducts().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : '商品の取得に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    })
   }, [fetchProducts])
 
   useEffect(() => {
-    fetchOrders()
+    fetchOrders().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : '発注の取得に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    })
   }, [fetchOrders])
 
   async function handleStatusChange(orderId: string, newStatus: string) {
-    await api.put(
-      `/api/inventory/purchase-orders/${orderId}/status`,
-      { status: newStatus },
-      PurchaseOrderSchema,
-    )
-    fetchOrders()
+    try {
+      await api.put(
+        `/api/inventory/purchase-orders/${orderId}/status`,
+        { status: newStatus },
+        PurchaseOrderSchema,
+      )
+      fetchOrders()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'ステータスの更新に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    }
   }
 
   async function handleCreateSubmit(data: {
@@ -90,9 +102,14 @@ export function PurchaseOrdersPage() {
     note: string
     items: Array<{ productId: string; orderedQuantity: number; unitCost: number }>
   }) {
-    await api.post('/api/inventory/purchase-orders', { storeId, ...data }, PurchaseOrderSchema)
-    setCreateDialogOpen(false)
-    fetchOrders()
+    try {
+      await api.post('/api/inventory/purchase-orders', { storeId, ...data }, PurchaseOrderSchema)
+      setCreateDialogOpen(false)
+      fetchOrders()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '発注の作成に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    }
   }
 
   return (
