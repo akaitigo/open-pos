@@ -209,7 +209,7 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         tenantHelper.setupTenantContext()
         val page = if (request.hasPagination()) (request.pagination.page - 1).coerceAtLeast(0) else 0
         val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) {
-                request.pagination.pageSize.coerceIn(1, 100)
+                if (request.pagination.pageSize <= 0) 20 else request.pagination.pageSize.coerceIn(1, 100)
             } else {
                 20
             }
@@ -354,7 +354,7 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
             tenantHelper.setupTenantContext()
             val page = if (request.hasPagination()) (request.pagination.page - 1).coerceAtLeast(0) else 0
             val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) {
-                request.pagination.pageSize.coerceIn(1, 100)
+                if (request.pagination.pageSize <= 0) 20 else request.pagination.pageSize.coerceIn(1, 100)
             } else {
                 20
             }
