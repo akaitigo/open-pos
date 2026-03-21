@@ -21,7 +21,7 @@ test.describe('Cross-App Checkout', () => {
     await posPage.searchProduct('北海道おにぎり鮭')
 
     await expect(
-      posPage.page.locator('.cursor-pointer').filter({ hasText: '北海道おにぎり鮭' }),
+      posPage.productGrid.getByRole('button', { name: /北海道おにぎり鮭/ }),
     ).toBeVisible({ timeout: 10_000 })
 
     // カートに追加

@@ -106,7 +106,7 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
   }
 
   return (
-    <section className={className}>
+    <section data-testid="cart-panel" className={className}>
       <div className="flex items-center justify-between border-b p-4">
         <div className="flex items-center gap-2">
           <ShoppingCart className="h-5 w-5" />
@@ -339,6 +339,7 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
         </div>
 
         <Button
+          data-testid="checkout-button"
           className="mt-4 w-full"
           size={fullScreen ? 'default' : 'lg'}
           disabled={items.length === 0}
