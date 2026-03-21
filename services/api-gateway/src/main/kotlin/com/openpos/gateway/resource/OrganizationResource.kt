@@ -19,7 +19,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/organizations")
 @Blocking
-@Timeout(5000)
+@Timeout(30000)
 class OrganizationResource {
     @Inject
     @GrpcClient("store-service")

@@ -20,7 +20,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/tax-rates")
 @Blocking
-@Timeout(5000)
+@Timeout(30000)
 class TaxRateResource {
     @Inject
     @GrpcClient("product-service")

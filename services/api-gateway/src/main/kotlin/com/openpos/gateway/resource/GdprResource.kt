@@ -24,7 +24,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout
  */
 @Path("/api/organizations/{id}")
 @Blocking
-@Timeout(5000)
+@Timeout(30000)
 class GdprResource {
     @Inject
     @GrpcClient("store-service")

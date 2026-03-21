@@ -16,7 +16,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/sync")
 @Blocking
-@Timeout(5000)
+@Timeout(30000)
 class SyncResource {
     @Inject
     @GrpcClient("pos-service")

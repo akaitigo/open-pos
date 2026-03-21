@@ -38,7 +38,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/transactions")
 @Blocking
-@Timeout(5000)
+@Timeout(30000)
 class TransactionResource {
     @Inject
     @GrpcClient("pos-service")

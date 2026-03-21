@@ -33,7 +33,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/inventory")
 @Blocking
-@Timeout(5000)
+@Timeout(30000)
 class InventoryResource {
     @Inject
     @GrpcClient("inventory-service")

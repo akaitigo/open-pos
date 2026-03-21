@@ -33,7 +33,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag
 
 @Path("/api/products")
 @Blocking
-@Timeout(5000)
+@Timeout(30000)
 @Tag(name = "Products", description = "商品管理API")
 class ProductResource {
     @Inject

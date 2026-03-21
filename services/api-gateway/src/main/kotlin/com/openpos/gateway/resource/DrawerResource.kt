@@ -18,7 +18,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/drawers")
 @Blocking
-@Timeout(5000)
+@Timeout(30000)
 class DrawerResource {
     @Inject
     @GrpcClient("pos-service")
