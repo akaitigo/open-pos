@@ -40,7 +40,7 @@ export function HistoryPage() {
     <div className="flex flex-1 flex-col gap-4 p-4">
       <h2 className="text-lg font-semibold">取引履歴</h2>
 
-      <div className="overflow-auto rounded-lg border">
+      <div data-testid="history-table" className="overflow-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50">
             <tr>
@@ -53,7 +53,11 @@ export function HistoryPage() {
           </thead>
           <tbody>
             {transactions.map((tx) => (
-              <tr key={tx.id} className="border-b last:border-0">
+              <tr
+                key={tx.id}
+                data-testid={`transaction-row-${tx.id}`}
+                className="border-b last:border-0"
+              >
                 <td className="p-3 font-mono text-xs">{tx.transactionNumber}</td>
                 <td className="p-3 text-xs">{new Date(tx.createdAt).toLocaleString('ja-JP')}</td>
                 <td className="p-3 text-right font-medium">{formatMoney(tx.total)}</td>
@@ -78,6 +82,7 @@ export function HistoryPage() {
                   {tx.status === 'COMPLETED' && (
                     <div className="flex gap-1">
                       <Button
+                        data-testid={`receipt-btn-${tx.id}`}
                         variant="ghost"
                         size="sm"
                         className="min-h-11 min-w-11"

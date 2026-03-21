@@ -375,7 +375,7 @@ function ProductFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent data-testid="product-edit-dialog" className="max-w-md">
         <DialogHeader>
           <DialogTitle>{product ? '商品を編集' : '商品を追加'}</DialogTitle>
         </DialogHeader>

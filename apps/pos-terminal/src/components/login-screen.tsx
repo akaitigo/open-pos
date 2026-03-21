@@ -126,6 +126,7 @@ export function LoginScreen() {
               {staffList.map((staff) => (
                 <Button
                   key={staff.id}
+                  data-testid={`staff-btn-${staff.id}`}
                   variant="outline"
                   className="h-auto flex-col gap-1 py-4"
                   onClick={() => setSelectedStaff(staff)}
@@ -170,10 +171,11 @@ export function LoginScreen() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div data-testid="pin-input" className="grid grid-cols-3 gap-2">
               {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '←'].map((key) => (
                 <Button
                   key={key}
+                  data-testid={`pin-key-${key === '←' ? 'backspace' : key}`}
                   variant={key === 'C' ? 'destructive' : key === '←' ? 'secondary' : 'outline'}
                   className="h-14 text-lg"
                   onClick={() => handleKeyPress(key)}
@@ -184,6 +186,7 @@ export function LoginScreen() {
             </div>
 
             <Button
+              data-testid="login-btn"
               className="w-full"
               size="lg"
               disabled={loading || pin.length < 4}
