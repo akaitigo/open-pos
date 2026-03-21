@@ -14,9 +14,11 @@ import openpos.common.v1.DateRange
 import openpos.common.v1.PaginationRequest
 import openpos.pos.v1.ListJournalEntriesRequest
 import openpos.pos.v1.PosServiceGrpc
+import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/journal")
 @Blocking
+@Timeout(30000)
 class JournalResource {
     @Inject
     @GrpcClient("pos-service")
