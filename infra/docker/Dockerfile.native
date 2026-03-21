@@ -44,4 +44,6 @@ COPY --from=build /app/services/${SERVICE_NAME}/build/*-runner /app/application
 RUN chown -R appuser:appuser /app
 USER appuser
 EXPOSE 8080 9000
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
+  CMD wget --quiet --tries=1 --spider http://localhost:8080/q/health/ready || exit 1
 ENTRYPOINT ["/app/application"]
