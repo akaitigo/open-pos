@@ -21,32 +21,11 @@ services:
     networks:
       - openpos-net
 
-  pgbouncer:
-    image: bitnami/pgbouncer:1
-    container_name: openpos-pgbouncer
-    ports:
-      - '16432:6432'
-    environment:
-      POSTGRESQL_HOST: postgres
-      POSTGRESQL_PORT: 5432
-      POSTGRESQL_USERNAME: openpos
-      POSTGRESQL_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
-      POSTGRESQL_DATABASE: openpos
-      PGBOUNCER_DATABASE: openpos
-      PGBOUNCER_POOL_MODE: transaction
-      PGBOUNCER_MAX_CLIENT_CONN: 200
-      PGBOUNCER_DEFAULT_POOL_SIZE: 20
-      PGBOUNCER_MIN_POOL_SIZE: 5
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -h localhost -p 6432 -U openpos || exit 1']
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    networks:
-      - openpos-net
+  # NOTE: pgBouncer は本番環境（K8s）でのみ使用する。
+  # ローカル開発・CI では postgres:5432 に直接接続する。
+  # 本番 K8s では pgBouncer sidecar（pgbouncer/pgbouncer:latest）を
+  # 各 Pod に配置し、DB_URL=jdbc:postgresql://localhost:6432/openpos で接続する。
+  # 設定: pool_mode=transaction, max_client_conn=200, default_pool_size=20
 
   redis:
     image: redis:7-alpine
@@ -190,6 +169,7 @@ services:
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
       QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
+      # ローカル/CI: postgres:5432 直接接続。本番 K8s: pgbouncer:6432 経由
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
