@@ -13,7 +13,6 @@ services:
     volumes:
       - openpos-pgdata:/var/lib/postgresql/data
       - ./init-scripts/postgres:/docker-entrypoint-initdb.d
-    restart: on-failure
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U openpos']
       interval: 5s
@@ -23,22 +22,21 @@ services:
       - openpos-net
 
   pgbouncer:
-    image: pgbouncer/pgbouncer:latest
+    image: bitnami/pgbouncer:1
     container_name: openpos-pgbouncer
     ports:
       - '16432:6432'
     environment:
-      DATABASES_HOST: postgres
-      DATABASES_PORT: 5432
-      DATABASES_USER: openpos
-      DATABASES_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
-      DATABASES_DBNAME: openpos
+      POSTGRESQL_HOST: postgres
+      POSTGRESQL_PORT: 5432
+      POSTGRESQL_USERNAME: openpos
+      POSTGRESQL_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
+      POSTGRESQL_DATABASE: openpos
+      PGBOUNCER_DATABASE: openpos
       PGBOUNCER_POOL_MODE: transaction
       PGBOUNCER_MAX_CLIENT_CONN: 200
       PGBOUNCER_DEFAULT_POOL_SIZE: 20
       PGBOUNCER_MIN_POOL_SIZE: 5
-      PGBOUNCER_LISTEN_PORT: 6432
-      PGBOUNCER_AUTH_TYPE: plain
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,7 +45,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-    restart: on-failure
     networks:
       - openpos-net
 
@@ -64,7 +61,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-    restart: on-failure
     networks:
       - openpos-net
 
@@ -86,7 +82,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: on-failure
     networks:
       - openpos-net
 
@@ -168,12 +163,6 @@ services:
         condition: service_healthy
       hydra:
         condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-    restart: on-failure
     healthcheck:
       test:
         [
@@ -216,12 +205,6 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-    restart: on-failure
     healthcheck:
       test:
         [
@@ -266,12 +249,6 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-    restart: on-failure
     healthcheck:
       test:
         [
@@ -316,12 +293,6 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-    restart: on-failure
     healthcheck:
       test:
         [
@@ -364,12 +335,6 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-    restart: on-failure
     healthcheck:
       test:
         [
@@ -412,12 +377,6 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-    restart: on-failure
     healthcheck:
       test:
         [
@@ -438,7 +397,6 @@ services:
     ports:
       - '13100:3100'
     command: -config.file=/etc/loki/local-config.yaml
-    restart: on-failure
     healthcheck:
       test: ['CMD-SHELL', 'wget --quiet --tries=1 --spider http://localhost:3100/ready || exit 1']
       interval: 10s
@@ -469,7 +427,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: on-failure
     networks:
       - openpos-net
 
