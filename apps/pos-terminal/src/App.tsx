@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router'
 
+import { ErrorBoundary } from '@/components/error-boundary'
 import { Layout } from '@/routes/layout'
 import { ProductsPage } from '@/routes/products'
 
@@ -17,8 +18,9 @@ function RouteLoading() {
 
 export function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
         <Route element={<Layout />}>
           <Route index element={<ProductsPage />} />
           <Route
@@ -38,7 +40,8 @@ export function App() {
             }
           />
         </Route>
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
