@@ -111,10 +111,15 @@ export function DashboardPage() {
   }, [todaySummary, yesterdaySummary])
 
   const basicCards = [
-    { title: '商品数', value: productCount, icon: Package },
-    { title: '店舗数', value: storeCount, icon: Store },
-    { title: 'スタッフ数', value: staffCount, icon: Users },
-    { title: '取引数', value: transactionCount, icon: Receipt },
+    { title: '商品数', value: productCount, icon: Package, testId: 'summary-card-products' },
+    { title: '店舗数', value: storeCount, icon: Store, testId: 'summary-card-stores' },
+    { title: 'スタッフ数', value: staffCount, icon: Users, testId: 'summary-card-staff' },
+    {
+      title: '取引数',
+      value: transactionCount,
+      icon: Receipt,
+      testId: 'summary-card-transactions',
+    },
   ]
 
   const maxSales = useMemo(() => {
@@ -228,7 +233,7 @@ export function DashboardPage() {
         {/* 基本集計カード */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {basicCards.map((card) => (
-            <Card key={card.title}>
+            <Card key={card.title} data-testid={card.testId}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
                 <card.icon className="h-4 w-4 text-muted-foreground" />

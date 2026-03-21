@@ -1,18 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { AdminPage } from '../pages/admin-page'
-
-function summaryCardValue(page: Page, title: string) {
-  return page
-    .getByText(title, { exact: true })
-    .locator('xpath=ancestor::div[contains(@class,"rounded-xl")]')
-    .locator('.text-2xl.font-bold')
-    .first()
-}
-
-async function summaryCardNumber(page: Page, title: string) {
-  const value = await summaryCardValue(page, title).textContent()
-  return Number(value?.trim() ?? '0')
-}
 
 test.describe('Admin Smoke', () => {
   let adminPage: AdminPage
@@ -24,10 +11,24 @@ test.describe('Admin Smoke', () => {
 
   test('dashboard shows seeded summary counts', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible()
-    await expect(summaryCardValue(page, '商品数')).toHaveText('40')
-    await expect(summaryCardValue(page, '店舗数')).toHaveText('2')
-    await expect(summaryCardValue(page, 'スタッフ数')).toHaveText('3')
-    await expect.poll(() => summaryCardNumber(page, '取引数')).toBeGreaterThanOrEqual(10)
+
+    const productCard = page.getByTestId('summary-card-products')
+    const storeCard = page.getByTestId('summary-card-stores')
+    const staffCard = page.getByTestId('summary-card-staff')
+    const txCard = page.getByTestId('summary-card-transactions')
+
+    await expect(productCard.locator('.text-2xl')).toHaveText('40', { timeout: 15_000 })
+    await expect(storeCard.locator('.text-2xl')).toHaveText('2', { timeout: 15_000 })
+    await expect(staffCard.locator('.text-2xl')).toHaveText('3', { timeout: 15_000 })
+    await expect
+      .poll(
+        async () => {
+          const text = await txCard.locator('.text-2xl').textContent()
+          return Number(text?.trim() ?? '0')
+        },
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThanOrEqual(10)
   })
 
   test('products page shows seeded products and supports search', async () => {

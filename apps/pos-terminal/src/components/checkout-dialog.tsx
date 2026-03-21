@@ -508,17 +508,21 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
             <Separator />
 
-            <Tabs value={paymentMethod} onValueChange={handleMethodChange}>
+            <Tabs
+              data-testid="payment-tabs"
+              value={paymentMethod}
+              onValueChange={handleMethodChange}
+            >
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="CASH" className="gap-2">
+                <TabsTrigger data-testid="payment-tab-cash" value="CASH" className="gap-2">
                   <Wallet className="h-4 w-4" />
                   現金
                 </TabsTrigger>
-                <TabsTrigger value="CREDIT_CARD" className="gap-2">
+                <TabsTrigger data-testid="payment-tab-card" value="CREDIT_CARD" className="gap-2">
                   <CreditCard className="h-4 w-4" />
                   カード
                 </TabsTrigger>
-                <TabsTrigger value="QR_CODE" className="gap-2">
+                <TabsTrigger data-testid="payment-tab-qr" value="QR_CODE" className="gap-2">
                   <QrCode className="h-4 w-4" />
                   QR
                 </TabsTrigger>
@@ -551,6 +555,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
                 <div className="flex flex-wrap gap-2">
                   <Button
+                    data-testid="checkout-exact-btn"
                     variant="outline"
                     size="sm"
                     onClick={() => setReceivedAmount(String(Math.ceil(remainingAmount / 100)))}
@@ -721,6 +726,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
               </Button>
             )}
             <Button
+              data-testid="checkout-confirm-btn"
               className="w-full"
               size="lg"
               disabled={processing || !canFinalize}

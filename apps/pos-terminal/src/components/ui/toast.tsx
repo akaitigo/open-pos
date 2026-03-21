@@ -38,7 +38,7 @@ export function Toaster() {
   const { toasts, dismiss } = useToast()
 
   return (
-    <div className="fixed right-0 top-0 z-100 flex max-h-screen w-full flex-col p-4 md:max-w-[420px]">
+    <div className="pointer-events-none fixed right-0 top-0 z-100 flex max-h-screen w-full flex-col p-4 md:max-w-[420px]">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} />
       ))}

@@ -130,7 +130,7 @@ export function ReceiptDialog({ open, receiptData, onClose }: ReceiptDialogProps
         if (!isOpen) onClose()
       }}
     >
-      <DialogContent className="max-w-sm">
+      <DialogContent data-testid="receipt-dialog" className="max-w-sm">
         <DialogHeader>
           <DialogTitle>レシート</DialogTitle>
         </DialogHeader>
@@ -235,11 +235,17 @@ export function ReceiptDialog({ open, receiptData, onClose }: ReceiptDialogProps
           )}
         </div>
         <DialogFooter className="flex-col gap-2 sm:flex-col">
-          <Button variant="outline" className="w-full gap-2" size="lg" onClick={handlePrint}>
+          <Button
+            data-testid="receipt-print-btn"
+            variant="outline"
+            className="w-full gap-2"
+            size="lg"
+            onClick={handlePrint}
+          >
             <Printer className="h-4 w-4" />
             印刷
           </Button>
-          <Button className="w-full" size="lg" onClick={onClose}>
+          <Button data-testid="receipt-close-btn" className="w-full" size="lg" onClick={onClose}>
             閉じる
           </Button>
         </DialogFooter>
