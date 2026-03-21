@@ -1,6 +1,7 @@
 package com.openpos.store.cache
 
 import io.quarkus.redis.datasource.RedisDataSource
+import io.quarkus.redis.datasource.keys.KeyScanArgs
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.jboss.logging.Logger
@@ -54,11 +55,19 @@ class StoreCacheService {
         }
     }
 
+    /**
+     * パターンに一致するキーを SCAN で取得して削除する。
+     * KEYS コマンドと違い、SCAN はカーソルベースでブロッキングしない。
+     */
     fun invalidatePattern(pattern: String) {
         try {
-            val keys = redis.key().keys(pattern)
-            if (keys.isNotEmpty()) {
-                redis.key().del(*keys.toTypedArray())
+            val allKeys = mutableListOf<String>()
+            val cursor = redis.key().scan(KeyScanArgs().match(pattern).count(100))
+            while (cursor.hasNext()) {
+                allKeys.addAll(cursor.next())
+            }
+            if (allKeys.isNotEmpty()) {
+                redis.key().del(*allKeys.toTypedArray())
             }
         } catch (e: Exception) {
             log.warnf("Redis invalidatePattern failed for pattern=%s: %s", pattern, e.message)

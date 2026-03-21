@@ -1,5 +1,6 @@
 package com.openpos.gateway.config
 
+import io.quarkus.redis.datasource.RedisDataSource
 import jakarta.annotation.Priority
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -11,15 +12,15 @@ import jakarta.ws.rs.container.ContainerResponseFilter
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.ext.Provider
 import org.eclipse.microprofile.config.inject.ConfigProperty
+import org.jboss.logging.Logger
 import java.time.Instant
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * テナント（organization_id）単位のレートリミッター。
  * 1分あたりの最大リクエスト数を制限する。
  * organization_id が未設定のリクエストは "anonymous" としてカウント。
+ * Redis INCR + EXPIRE による分散レートリミット。
+ * Redis 障害時はリクエストを許可する（fail-open）。
  */
 @Provider
 @Priority(Priorities.AUTHENTICATION + 5)
@@ -30,15 +31,18 @@ class RateLimitFilter :
     @Inject
     lateinit var tenantContext: TenantContext
 
+    @Inject
+    lateinit var redis: RedisDataSource
+
     @ConfigProperty(name = "openpos.rate-limit.requests-per-minute", defaultValue = "1000")
     var requestsPerMinute: Int = 1000
 
+    private val log = Logger.getLogger(RateLimitFilter::class.java)
+
     companion object {
-        private const val WINDOW_MILLIS = 60_000L
+        private const val TTL_SECONDS = 60L
         private const val ANONYMOUS_KEY = "anonymous"
     }
-
-    private val buckets = ConcurrentHashMap<String, RateBucket>()
 
     override fun filter(requestContext: ContainerRequestContext) {
         // OPTIONS は常にスキップ
@@ -53,22 +57,33 @@ class RateLimitFilter :
         }
 
         val tenantKey = tenantContext.organizationId?.toString() ?: ANONYMOUS_KEY
-        val bucket = buckets.computeIfAbsent(tenantKey) { RateBucket() }
-        val remaining = bucket.tryConsume(requestsPerMinute)
+        val minuteKey = currentMinuteKey()
+        val redisKey = "ratelimit:$tenantKey:$minuteKey"
+
+        val currentCount = tryIncrement(redisKey)
+
+        // Redis 障害時は -1 が返る → fail-open でリクエスト許可
+        if (currentCount < 0) {
+            return
+        }
+
+        val remaining = requestsPerMinute - currentCount.toInt()
+        val resetEpochSecond = nextMinuteEpochSecond()
 
         // レスポンス用にリクエストプロパティに保存
         requestContext.setProperty("rateLimit.limit", requestsPerMinute)
         requestContext.setProperty("rateLimit.remaining", remaining.coerceAtLeast(0))
-        requestContext.setProperty("rateLimit.resetAt", bucket.windowResetEpochSecond())
+        requestContext.setProperty("rateLimit.resetAt", resetEpochSecond)
 
         if (remaining < 0) {
+            val retryAfter = (resetEpochSecond - Instant.now().epochSecond).coerceAtLeast(1)
             requestContext.abortWith(
                 Response
                     .status(429)
                     .header("X-RateLimit-Limit", requestsPerMinute)
                     .header("X-RateLimit-Remaining", 0)
-                    .header("X-RateLimit-Reset", bucket.windowResetEpochSecond())
-                    .header("Retry-After", bucket.retryAfterSeconds())
+                    .header("X-RateLimit-Reset", resetEpochSecond)
+                    .header("Retry-After", retryAfter)
                     .entity(mapOf("error" to "Too Many Requests", "message" to "Rate limit exceeded. Try again later."))
                     .build(),
             )
@@ -89,37 +104,37 @@ class RateLimitFilter :
     }
 
     /**
-     * 固定ウィンドウ方式のレートバケット。
-     * スレッドセーフに1分間のリクエスト数をカウントする。
+     * Redis INCR + EXPIRE でリクエスト数をカウントする。
+     * Redis 障害時は -1 を返す（fail-open）。
      */
-    internal class RateBucket {
-        private val windowStart = AtomicLong(System.currentTimeMillis())
-        private val count = AtomicInteger(0)
-
-        /**
-         * リクエストを1つ消費し、残りリクエスト数を返す。
-         * 負の値はレートリミット超過を意味する。
-         */
-        fun tryConsume(limit: Int): Int {
-            val now = System.currentTimeMillis()
-            val start = windowStart.get()
-
-            // ウィンドウのリセット
-            if (now - start >= WINDOW_MILLIS) {
-                if (windowStart.compareAndSet(start, now)) {
-                    count.set(0)
-                }
+    internal fun tryIncrement(key: String): Long =
+        try {
+            val valueCommands = redis.value(Long::class.java)
+            val count = valueCommands.incr(key)
+            if (count == 1L) {
+                redis.key().expire(key, TTL_SECONDS)
             }
-
-            val current = count.incrementAndGet()
-            return limit - current
+            count
+        } catch (e: Exception) {
+            log.warnf("Redis rate-limit INCR failed for key=%s: %s", key, e.message)
+            -1L
         }
 
-        fun windowResetEpochSecond(): Long = Instant.ofEpochMilli(windowStart.get() + WINDOW_MILLIS).epochSecond
+    /**
+     * 現在の分を表すキー文字列（エポック分）。
+     */
+    internal fun currentMinuteKey(): String {
+        val now = Instant.now()
+        val epochMinute = now.epochSecond / 60
+        return epochMinute.toString()
+    }
 
-        fun retryAfterSeconds(): Long {
-            val remainingMillis = (windowStart.get() + WINDOW_MILLIS) - System.currentTimeMillis()
-            return (remainingMillis / 1000).coerceAtLeast(1)
-        }
+    /**
+     * 次の分の開始エポック秒を返す。
+     */
+    internal fun nextMinuteEpochSecond(): Long {
+        val now = Instant.now()
+        val currentMinute = now.epochSecond / 60
+        return (currentMinute + 1) * 60
     }
 }

@@ -25,9 +25,11 @@ import openpos.store.v1.ListStaffRequest
 import openpos.store.v1.StaffRole
 import openpos.store.v1.StoreServiceGrpc
 import openpos.store.v1.UpdateStaffRequest
+import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/staff")
 @Blocking
+@Timeout(30000)
 class StaffResource {
     @Inject
     @GrpcClient("store-service")
