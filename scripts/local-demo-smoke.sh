@@ -248,10 +248,11 @@ smoke_finalize_json="$(api_post "/api/transactions/$smoke_txn_id/finalize" "$fin
 pass "smoke transaction finalized"
 
 # Verify inventory decreased (retry with backoff for async RabbitMQ processing)
+# 最大60秒（30回 x 2秒）待機。RabbitMQ が正常ならこの間に在庫は減少するはず。
 expected_stock=$((stock_before - 2))
 inventory_ok=false
-for attempt in 1 2 3 4 5; do
-  sleep "$((attempt * 2))"
+for attempt in $(seq 1 30); do
+  sleep 2
   stock_after_json="$(api_get "/api/inventory/stocks?storeId=$shibuya_store_id&page=1&pageSize=200")"
   stock_after="$(jq -r --arg pid "$smoke_product_id" '.data[] | select(.productId == $pid) | .quantity' <<<"$stock_after_json")"
   [[ -n "$stock_after" ]] || continue
@@ -259,16 +260,13 @@ for attempt in 1 2 3 4 5; do
     inventory_ok=true
     break
   fi
-  echo "  inventory check attempt $attempt: before=$stock_before after=$stock_after expected=$expected_stock"
+  echo "  inventory check attempt $attempt/30: before=$stock_before after=$stock_after expected=$expected_stock"
 done
 
 if $inventory_ok; then
   pass "inventory decreased: $stock_before -> $stock_after (expected $expected_stock)"
-elif [[ -n "$stock_after" && "$stock_after" -lt "$stock_before" ]]; then
-  echo "WARN inventory changed: $stock_before -> $stock_after (expected $expected_stock, close enough)"
 else
-  # 在庫減少は RabbitMQ 非同期イベントに依存するため、CI 環境ではタイミングにより検出できない場合がある
-  echo "WARN: inventory did not decrease after transaction: before=$stock_before after=${stock_after:-unknown} expected=$expected_stock (async event may be delayed)"
+  fail "inventory did not decrease after transaction: before=$stock_before after=${stock_after:-unknown} expected=$expected_stock"
 fi
 
 echo "Local demo smoke passed."

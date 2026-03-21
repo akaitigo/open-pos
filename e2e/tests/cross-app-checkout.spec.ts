@@ -1,43 +1,72 @@
 import { expect, test } from '@playwright/test'
+import { AdminPage } from '../pages/admin-page'
 import { PosPage } from '../pages/pos-page'
 
 /**
  * クロスアプリ checkout E2E テスト (#408)
  *
- * シードデータで作成済みの商品を使い、POS端末で検索・チェックアウトできることを検証する。
- * Admin での商品作成は seed.sh が担当し、E2E ではその結果を利用する。
+ * Admin で商品を作成し、POS 端末で検索・チェックアウトできることを検証する。
+ * Admin → POS の完全フローをテストする。
  */
 test.describe('Cross-App Checkout', () => {
-  let posPage: PosPage
+  test('Admin creates product then POS searches and checks out', async ({ browser }) => {
+    test.slow()
+    test.setTimeout(120_000)
 
-  test.beforeEach(async ({ page }) => {
-    posPage = new PosPage(page)
+    const uniqueSuffix = Date.now().toString().slice(-6)
+    const productName = `E2Eテスト商品${uniqueSuffix}`
+    const productPrice = '500'
+
+    // --- Admin: create product ---
+    const adminContext = await browser.newContext()
+    const adminPageRaw = await adminContext.newPage()
+    const adminPage = new AdminPage(adminPageRaw)
+    await adminPage.goto()
+    await adminPage.navigateToProducts()
+
+    await adminPage.clickAddProduct()
+    await adminPage.fillProductForm({ name: productName, price: productPrice })
+    await adminPageRaw.getByRole('button', { name: '追加' }).click()
+
+    // Wait for the product to appear in the table after creation
+    await adminPage.expectProductVisible(productName)
+
+    await adminContext.close()
+
+    // --- POS: search and checkout the new product ---
+    const posContext = await browser.newContext()
+    const posPageRaw = await posContext.newPage()
+    const posPage = new PosPage(posPageRaw)
     await posPage.goto()
     await posPage.login()
-  })
 
-  test('seeded product can be searched and checked out on POS', async () => {
-    // seed.sh で作成された商品を検索
-    await posPage.searchProduct('北海道おにぎり鮭')
+    // Search for the product and wait for API response
+    const productResponsePromise = posPageRaw.waitForResponse(
+      (resp) => resp.url().includes('/api/products') && resp.status() === 200,
+    )
+    await posPage.searchProduct(productName)
+    await productResponsePromise
 
-    await expect(posPage.productGrid.getByText('北海道おにぎり鮭', { exact: true })).toBeVisible({
-      timeout: 10_000,
+    await expect(posPage.productGrid.getByText(productName, { exact: true })).toBeVisible({
+      timeout: 15_000,
     })
 
-    // カートに追加
-    await posPage.addProductToCart('北海道おにぎり鮭')
-    await expect(posPage.cart).toContainText('北海道おにぎり鮭')
+    // Add to cart
+    await posPage.addProductToCart(productName)
+    await expect(posPage.cart).toContainText(productName)
 
-    // チェックアウト
+    // Checkout
     await posPage.startPayment()
     await posPage.selectExactCashPayment()
     await posPage.confirmPayment()
 
-    // レシート確認
-    await expect(posPage.receiptDialog).toBeVisible({ timeout: 10_000 })
+    // Receipt confirmation
+    await expect(posPage.receiptDialog).toBeVisible({ timeout: 15_000 })
     await posPage.closeReceipt()
 
-    // カートが空になること
+    // Cart should be empty
     await expect(posPage.cart).toContainText('カートは空です')
+
+    await posContext.close()
   })
 })

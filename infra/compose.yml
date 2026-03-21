@@ -21,11 +21,24 @@ services:
     networks:
       - openpos-net
 
-  # NOTE: pgBouncer は本番環境（K8s）でのみ使用する。
-  # ローカル開発・CI では postgres:5432 に直接接続する。
-  # 本番 K8s では pgBouncer sidecar（pgbouncer/pgbouncer:latest）を
-  # 各 Pod に配置し、DB_URL=jdbc:postgresql://localhost:6432/openpos で接続する。
-  # 設定: pool_mode=transaction, max_client_conn=200, default_pool_size=20
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    container_name: openpos-pgbouncer
+    ports:
+      - '16432:6432'
+    volumes:
+      - ./init-scripts/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini
+      - ./init-scripts/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -p 6432 || exit 1']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - openpos-net
 
   redis:
     image: redis:7-alpine
@@ -122,6 +135,7 @@ services:
     ports:
       - '8080:8080'
     environment:
+      QUARKUS_PROFILE: docker
       QUARKUS_HTTP_PORT: 8080
       REDIS_URL: redis://redis:6379
       HYDRA_JWKS_URL: http://hydra:4444/.well-known/jwks.json
@@ -166,11 +180,11 @@ services:
       - '8081:8080'
       - '9001:9000'
     environment:
+      QUARKUS_PROFILE: docker
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
       QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
-      # ローカル/CI: postgres:5432 直接接続。本番 K8s: pgbouncer:6432 経由
-      DB_URL: jdbc:postgresql://postgres:5432/openpos
+      DB_URL: jdbc:postgresql://pgbouncer:6432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
@@ -179,7 +193,7 @@ services:
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
       RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -209,10 +223,11 @@ services:
       - '8082:8080'
       - '9002:9000'
     environment:
+      QUARKUS_PROFILE: docker
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
       QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
-      DB_URL: jdbc:postgresql://postgres:5432/openpos
+      DB_URL: jdbc:postgresql://pgbouncer:6432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
@@ -223,7 +238,7 @@ services:
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
       RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -253,10 +268,11 @@ services:
       - '8083:8080'
       - '9003:9000'
     environment:
+      QUARKUS_PROFILE: docker
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
       QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
-      DB_URL: jdbc:postgresql://postgres:5432/openpos
+      DB_URL: jdbc:postgresql://pgbouncer:6432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
@@ -267,7 +283,7 @@ services:
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
       RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -297,10 +313,11 @@ services:
       - '8084:8080'
       - '9004:9000'
     environment:
+      QUARKUS_PROFILE: docker
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
       QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
-      DB_URL: jdbc:postgresql://postgres:5432/openpos
+      DB_URL: jdbc:postgresql://pgbouncer:6432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
@@ -309,7 +326,7 @@ services:
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
       RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -339,10 +356,11 @@ services:
       - '8085:8080'
       - '9005:9000'
     environment:
+      QUARKUS_PROFILE: docker
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_GRPC_SERVER_PORT: 9000
       QUARKUS_FLYWAY_MIGRATE_AT_START: 'true'
-      DB_URL: jdbc:postgresql://postgres:5432/openpos
+      DB_URL: jdbc:postgresql://pgbouncer:6432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
       REDIS_URL: redis://redis:6379
@@ -351,7 +369,7 @@ services:
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
       RABBITMQ_PASS: ${RABBITMQ_DEFAULT_PASS:-openpos_dev}
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
       redis:
         condition: service_healthy

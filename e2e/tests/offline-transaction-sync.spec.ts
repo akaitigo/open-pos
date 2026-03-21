@@ -5,6 +5,8 @@ import { PosPage } from '../pages/pos-page'
  * オフライン同期 E2E テスト (#416)
  *
  * ネットワーク切断時の UI 挙動と、復帰後のデータ整合性を検証する。
+ * POS アプリは Dexie.js でオフラインストレージを使用し、
+ * オフライン中もローカルトランザクションとしてチェックアウトが完了する。
  */
 test.describe('Offline Sync', () => {
   let posPage: PosPage
@@ -33,5 +35,32 @@ test.describe('Offline Sync', () => {
     await context.setOffline(true)
     await context.setOffline(false)
     await expect(posPage.productGrid.getByText('ドリップコーヒー', { exact: true })).toBeVisible()
+  })
+
+  test('offline checkout creates local transaction and syncs on reconnect', async ({ context }) => {
+    test.slow()
+    test.setTimeout(60_000)
+
+    // Go offline
+    await context.setOffline(true)
+
+    // Add product to cart while offline
+    await posPage.addProductToCart('ドリップコーヒー')
+    await expect(posPage.cart).toContainText('ドリップコーヒー')
+
+    // Start payment flow offline
+    await posPage.startPayment()
+    await posPage.selectExactCashPayment()
+    await posPage.confirmPayment()
+
+    // Receipt should appear from local transaction (Dexie.js)
+    await expect(posPage.receiptDialog).toBeVisible({ timeout: 15_000 })
+    await posPage.closeReceipt()
+
+    // Go back online
+    await context.setOffline(false)
+
+    // Cart should be empty after checkout completes
+    await expect(posPage.cart).toContainText('カートは空です', { timeout: 15_000 })
   })
 })
