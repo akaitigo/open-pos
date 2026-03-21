@@ -12,6 +12,7 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Response
+import org.eclipse.microprofile.faulttolerance.Timeout
 
 /**
  * ギフトカード REST リソース (#142)。
@@ -19,6 +20,7 @@ import jakarta.ws.rs.core.Response
  */
 @Path("/api/gift-cards")
 @Blocking
+@Timeout(30000)
 class GiftCardResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
