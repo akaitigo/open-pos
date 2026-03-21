@@ -1,6 +1,7 @@
 package com.openpos.store.grpc
 
 import at.favre.lib.crypto.bcrypt.BCrypt
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.openpos.store.entity.DataProcessingConsentEntity
 import com.openpos.store.entity.OrganizationEntity
 import com.openpos.store.entity.StaffEntity
@@ -93,6 +94,9 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
 
     @Inject
     lateinit var tenantHelper: GrpcTenantHelper
+
+    @Inject
+    lateinit var objectMapper: ObjectMapper
 
     // === Organization ===
 
@@ -204,7 +208,7 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize.coerceAtMost(100) else 20
         val (stores, totalCount) = storeService.list(page, pageSize)
         val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
         responseObserver.onNext(
@@ -316,7 +320,10 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
             action = "CREATE",
             entityType = "STAFF",
             entityId = entity.id.toString(),
-            details = """{"name":"${entity.name}","role":"${entity.role}","storeId":"${entity.storeId}"}""",
+            details =
+                objectMapper.writeValueAsString(
+                    mapOf("name" to entity.name, "role" to entity.role, "storeId" to entity.storeId.toString()),
+                ),
         )
         responseObserver.onNext(
             CreateStaffResponse.newBuilder().setStaff(entity.toProto()).build(),
@@ -345,7 +352,14 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         try {
             tenantHelper.setupTenantContext()
             val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-            val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+            val pageSize =
+                if (request.hasPagination() &&
+                    request.pagination.pageSize > 0
+                ) {
+                    request.pagination.pageSize.coerceAtMost(100)
+                } else {
+                    20
+                }
             val (staff, totalCount) = staffService.listByStoreId(request.storeId.toUUID(), page, pageSize)
             val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
             responseObserver.onNext(
@@ -364,11 +378,7 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
             )
             responseObserver.onCompleted()
         } catch (e: Exception) {
-            logger.error("listStaff failed", e)
-            throw Status.INTERNAL
-                .withDescription(e.message)
-                .withCause(e)
-                .asRuntimeException()
+            throw mapToGrpcException(e)
         }
     }
 
@@ -397,7 +407,10 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
             action = "UPDATE",
             entityType = "STAFF",
             entityId = entity.id.toString(),
-            details = """{"name":"${entity.name}","role":"${entity.role}"}""",
+            details =
+                objectMapper.writeValueAsString(
+                    mapOf("name" to entity.name, "role" to entity.role),
+                ),
         )
         responseObserver.onNext(
             UpdateStaffResponse.newBuilder().setStaff(entity.toProto()).build(),
@@ -432,7 +445,10 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
                 action = action,
                 entityType = "STAFF",
                 entityId = staff.id.toString(),
-                details = """{"reason":"${result.reason ?: "OK"}"}""",
+                details =
+                    objectMapper.writeValueAsString(
+                        mapOf("reason" to (result.reason ?: "OK")),
+                    ),
             )
         }
 

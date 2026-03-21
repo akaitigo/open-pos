@@ -130,7 +130,7 @@ class AnalyticsGrpcService : AnalyticsServiceGrpc.AnalyticsServiceImplBase() {
             }
 
         val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize.coerceAtMost(100) else 20
         val totalCount = sorted.size.toLong()
         val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
         val paged = sorted.drop(page * pageSize).take(pageSize)

@@ -366,7 +366,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize.coerceAtMost(100) else 20
 
         val statusFilter =
             when (request.status) {
@@ -451,7 +451,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
+        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize.coerceAtMost(100) else 20
 
         val typeFilter = request.type.ifBlank { null }
         val startDate =
