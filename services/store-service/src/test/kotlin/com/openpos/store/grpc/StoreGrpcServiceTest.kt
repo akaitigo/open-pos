@@ -1,5 +1,6 @@
 package com.openpos.store.grpc
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.BoolValue
 import com.openpos.store.entity.StaffEntity
 import com.openpos.store.entity.StoreEntity
@@ -36,6 +37,7 @@ class StoreGrpcServiceTest {
                 this.staffService = this@StoreGrpcServiceTest.staffService
                 this.auditLogService = this@StoreGrpcServiceTest.auditLogService
                 this.tenantHelper = this@StoreGrpcServiceTest.tenantHelper
+                this.objectMapper = ObjectMapper()
             }
     }
 
