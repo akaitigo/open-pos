@@ -7,6 +7,9 @@ import jakarta.inject.Inject
 import org.eclipse.microprofile.reactive.messaging.Channel
 import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Incoming
+import org.eclipse.microprofile.reactive.messaging.Message
+import org.eclipse.microprofile.reactive.messaging.Metadata
+import io.smallrye.reactive.messaging.rabbitmq.OutgoingRabbitMQMetadata
 import org.jboss.logging.Logger
 import java.util.concurrent.CompletionStage
 
@@ -41,8 +44,8 @@ class DeadLetterQueueConsumer {
     fun onDlqSaleCompleted(message: IncomingRabbitMQMessage<String>): CompletionStage<Void> =
         try {
             val body = message.payload
-            handleDeadLetter(body, "analytics.sale-completed") { retryMessage ->
-                saleCompletedRetryEmitter.send(retryMessage)
+            handleDeadLetter(body, "analytics.sale-completed") { retryMessage, delayMs ->
+                sendWithDelay(saleCompletedRetryEmitter, retryMessage, delayMs)
             }
             message.ack()
         } catch (e: Exception) {
@@ -54,8 +57,8 @@ class DeadLetterQueueConsumer {
     fun onDlqSaleVoided(message: IncomingRabbitMQMessage<String>): CompletionStage<Void> =
         try {
             val body = message.payload
-            handleDeadLetter(body, "analytics.sale-voided") { retryMessage ->
-                saleVoidedRetryEmitter.send(retryMessage)
+            handleDeadLetter(body, "analytics.sale-voided") { retryMessage, delayMs ->
+                sendWithDelay(saleVoidedRetryEmitter, retryMessage, delayMs)
             }
             message.ack()
         } catch (e: Exception) {
@@ -66,7 +69,7 @@ class DeadLetterQueueConsumer {
     private fun handleDeadLetter(
         messageBody: String,
         originalQueue: String,
-        republish: (String) -> Unit,
+        republish: (String, Long) -> Unit,
     ) {
         val retryCount = extractRetryCount(messageBody)
         val eventId = extractField(messageBody, "eventId") ?: "unknown"
@@ -84,10 +87,8 @@ class DeadLetterQueueConsumer {
                 delayMs,
             )
 
-            Thread.sleep(delayMs)
-
             val updatedMessage = incrementRetryCount(messageBody, retryCount)
-            republish(updatedMessage)
+            republish(updatedMessage, delayMs)
         } else {
             log.errorf(
                 "PERMANENT FAILURE: DLQ message exceeded max retries (%d) for queue=%s, eventId=%s, eventType=%s",
@@ -98,6 +99,11 @@ class DeadLetterQueueConsumer {
             )
             log.debugf("DLQ permanent failure payload for eventId=%s: %s", eventId, messageBody)
         }
+    }
+
+    private fun sendWithDelay(emitter: Emitter<String>, message: String, delayMs: Long) {
+        val metadata = OutgoingRabbitMQMetadata.builder().withExpiration(delayMs.toString()).build()
+        emitter.send(Message.of(message, Metadata.of(metadata)))
     }
 
     @Suppress("UNCHECKED_CAST")
