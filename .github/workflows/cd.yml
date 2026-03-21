@@ -84,6 +84,8 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:latest
             ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:${{ github.sha }}
             ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:${{ needs.version.outputs.semver }}
+          sbom: true
+          provenance: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
