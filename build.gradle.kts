@@ -1,9 +1,9 @@
 plugins {
-    kotlin("jvm") apply false
-    kotlin("plugin.allopen") apply false
-    kotlin("plugin.noarg") apply false
-    id("io.quarkus") apply false
-    id("org.owasp.dependencycheck") version "12.2.0" apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.allopen) apply false
+    alias(libs.plugins.kotlin.noarg) apply false
+    alias(libs.plugins.quarkus) apply false
+    alias(libs.plugins.owasp) apply false
 }
 
 allprojects {
@@ -29,15 +29,15 @@ subprojects {
 
         afterEvaluate {
             dependencies {
-                "testImplementation"("org.testcontainers:testcontainers:2.0.3")
-                "testImplementation"("org.testcontainers:testcontainers-postgresql:2.0.3")
-                "testImplementation"("org.testcontainers:testcontainers-junit-jupiter:2.0.3")
+                "testImplementation"(libs.testcontainers)
+                "testImplementation"(libs.testcontainers.postgresql)
+                "testImplementation"(libs.testcontainers.junit.jupiter)
             }
 
             apply(plugin = "jacoco")
 
             configure<JacocoPluginExtension> {
-                toolVersion = "0.8.12"
+                toolVersion = libs.versions.jacoco.get()
             }
 
             tasks.withType<Test> {

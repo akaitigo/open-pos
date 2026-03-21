@@ -69,14 +69,18 @@ class DeadLetterQueueConsumer {
         republish: (String) -> Unit,
     ) {
         val retryCount = extractRetryCount(messageBody)
+        val eventId = extractField(messageBody, "eventId") ?: "unknown"
+        val eventType = extractField(messageBody, "eventType") ?: "unknown"
 
         if (retryCount < MAX_RETRY_COUNT) {
             val delayMs = BACKOFF_DELAYS_MS[retryCount]
             log.warnf(
-                "DLQ message retry %d/%d for queue=%s, delay=%dms",
+                "DLQ message retry %d/%d for queue=%s, eventId=%s, eventType=%s, delay=%dms",
                 retryCount + 1,
                 MAX_RETRY_COUNT,
                 originalQueue,
+                eventId,
+                eventType,
                 delayMs,
             )
 
@@ -86,13 +90,27 @@ class DeadLetterQueueConsumer {
             republish(updatedMessage)
         } else {
             log.errorf(
-                "PERMANENT FAILURE: DLQ message exceeded max retries (%d) for queue=%s. Message: %s",
+                "PERMANENT FAILURE: DLQ message exceeded max retries (%d) for queue=%s, eventId=%s, eventType=%s",
                 MAX_RETRY_COUNT,
                 originalQueue,
-                messageBody,
+                eventId,
+                eventType,
             )
+            log.debugf("DLQ permanent failure payload for eventId=%s: %s", eventId, messageBody)
         }
     }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun extractField(
+        message: String,
+        field: String,
+    ): String? =
+        try {
+            val map = objectMapper.readValue(message, Map::class.java) as Map<String, Any>
+            map[field]?.toString()
+        } catch (_: Exception) {
+            null
+        }
 
     @Suppress("UNCHECKED_CAST")
     private fun extractRetryCount(message: String): Int =
