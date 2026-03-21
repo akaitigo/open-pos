@@ -23,21 +23,16 @@ services:
       - openpos-net
 
   pgbouncer:
-    image: bitnami/pgbouncer:1
+    image: edoburu/pgbouncer:1.23.1-p1
     container_name: openpos-pgbouncer
     ports:
       - '16432:6432'
     environment:
-      POSTGRESQL_HOST: postgres
-      POSTGRESQL_PORT: 5432
-      POSTGRESQL_USERNAME: openpos
-      POSTGRESQL_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
-      POSTGRESQL_DATABASE: openpos
-      PGBOUNCER_DATABASE: openpos
-      PGBOUNCER_POOL_MODE: transaction
-      PGBOUNCER_MAX_CLIENT_CONN: 200
-      PGBOUNCER_DEFAULT_POOL_SIZE: 20
-      PGBOUNCER_MIN_POOL_SIZE: 5
+      DATABASE_URL: postgres://openpos:${POSTGRES_PASSWORD:-openpos_dev}@postgres:5432/openpos
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 20
+      MIN_POOL_SIZE: 5
     depends_on:
       postgres:
         condition: service_healthy
