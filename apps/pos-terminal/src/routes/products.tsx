@@ -180,6 +180,7 @@ export function ProductsPage() {
     <div className="flex flex-1 flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Input
+          data-testid="product-search-input"
           placeholder="商品名・バーコードで検索..."
           value={search}
           onChange={(e) => {
@@ -255,7 +256,7 @@ export function ProductsPage() {
       </div>
 
       {catalogLoading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div data-testid="product-grid" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {Array.from({ length: 12 }).map((_, index) => (
             <Card key={index} className="space-y-3 p-3">
               <div className="aspect-square animate-pulse rounded-md bg-muted" />
@@ -280,7 +281,7 @@ export function ProductsPage() {
           商品が見つかりません
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div data-testid="product-grid" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {pagedProducts.map((product) => {
             const category = product.categoryId ? categoryById[product.categoryId] : undefined
             const stock = stocksByProductId[product.id]
@@ -292,13 +293,23 @@ export function ProductsPage() {
             return (
               <Card
                 key={product.id}
+                data-testid={`product-card-${product.id}`}
                 className={`min-h-11 min-w-11 overflow-hidden p-3 transition-colors ${
                   isSoldOut
                     ? 'cursor-not-allowed border-dashed opacity-55'
                     : 'cursor-pointer hover:border-primary/60 hover:bg-accent'
                 }`}
+                role="button"
+                tabIndex={0}
                 aria-disabled={isSoldOut}
+                aria-label={`${product.name} ${formatMoney(product.price)}${isSoldOut ? ' 在庫切れ' : ''} をカートに追加`}
                 onClick={() => handleAddToCart(product, stock)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    handleAddToCart(product, stock)
+                  }
+                }}
               >
                 <div
                   className="mb-3 h-1.5 rounded-full bg-muted"

@@ -23,6 +23,7 @@ import {
 import { api } from '@/lib/api'
 import type { Staff, Store, PaginatedResponse } from '@shared-types/openpos'
 import { StaffSchema, PaginatedStaffSchema, PaginatedStoresSchema } from '@shared-types/openpos'
+import { toast } from '@/hooks/use-toast'
 
 const ROLE_LABELS: Record<string, string> = {
   OWNER: 'オーナー',
@@ -51,6 +52,10 @@ export function StaffPage() {
           setSelectedStoreId((prev) => prev || firstStore.id)
         }
       })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : '店舗の取得に失敗しました'
+        toast({ title: 'エラー', description: message, variant: 'destructive' })
+      })
   }, [])
 
   const fetchStaff = useCallback(async () => {
@@ -63,7 +68,10 @@ export function StaffPage() {
   }, [selectedStoreId, page])
 
   useEffect(() => {
-    fetchStaff()
+    fetchStaff().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'スタッフの取得に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    })
   }, [fetchStaff])
 
   function handleStoreChange(storeId: string) {
@@ -82,13 +90,18 @@ export function StaffPage() {
   }
 
   async function handleSubmit(data: Record<string, unknown>) {
-    if (editingStaff) {
-      await api.put(`/api/staff/${editingStaff.id}`, data, StaffSchema)
-    } else {
-      await api.post('/api/staff', data, StaffSchema)
+    try {
+      if (editingStaff) {
+        await api.put(`/api/staff/${editingStaff.id}`, data, StaffSchema)
+      } else {
+        await api.post('/api/staff', data, StaffSchema)
+      }
+      setDialogOpen(false)
+      fetchStaff()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'スタッフの保存に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
     }
-    setDialogOpen(false)
-    fetchStaff()
   }
 
   function getStoreName(storeId: string): string {

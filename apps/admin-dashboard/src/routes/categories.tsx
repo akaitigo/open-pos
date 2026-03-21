@@ -18,6 +18,7 @@ import type { Category } from '@shared-types/openpos'
 import { CategorySchema } from '@shared-types/openpos'
 import { z } from 'zod'
 import { ChevronDown, ChevronRight, List, TreesIcon } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 
 type ViewMode = 'table' | 'tree'
 
@@ -73,7 +74,10 @@ export function CategoriesPage() {
   }, [])
 
   useEffect(() => {
-    fetchCategories()
+    fetchCategories().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'カテゴリの取得に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    })
   }, [fetchCategories])
 
   function handleCreate() {
@@ -87,18 +91,28 @@ export function CategoriesPage() {
   }
 
   async function handleDelete(id: string) {
-    await api.delete(`/api/categories/${id}`)
-    fetchCategories()
+    try {
+      await api.delete(`/api/categories/${id}`)
+      fetchCategories()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'カテゴリの削除に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    }
   }
 
   async function handleSubmit(data: Record<string, unknown>) {
-    if (editingCategory) {
-      await api.put(`/api/categories/${editingCategory.id}`, data, CategorySchema)
-    } else {
-      await api.post('/api/categories', data, CategorySchema)
+    try {
+      if (editingCategory) {
+        await api.put(`/api/categories/${editingCategory.id}`, data, CategorySchema)
+      } else {
+        await api.post('/api/categories', data, CategorySchema)
+      }
+      setDialogOpen(false)
+      fetchCategories()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'カテゴリの保存に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
     }
-    setDialogOpen(false)
-    fetchCategories()
   }
 
   function getCategoryName(id: string | null): string {
