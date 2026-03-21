@@ -121,8 +121,6 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         request: GetOrganizationRequest,
         responseObserver: io.grpc.stub.StreamObserver<GetOrganizationResponse>,
     ) {
-        // OrganizationEntity はテナントルートのため Hibernate Filter 不要だが、
-        // 呼び出し元の x-organization-id を検証し、自テナントのみアクセス可能にする
         tenantHelper.setupTenantContextWithoutFilter()
         val requestedId = request.id.toUUID()
         val callerId = requireNotNull(tenantHelper.currentOrganizationId()) { "organizationId is not set" }
@@ -144,8 +142,6 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         request: UpdateOrganizationRequest,
         responseObserver: io.grpc.stub.StreamObserver<UpdateOrganizationResponse>,
     ) {
-        // OrganizationEntity はテナントルートのため Hibernate Filter 不要だが、
-        // 呼び出し元の x-organization-id を検証し、自テナントのみ更新可能にする
         tenantHelper.setupTenantContextWithoutFilter()
         val requestedId = request.id.toUUID()
         val callerId = requireNotNull(tenantHelper.currentOrganizationId()) { "organizationId is not set" }
