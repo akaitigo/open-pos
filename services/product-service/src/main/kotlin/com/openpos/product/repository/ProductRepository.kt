@@ -19,14 +19,6 @@ class ProductRepository : PanacheRepositoryBase<ProductEntity, UUID> {
     fun findByBarcode(barcode: String): ProductEntity? = find("barcode = ?1", barcode).firstResult()
 
     /**
-     * 複数 ID で商品を一括取得する（N+1 防止）。
-     */
-    fun findByIds(ids: List<UUID>): List<ProductEntity> {
-        if (ids.isEmpty()) return emptyList()
-        return list("id IN ?1 AND deletedAt IS NULL", ids)
-    }
-
-    /**
      * カテゴリIDで商品一覧を取得する。
      */
     fun findByCategoryId(categoryId: UUID): List<ProductEntity> = list("categoryId = ?1 ORDER BY displayOrder ASC", categoryId)

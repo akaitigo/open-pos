@@ -57,13 +57,9 @@ class ProductCacheService {
 
     fun invalidatePattern(pattern: String) {
         try {
-            val matchedKeys = mutableListOf<String>()
-            val cursor = redis.key().scan(io.quarkus.redis.datasource.keys.KeyScanArgs().match(pattern).count(100))
-            while (cursor.hasNext()) {
-                matchedKeys.addAll(cursor.next())
-            }
-            if (matchedKeys.isNotEmpty()) {
-                redis.key().del(*matchedKeys.toTypedArray())
+            val keys = redis.key().keys(pattern)
+            if (keys.isNotEmpty()) {
+                redis.key().del(*keys.toTypedArray())
             }
         } catch (e: Exception) {
             log.warnf("Redis invalidatePattern failed for pattern=%s: %s", pattern, e.message)

@@ -56,10 +56,6 @@ fun mapToGrpcException(e: Exception): StatusRuntimeException =
         }
 
         else -> {
-            val log =
-                org.jboss.logging.Logger
-                    .getLogger("GrpcExceptionMapping")
-            log.errorf(e, "Unhandled exception in gRPC handler")
-            Status.INTERNAL.withDescription("Internal server error").asRuntimeException()
+            Status.INTERNAL.withDescription(e.message).asRuntimeException()
         }
     }

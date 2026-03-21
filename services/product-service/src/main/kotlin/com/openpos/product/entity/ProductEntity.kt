@@ -3,7 +3,6 @@ package com.openpos.product.entity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
-import jakarta.persistence.Version
 import java.time.Instant
 import java.util.UUID
 
@@ -56,9 +55,4 @@ class ProductEntity : BaseEntity() {
     /** ソフトデリート日時（null = 未削除） */
     @Column(name = "deleted_at")
     var deletedAt: Instant? = null
-
-    /** 楽観ロック用バージョン */
-    @Version
-    @Column(name = "version", nullable = false)
-    var version: Long = 0
 }

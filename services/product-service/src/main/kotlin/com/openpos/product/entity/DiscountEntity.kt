@@ -3,7 +3,6 @@ package com.openpos.product.entity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
-import jakarta.persistence.Version
 import java.time.Instant
 
 /**
@@ -35,9 +34,4 @@ class DiscountEntity : BaseEntity() {
 
     @Column(name = "is_active", nullable = false)
     var isActive: Boolean = true
-
-    /** 楽観ロック用バージョン */
-    @Version
-    @Column(name = "version", nullable = false)
-    var version: Long = 0
 }

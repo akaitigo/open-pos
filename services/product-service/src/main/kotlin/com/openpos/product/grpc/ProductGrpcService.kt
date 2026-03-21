@@ -16,8 +16,6 @@ import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
 import jakarta.persistence.OptimisticLockException
 import openpos.common.v1.PaginationResponse
-import openpos.product.v1.BatchGetProductsRequest
-import openpos.product.v1.BatchGetProductsResponse
 import openpos.product.v1.Category
 import openpos.product.v1.Coupon
 import openpos.product.v1.CreateCategoryRequest
@@ -130,12 +128,8 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         responseObserver: io.grpc.stub.StreamObserver<ListProductsResponse>,
     ) {
         tenantHelper.setupTenantContext()
-        val page = if (request.hasPagination()) (request.pagination.page - 1).coerceAtLeast(0) else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) {
-                if (request.pagination.pageSize <= 0) 20 else request.pagination.pageSize.coerceIn(1, 100)
-            } else {
-                20
-            }
+        val page = if (request.hasPagination()) request.pagination.page - 1 else 0
+        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize else 20
         val (products, totalCount) =
             productService.search(
                 query = request.search.ifBlank { null },
@@ -216,19 +210,6 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
                 ?: throw Status.NOT_FOUND.withDescription("Product not found for barcode: ${request.barcode}").asRuntimeException()
         responseObserver.onNext(
             GetProductByBarcodeResponse.newBuilder().setProduct(entity.toProto()).build(),
-        )
-        responseObserver.onCompleted()
-    }
-
-    override fun batchGetProducts(
-        request: BatchGetProductsRequest,
-        responseObserver: io.grpc.stub.StreamObserver<BatchGetProductsResponse>,
-    ) {
-        tenantHelper.setupTenantContext()
-        val ids = request.idsList.map { it.toUUID() }
-        val entities = productService.findByIds(ids)
-        responseObserver.onNext(
-            BatchGetProductsResponse.newBuilder().addAllProducts(entities.map { it.toProto() }).build(),
         )
         responseObserver.onCompleted()
     }

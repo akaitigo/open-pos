@@ -138,15 +138,29 @@ class ProductCacheServiceTest {
     @Nested
     inner class InvalidatePattern {
         @Test
-        fun `invalidatePatternはRedis障害時でも例外を投げない`() {
-            // Arrange — SCAN がエラーを返すケース
-            whenever(keyCommands.scan(any<io.quarkus.redis.datasource.keys.KeyScanArgs>()))
-                .thenThrow(RuntimeException("Redis connection lost"))
+        fun `パターンに一致するキーが全て削除される`() {
+            // Arrange
+            val matchedKeys = listOf("openpos:product-service:product:1", "openpos:product-service:product:2")
+            whenever(keyCommands.keys("openpos:product-service:product:*")).thenReturn(matchedKeys)
 
-            // Act — 例外が伝播しないことを確認
+            // Act
             cacheService.invalidatePattern("openpos:product-service:product:*")
 
-            // Assert — del は呼ばれない（SCAN 前に例外）
+            // Assert
+            verify(keyCommands).keys("openpos:product-service:product:*")
+            verify(keyCommands).del("openpos:product-service:product:1", "openpos:product-service:product:2")
+        }
+
+        @Test
+        fun `パターンに一致するキーがない場合はdelが呼ばれない`() {
+            // Arrange
+            whenever(keyCommands.keys("openpos:product-service:nonexistent:*")).thenReturn(emptyList())
+
+            // Act
+            cacheService.invalidatePattern("openpos:product-service:nonexistent:*")
+
+            // Assert
+            verify(keyCommands).keys("openpos:product-service:nonexistent:*")
             verify(keyCommands, never()).del(any<String>())
         }
     }
@@ -206,12 +220,17 @@ class ProductCacheServiceTest {
     @Nested
     inner class InvalidateCategory {
         @Test
-        fun `カテゴリIDキーが削除される`() {
+        fun `カテゴリIDキーとリストパターンが削除される`() {
+            // Arrange
+            whenever(keyCommands.keys("openpos:product-service:category:list:*"))
+                .thenReturn(listOf("openpos:product-service:category:list:root"))
+
             // Act
             cacheService.invalidateCategory("cat-001")
 
-            // Assert — 個別キーの削除は直接呼ばれる
+            // Assert
             verify(keyCommands).del("openpos:product-service:category:cat-001")
+            verify(keyCommands).keys("openpos:product-service:category:list:*")
         }
     }
 }

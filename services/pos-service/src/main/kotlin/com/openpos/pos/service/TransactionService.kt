@@ -450,14 +450,8 @@ class TransactionService {
 
     private fun generateTransactionNumber(): String {
         val date = LocalDate.now(ZoneOffset.UTC)
-        val uniquePart =
-            UUID
-                .randomUUID()
-                .toString()
-                .replace("-", "")
-                .take(8)
-                .uppercase()
-        return "T-$date-$uniquePart"
+        val seq = (System.nanoTime() % 1_000_000).toString().padStart(6, '0')
+        return "T-$date-$seq"
     }
 
     private fun publishSaleCompletedEvent(

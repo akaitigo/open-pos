@@ -16,6 +16,7 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Response
+import org.eclipse.microprofile.config.inject.ConfigProperty
 import openpos.common.v1.PaginationRequest
 import openpos.store.v1.AuthenticateByPinRequest
 import openpos.store.v1.CreateStaffRequest
@@ -24,7 +25,6 @@ import openpos.store.v1.ListStaffRequest
 import openpos.store.v1.StaffRole
 import openpos.store.v1.StoreServiceGrpc
 import openpos.store.v1.UpdateStaffRequest
-import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @Path("/api/staff")
 @Blocking
