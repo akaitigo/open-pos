@@ -18,11 +18,9 @@ import openpos.product.v1.DeleteCategoryRequest
 import openpos.product.v1.ListCategoriesRequest
 import openpos.product.v1.ProductServiceGrpc
 import openpos.product.v1.UpdateCategoryRequest
-import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/categories")
 @Blocking
-@Timeout(30000)
 class CategoryResource {
     @Inject
     @GrpcClient("product-service")

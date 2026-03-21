@@ -16,11 +16,9 @@ import openpos.store.v1.GetSystemSettingRequest
 import openpos.store.v1.ListSystemSettingsRequest
 import openpos.store.v1.SystemSettingServiceGrpc
 import openpos.store.v1.UpsertSystemSettingRequest
-import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/settings")
 @Blocking
-@Timeout(30000)
 class SystemSettingResource {
     @Inject
     @GrpcClient("store-service")

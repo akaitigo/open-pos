@@ -21,8 +21,6 @@ import openpos.product.v1.ListTaxRatesRequest
 import openpos.product.v1.ProductServiceGrpc
 import openpos.product.v1.TaxRate
 import openpos.product.v1.ValidateCouponRequest
-import org.eclipse.microprofile.faulttolerance.CircuitBreaker
-import org.eclipse.microprofile.faulttolerance.Retry
 import org.jboss.logging.Logger
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -55,8 +53,6 @@ class ProductServiceClient {
         private const val GRPC_DEADLINE_SECONDS = 5L
     }
 
-    @CircuitBreaker(requestVolumeThreshold = 10, failureRatio = 0.5, delay = 10000)
-    @Retry(maxRetries = 2, delay = 500)
     fun getProductSnapshot(
         productId: UUID,
         organizationId: UUID,
@@ -114,8 +110,6 @@ class ProductServiceClient {
     /**
      * クーポンコードを検証し、紐付く割引情報を取得する。
      */
-    @CircuitBreaker(requestVolumeThreshold = 10, failureRatio = 0.5, delay = 10000)
-    @Retry(maxRetries = 2, delay = 500)
     fun validateCoupon(
         couponCode: String,
         organizationId: UUID,
@@ -151,8 +145,6 @@ class ProductServiceClient {
     /**
      * 割引IDから割引マスタ情報を取得する。
      */
-    @CircuitBreaker(requestVolumeThreshold = 10, failureRatio = 0.5, delay = 10000)
-    @Retry(maxRetries = 2, delay = 500)
     fun getDiscount(
         discountId: UUID,
         organizationId: UUID,
@@ -187,8 +179,6 @@ class ProductServiceClient {
      * BatchGetProducts RPC で 1 回のラウンドトリップで全商品を取得し、
      * 税率一覧も 1 回だけ取得する。
      */
-    @CircuitBreaker(requestVolumeThreshold = 10, failureRatio = 0.5, delay = 10000)
-    @Retry(maxRetries = 2, delay = 500)
     fun getProductSnapshots(
         productIds: List<UUID>,
         organizationId: UUID,

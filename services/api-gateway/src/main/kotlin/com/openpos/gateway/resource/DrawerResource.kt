@@ -14,11 +14,9 @@ import openpos.pos.v1.CloseDrawerRequest
 import openpos.pos.v1.GetDrawerStatusRequest
 import openpos.pos.v1.OpenDrawerRequest
 import openpos.pos.v1.PosServiceGrpc
-import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/drawers")
 @Blocking
-@Timeout(30000)
 class DrawerResource {
     @Inject
     @GrpcClient("pos-service")

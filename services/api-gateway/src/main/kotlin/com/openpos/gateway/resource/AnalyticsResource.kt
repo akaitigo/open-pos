@@ -17,11 +17,9 @@ import openpos.analytics.v1.GetHourlySalesRequest
 import openpos.analytics.v1.GetSalesForecastRequest
 import openpos.analytics.v1.GetSalesSummaryRequest
 import openpos.common.v1.DateRange
-import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/analytics")
 @Blocking
-@Timeout(30000)
 class AnalyticsResource {
     @Inject
     @GrpcClient("analytics-service")

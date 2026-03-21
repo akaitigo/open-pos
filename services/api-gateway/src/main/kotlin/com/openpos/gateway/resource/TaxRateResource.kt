@@ -16,11 +16,9 @@ import openpos.product.v1.CreateTaxRateRequest
 import openpos.product.v1.ListTaxRatesRequest
 import openpos.product.v1.ProductServiceGrpc
 import openpos.product.v1.UpdateTaxRateRequest
-import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/tax-rates")
 @Blocking
-@Timeout(30000)
 class TaxRateResource {
     @Inject
     @GrpcClient("product-service")

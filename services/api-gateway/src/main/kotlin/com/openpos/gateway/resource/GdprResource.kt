@@ -16,7 +16,6 @@ import openpos.store.v1.DeleteOrganizationDataRequest
 import openpos.store.v1.GetConsentRequest
 import openpos.store.v1.RecordConsentRequest
 import openpos.store.v1.StoreServiceGrpc
-import org.eclipse.microprofile.faulttolerance.Timeout
 
 /**
  * GDPR / 個人情報保護 REST エンドポイント。
@@ -24,7 +23,6 @@ import org.eclipse.microprofile.faulttolerance.Timeout
  */
 @Path("/api/organizations/{id}")
 @Blocking
-@Timeout(30000)
 class GdprResource {
     @Inject
     @GrpcClient("store-service")

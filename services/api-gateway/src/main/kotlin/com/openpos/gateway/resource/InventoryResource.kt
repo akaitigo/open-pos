@@ -29,11 +29,9 @@ import openpos.inventory.v1.PurchaseOrderItemInput
 import openpos.inventory.v1.PurchaseOrderStatus
 import openpos.inventory.v1.ReceivedItemInput
 import openpos.inventory.v1.UpdatePurchaseOrderStatusRequest
-import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/inventory")
 @Blocking
-@Timeout(30000)
 class InventoryResource {
     @Inject
     @GrpcClient("inventory-service")

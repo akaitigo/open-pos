@@ -27,13 +27,11 @@ import openpos.product.v1.GetProductRequest
 import openpos.product.v1.ListProductsRequest
 import openpos.product.v1.ProductServiceGrpc
 import openpos.product.v1.UpdateProductRequest
-import org.eclipse.microprofile.faulttolerance.Timeout
 import org.eclipse.microprofile.openapi.annotations.Operation
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
 
 @Path("/api/products")
 @Blocking
-@Timeout(30000)
 @Tag(name = "Products", description = "商品管理API")
 class ProductResource {
     @Inject

@@ -13,11 +13,9 @@ import jakarta.ws.rs.core.Response
 import openpos.pos.v1.CreateSettlementRequest
 import openpos.pos.v1.GetSettlementRequest
 import openpos.pos.v1.PosServiceGrpc
-import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/settlements")
 @Blocking
-@Timeout(30000)
 class SettlementResource {
     @Inject
     @GrpcClient("pos-service")
