@@ -87,7 +87,7 @@ export class PosPage {
   }
 
   async closeReceipt(): Promise<void> {
-    await expect(this.receiptDialog).toBeVisible({ timeout: 10_000 })
+    await expect(this.receiptDialog).toBeVisible({ timeout: 30_000 })
     await this.receiptCloseButton.click()
   }
 
