@@ -2,11 +2,14 @@ package com.openpos.inventory.event
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
+import io.smallrye.reactive.messaging.rabbitmq.OutgoingRabbitMQMetadata
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.eclipse.microprofile.reactive.messaging.Channel
 import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Incoming
+import org.eclipse.microprofile.reactive.messaging.Message
+import org.eclipse.microprofile.reactive.messaging.Metadata
 import org.jboss.logging.Logger
 import java.util.concurrent.CompletionStage
 
@@ -16,6 +19,9 @@ import java.util.concurrent.CompletionStage
  * 最大 3 回のリトライ（指数バックオフ: 1s, 5s, 25s）を試み、
  * それを超えた場合は永久失敗としてログに記録する。
  * 明示的に ack/nack を行う。
+ *
+ * バックオフは Thread.sleep ではなく RabbitMQ メッセージの expiration（TTL）で実現する。
+ * TTL 付きメッセージは RabbitMQ 側で遅延後に配信されるため、スレッドをブロックしない。
  */
 @ApplicationScoped
 class DeadLetterQueueConsumer {
@@ -41,8 +47,15 @@ class DeadLetterQueueConsumer {
     fun onDlqSaleCompleted(message: IncomingRabbitMQMessage<String>): CompletionStage<Void> =
         try {
             val body = message.payload
-            handleDeadLetter(body, "inventory.sale-completed") { retryMessage ->
-                saleCompletedRetryEmitter.send(retryMessage)
+            handleDeadLetter(body, "inventory.sale-completed") { retryMessage, delayMs ->
+                val metadata =
+                    OutgoingRabbitMQMetadata
+                        .builder()
+                        .withExpiration(delayMs.toString())
+                        .build()
+                saleCompletedRetryEmitter.send(
+                    Message.of(retryMessage, Metadata.of(metadata)),
+                )
             }
             message.ack()
         } catch (e: Exception) {
@@ -54,8 +67,15 @@ class DeadLetterQueueConsumer {
     fun onDlqSaleVoided(message: IncomingRabbitMQMessage<String>): CompletionStage<Void> =
         try {
             val body = message.payload
-            handleDeadLetter(body, "inventory.sale-voided") { retryMessage ->
-                saleVoidedRetryEmitter.send(retryMessage)
+            handleDeadLetter(body, "inventory.sale-voided") { retryMessage, delayMs ->
+                val metadata =
+                    OutgoingRabbitMQMetadata
+                        .builder()
+                        .withExpiration(delayMs.toString())
+                        .build()
+                saleVoidedRetryEmitter.send(
+                    Message.of(retryMessage, Metadata.of(metadata)),
+                )
             }
             message.ack()
         } catch (e: Exception) {
@@ -66,7 +86,7 @@ class DeadLetterQueueConsumer {
     private fun handleDeadLetter(
         messageBody: String,
         originalQueue: String,
-        republish: (String) -> Unit,
+        republish: (String, Long) -> Unit,
     ) {
         val retryCount = extractRetryCount(messageBody)
         val eventId = extractField(messageBody, "eventId")
@@ -84,10 +104,8 @@ class DeadLetterQueueConsumer {
                 delayMs,
             )
 
-            Thread.sleep(delayMs)
-
             val updatedMessage = incrementRetryCount(messageBody, retryCount)
-            republish(updatedMessage)
+            republish(updatedMessage, delayMs)
         } else {
             log.errorf(
                 "PERMANENT FAILURE: DLQ message exceeded max retries (%d) for queue=%s, eventId=%s, eventType=%s",
