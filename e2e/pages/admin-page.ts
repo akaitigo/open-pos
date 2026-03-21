@@ -3,7 +3,8 @@ import { expect, type Locator, type Page } from '@playwright/test'
 /**
  * 管理画面の Page Object Model
  *
- * 現行 UI に対する商品管理 smoke 操作を抽象化する。
+ * Playwright ベストプラクティスに準拠:
+ * - data-testid / getByRole ベースのロケータ
  */
 export class AdminPage {
   readonly page: Page
@@ -23,25 +24,27 @@ export class AdminPage {
 
     this.productsNavLink = page.getByRole('link', { name: '商品管理' })
 
-    this.productTable = page.locator('table')
-    this.addProductButton = page.getByRole('button', { name: '商品を追加' })
-    this.productSearchInput = page.getByPlaceholder('商品名・バーコード・SKUで検索...')
+    this.productTable = page.getByTestId('product-table')
+    this.addProductButton = page.getByTestId('add-product-button')
+    this.productSearchInput = page.getByTestId('product-search-input')
 
     this.productNameInput = page.getByLabel('商品名 *')
     this.productPriceInput = page.getByLabel('価格（円） *')
     this.productCategorySelect = page.locator('#category')
-    this.productDialog = page.getByRole('dialog')
+    this.productDialog = page.getByTestId('product-edit-dialog')
     this.productCancelButton = page.getByRole('button', { name: 'キャンセル' })
   }
 
   async goto(): Promise<void> {
     await this.page.goto('http://localhost:5174/')
-    await expect(this.page.getByText('管理ダッシュボード')).toBeVisible()
+    await expect(this.page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible({
+      timeout: 15_000,
+    })
   }
 
   async navigateToProducts(): Promise<void> {
     await this.productsNavLink.click()
-    await expect(this.page.getByText('商品管理')).toBeVisible()
+    await expect(this.productTable).toBeVisible({ timeout: 15_000 })
   }
 
   async clickAddProduct(): Promise<void> {
@@ -61,18 +64,26 @@ export class AdminPage {
   }
 
   async openFirstProductEditor(): Promise<void> {
-    await this.page.locator('tbody tr').first().getByRole('button', { name: '編集' }).click()
+    await this.productTable
+      .locator('tbody tr')
+      .first()
+      .getByRole('button', { name: '編集' })
+      .click()
   }
 
   async expectProductVisible(productName: string): Promise<void> {
-    await expect(this.page.locator('tbody tr').filter({ hasText: productName })).toHaveCount(1)
+    await expect(
+      this.productTable.locator('tbody tr').filter({ hasText: productName }),
+    ).toHaveCount(1, { timeout: 10_000 })
   }
 
   async expectProductNotVisible(productName: string): Promise<void> {
-    await expect(this.page.locator('tbody tr').filter({ hasText: productName })).toHaveCount(0)
+    await expect(
+      this.productTable.locator('tbody tr').filter({ hasText: productName }),
+    ).toHaveCount(0, { timeout: 10_000 })
   }
 
   async getProductRowCount(): Promise<number> {
-    return this.page.locator('tbody tr').count()
+    return this.productTable.locator('tbody tr').count()
   }
 }

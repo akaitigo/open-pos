@@ -12,13 +12,10 @@ test.describe('Offline Sync E2E', () => {
 
   test('creates transaction while offline and syncs when back online', async ({ context }) => {
     // Verify product list is visible (online)
-    await expect(posPage.page.getByText('ドリップコーヒー', { exact: true })).toBeVisible()
+    await expect(posPage.productGrid.getByText('ドリップコーヒー', { exact: true })).toBeVisible()
 
     // Go offline
     await context.setOffline(true)
-
-    // Verify offline indicator appears
-    await posPage.page.waitForTimeout(500)
 
     // Add product to cart while offline
     await posPage.addProductToCart('ドリップコーヒー')
@@ -27,23 +24,18 @@ test.describe('Offline Sync E2E', () => {
     // Go back online
     await context.setOffline(false)
 
-    // Wait for sync to complete
-    await posPage.page.waitForTimeout(2000)
-
     // Verify the product is still in cart after reconnection
     await expect(posPage.cart).toContainText('ドリップコーヒー')
   })
 
-  test('shows offline status when network is disconnected', async ({ context }) => {
+  test('product list remains visible after brief offline period', async ({ context }) => {
     // Go offline
     await context.setOffline(true)
-    await posPage.page.waitForTimeout(500)
 
     // Go back online
     await context.setOffline(false)
-    await posPage.page.waitForTimeout(500)
 
-    // Product list should still be visible (cached)
-    await expect(posPage.page.getByText('ドリップコーヒー', { exact: true })).toBeVisible()
+    // Product list should still be visible
+    await expect(posPage.productGrid.getByText('ドリップコーヒー', { exact: true })).toBeVisible()
   })
 })
