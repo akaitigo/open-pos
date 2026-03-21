@@ -72,6 +72,14 @@ class ProductService {
     }
 
     /**
+     * 複数IDで商品を一括取得する。
+     */
+    fun findByIds(ids: List<UUID>): List<ProductEntity> {
+        tenantFilterService.enableFilter()
+        return productRepository.findByIds(ids)
+    }
+
+    /**
      * バーコードで商品を検索する。
      */
     fun findByBarcode(barcode: String): ProductEntity? {
