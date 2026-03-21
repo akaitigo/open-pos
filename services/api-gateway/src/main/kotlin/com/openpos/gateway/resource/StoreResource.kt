@@ -24,9 +24,11 @@ import openpos.store.v1.RegisterTerminalRequest
 import openpos.store.v1.StoreServiceGrpc
 import openpos.store.v1.UpdateStoreRequest
 import openpos.store.v1.UpdateTerminalSyncRequest
+import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/stores")
 @Blocking
+@Timeout(30000)
 class StoreResource {
     @Inject
     @GrpcClient("store-service")
