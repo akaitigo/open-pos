@@ -45,7 +45,7 @@ export class PosPage {
     // Toast 通知コンテナの pointer-events を無効化して
     // E2E テスト中にクリックをブロックしないようにする
     await this.page.addStyleTag({
-      content: '[class*="fixed"][class*="top-0"][class*="z-"] { display: none !important; }',
+      content: '.fixed.right-0.top-0.z-100 { display: none !important; }',
     })
   }
 
@@ -72,7 +72,7 @@ export class PosPage {
     // CSS で pointer-events: none を注入済みのため、追加操作不要
     // ページ遷移後に再注入が必要な場合のみ使用
     await this.page.addStyleTag({
-      content: '[class*="fixed"][class*="top-0"][class*="z-"] { display: none !important; }',
+      content: '.fixed.right-0.top-0.z-100 { display: none !important; }',
     })
   }
 
