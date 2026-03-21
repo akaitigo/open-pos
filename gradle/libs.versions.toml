@@ -1,0 +1,62 @@
+[versions]
+kotlin = "2.3.20"
+quarkus = "3.32.1"
+mockito-kotlin = "6.2.3"
+testcontainers = "2.0.3"
+owasp-depcheck = "12.2.0"
+bcrypt = "0.10.2"
+jacoco = "0.8.12"
+
+[libraries]
+# Quarkus BOM
+quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
+
+# Quarkus core
+quarkus-kotlin = { module = "io.quarkus:quarkus-kotlin" }
+quarkus-arc = { module = "io.quarkus:quarkus-arc" }
+quarkus-rest = { module = "io.quarkus:quarkus-rest" }
+quarkus-rest-jackson = { module = "io.quarkus:quarkus-rest-jackson" }
+
+# Quarkus gRPC
+quarkus-grpc = { module = "io.quarkus:quarkus-grpc" }
+
+# Quarkus persistence
+quarkus-hibernate-orm-panache-kotlin = { module = "io.quarkus:quarkus-hibernate-orm-panache-kotlin" }
+quarkus-jdbc-postgresql = { module = "io.quarkus:quarkus-jdbc-postgresql" }
+quarkus-flyway = { module = "io.quarkus:quarkus-flyway" }
+
+# Quarkus messaging
+quarkus-messaging-rabbitmq = { module = "io.quarkus:quarkus-messaging-rabbitmq" }
+
+# Quarkus cache / auth / observability
+quarkus-redis-client = { module = "io.quarkus:quarkus-redis-client" }
+quarkus-smallrye-jwt = { module = "io.quarkus:quarkus-smallrye-jwt" }
+quarkus-smallrye-health = { module = "io.quarkus:quarkus-smallrye-health" }
+quarkus-smallrye-openapi = { module = "io.quarkus:quarkus-smallrye-openapi" }
+quarkus-smallrye-fault-tolerance = { module = "io.quarkus:quarkus-smallrye-fault-tolerance" }
+quarkus-micrometer-registry-prometheus = { module = "io.quarkus:quarkus-micrometer-registry-prometheus" }
+quarkus-opentelemetry = { module = "io.quarkus:quarkus-opentelemetry" }
+quarkus-scheduler = { module = "io.quarkus:quarkus-scheduler" }
+
+# Kotlin
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib" }
+
+# Third-party
+bcrypt = { module = "at.favre.lib:bcrypt", version.ref = "bcrypt" }
+
+# Test
+quarkus-junit5 = { module = "io.quarkus:quarkus-junit5" }
+quarkus-junit5-mockito = { module = "io.quarkus:quarkus-junit5-mockito" }
+quarkus-jdbc-h2 = { module = "io.quarkus:quarkus-jdbc-h2" }
+rest-assured = { module = "io.rest-assured:rest-assured" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
+testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
+kotlin-noarg = { id = "org.jetbrains.kotlin.plugin.noarg", version.ref = "kotlin" }
+quarkus = { id = "io.quarkus", version.ref = "quarkus" }
+owasp-depcheck = { id = "org.owasp.dependencycheck", version.ref = "owasp-depcheck" }

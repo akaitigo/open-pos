@@ -1,33 +1,29 @@
 plugins {
-    kotlin("jvm")
-    kotlin("plugin.allopen")
-    id("io.quarkus")
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.allopen)
+    alias(libs.plugins.quarkus)
 }
 
-val quarkusPlatformGroupId: String by project
-val quarkusPlatformArtifactId: String by project
-val quarkusPlatformVersion: String by project
-
 dependencies {
-    implementation(enforcedPlatform("$quarkusPlatformGroupId:$quarkusPlatformArtifactId:$quarkusPlatformVersion"))
-    implementation("io.quarkus:quarkus-kotlin")
-    implementation("io.quarkus:quarkus-rest")
-    implementation("io.quarkus:quarkus-rest-jackson")
-    implementation("io.quarkus:quarkus-grpc")
-    implementation("io.quarkus:quarkus-smallrye-jwt")
-    implementation("io.quarkus:quarkus-redis-client")
-    implementation("io.quarkus:quarkus-smallrye-health")
-    implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
-    implementation("io.quarkus:quarkus-opentelemetry")
-    implementation("io.quarkus:quarkus-smallrye-openapi")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
-    implementation("io.quarkus:quarkus-arc")
-    implementation("io.quarkus:quarkus-smallrye-fault-tolerance")
+    implementation(enforcedPlatform(libs.quarkus.bom))
+    implementation(libs.quarkus.kotlin)
+    implementation(libs.quarkus.rest)
+    implementation(libs.quarkus.rest.jackson)
+    implementation(libs.quarkus.grpc)
+    implementation(libs.quarkus.smallrye.jwt)
+    implementation(libs.quarkus.redis.client)
+    implementation(libs.quarkus.smallrye.health)
+    implementation(libs.quarkus.micrometer.registry.prometheus)
+    implementation(libs.quarkus.opentelemetry)
+    implementation(libs.quarkus.smallrye.openapi)
+    implementation(libs.quarkus.smallrye.fault.tolerance)
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.quarkus.arc)
 
-    testImplementation("io.quarkus:quarkus-junit5")
-    testImplementation("io.quarkus:quarkus-junit5-mockito")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:6.2.3")
-    testImplementation("io.rest-assured:rest-assured")
+    testImplementation(libs.quarkus.junit5)
+    testImplementation(libs.quarkus.junit5.mockito)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.rest.assured)
 }
 
 allOpen {
