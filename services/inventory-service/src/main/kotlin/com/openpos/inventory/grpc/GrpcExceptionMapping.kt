@@ -2,6 +2,7 @@ package com.openpos.inventory.grpc
 
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
+import org.jboss.logging.Logger
 
 /**
  * ビジネス例外階層と gRPC Status Code のマッピング。
@@ -10,6 +11,8 @@ import io.grpc.StatusRuntimeException
  * - FAILED_PRECONDITION: ビジネスロジックエラー（状態遷移違反等）
  * - NOT_FOUND: リソース未存在
  */
+
+private val logger: Logger = Logger.getLogger("com.openpos.inventory.grpc.GrpcExceptionMapping")
 
 /** 入力バリデーションエラー → INVALID_ARGUMENT */
 open class InvalidInputException(
@@ -28,6 +31,7 @@ open class ResourceNotFoundException(
 
 /**
  * ビジネス例外を適切な gRPC StatusRuntimeException に変換する。
+ * catch-all では内部情報を漏洩させず、ログにのみ詳細を記録する。
  */
 fun mapToGrpcException(e: Exception): StatusRuntimeException =
     when (e) {
@@ -56,6 +60,7 @@ fun mapToGrpcException(e: Exception): StatusRuntimeException =
         }
 
         else -> {
-            Status.INTERNAL.withDescription(e.message).asRuntimeException()
+            logger.error("Unhandled exception", e)
+            Status.INTERNAL.withDescription("Internal server error").asRuntimeException()
         }
     }
