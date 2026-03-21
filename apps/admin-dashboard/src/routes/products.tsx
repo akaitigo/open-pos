@@ -53,11 +53,17 @@ export function ProductsPage() {
   }, [])
 
   useEffect(() => {
-    fetchProducts()
+    fetchProducts().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : '商品の取得に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    })
   }, [fetchProducts])
 
   useEffect(() => {
-    fetchMasterData()
+    fetchMasterData().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'マスタデータの取得に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    })
   }, [fetchMasterData])
 
   function handleCreate() {
@@ -71,18 +77,28 @@ export function ProductsPage() {
   }
 
   async function handleDelete(id: string) {
-    await api.delete(`/api/products/${id}`)
-    fetchProducts()
+    try {
+      await api.delete(`/api/products/${id}`)
+      fetchProducts()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '商品の削除に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    }
   }
 
   async function handleSubmit(data: Record<string, unknown>) {
-    if (editingProduct) {
-      await api.put(`/api/products/${editingProduct.id}`, data, ProductSchema)
-    } else {
-      await api.post('/api/products', data, ProductSchema)
+    try {
+      if (editingProduct) {
+        await api.put(`/api/products/${editingProduct.id}`, data, ProductSchema)
+      } else {
+        await api.post('/api/products', data, ProductSchema)
+      }
+      setDialogOpen(false)
+      fetchProducts()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '商品の保存に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
     }
-    setDialogOpen(false)
-    fetchProducts()
   }
 
   function getCategoryName(id: string | undefined): string {
@@ -96,6 +112,7 @@ export function ProductsPage() {
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="flex items-center justify-between gap-4">
           <Input
+            data-testid="product-search-input"
             placeholder="商品名・バーコード・SKUで検索..."
             value={search}
             onChange={(e) => {
@@ -106,11 +123,13 @@ export function ProductsPage() {
           />
           <div className="flex gap-2">
             <CsvImportButton onImported={fetchProducts} />
-            <Button onClick={handleCreate}>商品を追加</Button>
+            <Button data-testid="add-product-button" onClick={handleCreate}>
+              商品を追加
+            </Button>
           </div>
         </div>
 
-        <div className="rounded-md border">
+        <div data-testid="product-table" className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>

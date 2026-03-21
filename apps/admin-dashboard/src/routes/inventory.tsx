@@ -17,6 +17,7 @@ import { api } from '@/lib/api'
 import { PaginatedStocksSchema, StockSchema } from '@shared-types/openpos'
 import type { Stock, PaginatedResponse, Product } from '@shared-types/openpos'
 import { PaginatedProductsSchema } from '@shared-types/openpos'
+import { toast } from '@/hooks/use-toast'
 
 type StockStatus = 'normal' | 'low' | 'out'
 
@@ -76,11 +77,17 @@ export function InventoryPage() {
   }, [storeId, page, lowStockOnly])
 
   useEffect(() => {
-    fetchProducts()
+    fetchProducts().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : '商品の取得に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    })
   }, [fetchProducts])
 
   useEffect(() => {
-    fetchStocks()
+    fetchStocks().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : '在庫の取得に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    })
   }, [fetchStocks])
 
   function handleAdjust(stock: Stock) {
@@ -90,19 +97,24 @@ export function InventoryPage() {
 
   async function handleAdjustSubmit(data: { quantityChange: number; note: string }) {
     if (!selectedStock) return
-    await api.post(
-      '/api/inventory/stocks/adjust',
-      {
-        storeId: selectedStock.storeId,
-        productId: selectedStock.productId,
-        quantityChange: data.quantityChange,
-        movementType: 'ADJUSTMENT',
-        note: data.note,
-      },
-      StockSchema,
-    )
-    setAdjustDialogOpen(false)
-    fetchStocks()
+    try {
+      await api.post(
+        '/api/inventory/stocks/adjust',
+        {
+          storeId: selectedStock.storeId,
+          productId: selectedStock.productId,
+          quantityChange: data.quantityChange,
+          movementType: 'ADJUSTMENT',
+          note: data.note,
+        },
+        StockSchema,
+      )
+      setAdjustDialogOpen(false)
+      fetchStocks()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '在庫調整に失敗しました'
+      toast({ title: 'エラー', description: message, variant: 'destructive' })
+    }
   }
 
   return (
