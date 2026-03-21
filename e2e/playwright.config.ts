@@ -11,7 +11,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   timeout: 30_000,
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? 'github' : 'html',
+  reporter: process.env.CI ? [['github'], ['list']] : 'html',
   webServer: [
     {
       command: 'pnpm --filter pos-terminal exec vite --host 127.0.0.1 --port 5173 --strictPort',
