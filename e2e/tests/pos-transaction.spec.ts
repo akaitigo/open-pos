@@ -36,7 +36,7 @@ test.describe('POS Smoke', () => {
     await expect(posPage.receiptDialog).toContainText('レシート')
     await posPage.closeReceipt()
     await posPage.dismissToastIfVisible()
-    await expect(posPage.productGrid).toBeVisible()
+    await expect(posPage.productList.first()).toBeVisible()
     await expect(posPage.cart).toContainText('カートは空です')
   })
 })
