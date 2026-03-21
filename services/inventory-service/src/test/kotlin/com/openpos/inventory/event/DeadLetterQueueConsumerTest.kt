@@ -3,11 +3,12 @@ package com.openpos.inventory.event
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
 import org.eclipse.microprofile.reactive.messaging.Emitter
+import org.eclipse.microprofile.reactive.messaging.Message
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentCaptor
 import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
@@ -54,6 +55,13 @@ class DeadLetterQueueConsumerTest {
         return objectMapper.writeValueAsString(map)
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun captureMessagePayload(emitter: Emitter<String>): String {
+        val captor = ArgumentCaptor.forClass(Message::class.java) as ArgumentCaptor<Message<String>>
+        verify(emitter).send(captor.capture())
+        return captor.value.payload
+    }
+
     @Nested
     inner class OnDlqSaleCompleted {
         @Test
@@ -66,10 +74,8 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleCompleted(message)
 
             // Assert
-            val captor = argumentCaptor<String>()
-            verify(saleCompletedRetryEmitter).send(captor.capture())
-
-            val sentMessage = objectMapper.readValue(captor.firstValue, Map::class.java)
+            val payload = captureMessagePayload(saleCompletedRetryEmitter)
+            val sentMessage = objectMapper.readValue(payload, Map::class.java)
             assertTrue(sentMessage["retryCount"] == 1)
             verify(message).ack()
         }
@@ -84,10 +90,8 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleCompleted(message)
 
             // Assert
-            val captor = argumentCaptor<String>()
-            verify(saleCompletedRetryEmitter).send(captor.capture())
-
-            val sentMessage = objectMapper.readValue(captor.firstValue, Map::class.java)
+            val payload = captureMessagePayload(saleCompletedRetryEmitter)
+            val sentMessage = objectMapper.readValue(payload, Map::class.java)
             assertTrue(sentMessage["retryCount"] == 1)
             verify(message).ack()
         }
@@ -102,7 +106,7 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleCompleted(message)
 
             // Assert
-            verify(saleCompletedRetryEmitter, never()).send(any())
+            verify(saleCompletedRetryEmitter, never()).send(any<Message<String>>())
             verify(message).ack()
         }
 
@@ -116,10 +120,8 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleCompleted(message)
 
             // Assert
-            val captor = argumentCaptor<String>()
-            verify(saleCompletedRetryEmitter).send(captor.capture())
-
-            val sentMessage = objectMapper.readValue(captor.firstValue, Map::class.java)
+            val payload = captureMessagePayload(saleCompletedRetryEmitter)
+            val sentMessage = objectMapper.readValue(payload, Map::class.java)
             assertTrue(sentMessage["retryCount"] == 2)
             verify(message).ack()
         }
@@ -137,7 +139,7 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleVoided(message)
 
             // Assert
-            verify(saleVoidedRetryEmitter).send(any())
+            verify(saleVoidedRetryEmitter).send(any<Message<String>>())
             verify(message).ack()
         }
 
@@ -151,7 +153,7 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleVoided(message)
 
             // Assert
-            verify(saleVoidedRetryEmitter, never()).send(any())
+            verify(saleVoidedRetryEmitter, never()).send(any<Message<String>>())
             verify(message).ack()
         }
     }

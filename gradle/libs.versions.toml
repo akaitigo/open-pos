@@ -43,6 +43,9 @@ quarkus-smallrye-openapi = { module = "io.quarkus:quarkus-smallrye-openapi" }
 # Quarkus scheduler
 quarkus-scheduler = { module = "io.quarkus:quarkus-scheduler" }
 
+# Quarkus fault tolerance
+quarkus-smallrye-fault-tolerance = { module = "io.quarkus:quarkus-smallrye-fault-tolerance" }
+
 # Kotlin
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib" }
 

@@ -18,6 +18,7 @@ dependencies {
     implementation(libs.quarkus.smallrye.openapi)
     implementation(libs.kotlin.stdlib)
     implementation(libs.quarkus.arc)
+    implementation(libs.quarkus.smallrye.fault.tolerance)
 
     testImplementation(libs.quarkus.junit5)
     testImplementation(libs.quarkus.junit5.mockito)

@@ -2,6 +2,8 @@ package com.openpos.gateway.cache
 
 import io.quarkus.redis.datasource.RedisDataSource
 import io.quarkus.redis.datasource.keys.KeyCommands
+import io.quarkus.redis.datasource.keys.KeyScanArgs
+import io.quarkus.redis.datasource.keys.KeyScanCursor
 import io.quarkus.redis.datasource.value.ValueCommands
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -135,30 +137,43 @@ class RedisCacheServiceTest {
 
     @Nested
     inner class InvalidatePattern {
+        private fun mockScanCursor(keys: List<String>): KeyScanCursor<String> {
+            val cursor = mock<KeyScanCursor<String>>()
+            if (keys.isEmpty()) {
+                whenever(cursor.hasNext()).thenReturn(false)
+            } else {
+                whenever(cursor.hasNext()).thenReturn(true, false)
+                whenever(cursor.next()).thenReturn(keys.toSet())
+            }
+            return cursor
+        }
+
         @Test
         fun `パターンに一致するキーが全て削除される`() {
             // Arrange
             val matchedKeys = listOf("openpos:product:1", "openpos:product:2")
-            whenever(keyCommands.keys("openpos:product:*")).thenReturn(matchedKeys)
+            val cursor = mockScanCursor(matchedKeys)
+            whenever(keyCommands.scan(any<KeyScanArgs>())).thenReturn(cursor)
 
             // Act
             redisCacheService.invalidatePattern("openpos:product:*")
 
             // Assert
-            verify(keyCommands).keys("openpos:product:*")
+            verify(keyCommands).scan(any<KeyScanArgs>())
             verify(keyCommands).del("openpos:product:1", "openpos:product:2")
         }
 
         @Test
         fun `パターンに一致するキーがない場合はdelが呼ばれない`() {
             // Arrange
-            whenever(keyCommands.keys("openpos:nonexistent:*")).thenReturn(emptyList())
+            val cursor = mockScanCursor(emptyList())
+            whenever(keyCommands.scan(any<KeyScanArgs>())).thenReturn(cursor)
 
             // Act
             redisCacheService.invalidatePattern("openpos:nonexistent:*")
 
             // Assert
-            verify(keyCommands).keys("openpos:nonexistent:*")
+            verify(keyCommands).scan(any<KeyScanArgs>())
             verify(keyCommands, never()).del(any<String>())
         }
     }

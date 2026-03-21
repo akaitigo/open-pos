@@ -20,6 +20,8 @@ dependencies {
     implementation(libs.kotlin.stdlib)
     implementation(libs.quarkus.arc)
     implementation(libs.quarkus.scheduler)
+    implementation(libs.quarkus.smallrye.fault.tolerance)
+    implementation(libs.quarkus.scheduler)
 
     testImplementation(libs.quarkus.junit5)
     testImplementation(libs.quarkus.junit5.mockito)

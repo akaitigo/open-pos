@@ -1,5 +1,6 @@
 package com.openpos.store.grpc
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.BoolValue
 import com.openpos.store.entity.StaffEntity
 import com.openpos.store.entity.StoreEntity
@@ -27,6 +28,7 @@ class StoreGrpcServiceTest {
     private val staffService = mock<StaffService>()
     private val auditLogService = mock<AuditLogService>()
     private val tenantHelper = mock<GrpcTenantHelper>()
+    private val objectMapper = ObjectMapper()
 
     @BeforeEach
     fun setUp() {
@@ -36,6 +38,7 @@ class StoreGrpcServiceTest {
                 this.staffService = this@StoreGrpcServiceTest.staffService
                 this.auditLogService = this@StoreGrpcServiceTest.auditLogService
                 this.tenantHelper = this@StoreGrpcServiceTest.tenantHelper
+                this.objectMapper = this@StoreGrpcServiceTest.objectMapper
             }
     }
 
