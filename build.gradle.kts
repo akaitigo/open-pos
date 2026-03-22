@@ -79,7 +79,7 @@ subprojects {
                             counter = "LINE"
                             // TODO: 段階的に 80% へ引き上げ予定。
                             //       ロードマップ: 50% → 65% → 80%
-                            minimum = "0.50".toBigDecimal()
+                            minimum = "0.65".toBigDecimal()
                         }
                     }
                 }
