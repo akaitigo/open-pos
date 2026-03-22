@@ -73,11 +73,12 @@ class WebhookDeliveryService {
      * リトライ対象の配信を再試行する。
      * スケジューラーから定期的に呼び出されることを想定する。
      */
-    fun retryPendingDeliveries(): Int {
+    fun retryPendingDeliveries(organizationId: UUID? = null): Int {
         val pending = webhookStore.findPendingRetries()
         var retried = 0
         for (delivery in pending) {
             val webhook = webhookStore.findById(delivery.webhookId) ?: continue
+            if (organizationId != null && webhook.organizationId != organizationId) continue
             if (!webhook.isActive) {
                 webhookStore.updateDelivery(
                     delivery.copy(

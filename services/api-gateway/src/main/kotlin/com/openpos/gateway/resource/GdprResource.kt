@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
@@ -17,10 +18,12 @@ import openpos.store.v1.GetConsentRequest
 import openpos.store.v1.RecordConsentRequest
 import openpos.store.v1.StoreServiceGrpc
 import org.eclipse.microprofile.faulttolerance.Timeout
+import java.util.UUID
 
 /**
  * GDPR / 個人情報保護 REST エンドポイント。
  * テナントデータの削除・匿名化・同意管理を提供する。
+ * OWNER ロールのみアクセス可能。パスパラメータの組織IDとテナントコンテキストの一致を検証する。
  */
 @Path("/api/organizations/{id}")
 @Blocking
@@ -33,6 +36,28 @@ class GdprResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
+    /**
+     * パスパラメータの組織IDがテナントコンテキストと一致するか検証する。
+     */
+    private fun validateTenantAccess(pathId: String): Response? {
+        val tenantOrgId =
+            tenantContext.organizationId
+                ?: return Response.status(Response.Status.BAD_REQUEST).entity("Organization ID is required").build()
+        val pathOrgId =
+            try {
+                UUID.fromString(pathId)
+            } catch (e: IllegalArgumentException) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("Invalid organization ID").build()
+            }
+        if (tenantOrgId != pathOrgId) {
+            return Response.status(Response.Status.FORBIDDEN).entity("Access denied").build()
+        }
+        return null
+    }
+
     /**
      * テナントの全データを削除する（GDPR 忘れられる権利）。
      * PII を匿名化し、組織を論理削除する。
@@ -42,6 +67,7 @@ class GdprResource {
     fun deleteOrganizationData(
         @PathParam("id") id: String,
     ): Response {
+        validateTenantAccess(id)?.let { return it }
         val request =
             DeleteOrganizationDataRequest
                 .newBuilder()
@@ -64,7 +90,8 @@ class GdprResource {
     @Path("/anonymize/staff")
     fun anonymizeStaffData(
         @PathParam("id") id: String,
-    ): Map<String, Any> {
+    ): Any {
+        validateTenantAccess(id)?.let { return it }
         val request =
             AnonymizeStaffDataRequest
                 .newBuilder()
@@ -81,7 +108,8 @@ class GdprResource {
     @Path("/anonymize/customers")
     fun anonymizeCustomerData(
         @PathParam("id") id: String,
-    ): Map<String, Any> {
+    ): Any {
+        validateTenantAccess(id)?.let { return it }
         val request =
             AnonymizeCustomerDataRequest
                 .newBuilder()
@@ -100,6 +128,7 @@ class GdprResource {
         @PathParam("id") id: String,
         body: RecordConsentBody,
     ): Response {
+        validateTenantAccess(id)?.let { return it }
         val request =
             RecordConsentRequest
                 .newBuilder()
@@ -136,7 +165,8 @@ class GdprResource {
     @Path("/consent")
     fun getConsents(
         @PathParam("id") id: String,
-    ): List<Map<String, Any?>> {
+    ): Any {
+        validateTenantAccess(id)?.let { return it }
         val request =
             GetConsentRequest
                 .newBuilder()

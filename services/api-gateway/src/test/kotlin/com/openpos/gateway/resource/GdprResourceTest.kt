@@ -21,10 +21,12 @@ import java.util.UUID
 class GdprResourceTest {
     private val stub: StoreServiceGrpc.StoreServiceBlockingStub = mock()
     private val grpc: GrpcClientHelper = mock()
+    private val tenantContext: com.openpos.gateway.config.TenantContext = mock()
     private val resource =
         GdprResource().also { r ->
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
+            ProductResourceTest.setField(r, "tenantContext", tenantContext)
         }
 
     private val orgId = UUID.randomUUID().toString()
@@ -32,6 +34,7 @@ class GdprResourceTest {
     @BeforeEach
     fun setUp() {
         whenever(grpc.withTenant(stub)).thenReturn(stub)
+        whenever(tenantContext.organizationId).thenReturn(UUID.fromString(orgId))
     }
 
     @Nested
@@ -75,7 +78,9 @@ class GdprResourceTest {
             val result = resource.anonymizeStaffData(orgId)
 
             // Assert
-            assertEquals(5, result["anonymizedCount"])
+            @Suppress("UNCHECKED_CAST")
+            val map = result as Map<String, Any>
+            assertEquals(5, map["anonymizedCount"])
         }
     }
 
@@ -95,7 +100,9 @@ class GdprResourceTest {
             val result = resource.anonymizeCustomerData(orgId)
 
             // Assert
-            assertEquals(3, result["anonymizedCount"])
+            @Suppress("UNCHECKED_CAST")
+            val map = result as Map<String, Any>
+            assertEquals(3, map["anonymizedCount"])
         }
     }
 
@@ -165,9 +172,11 @@ class GdprResourceTest {
             )
 
             // Act
-            val result = resource.getConsents(orgId)
+            val resultAny = resource.getConsents(orgId)
 
             // Assert
+            @Suppress("UNCHECKED_CAST")
+            val result = resultAny as List<Map<String, Any?>>
             assertEquals(1, result.size)
             assertEquals("DATA_PROCESSING", result[0]["consentType"])
             assertEquals(true, result[0]["granted"])
@@ -181,9 +190,11 @@ class GdprResourceTest {
             )
 
             // Act
-            val result = resource.getConsents(orgId)
+            val resultAny = resource.getConsents(orgId)
 
             // Assert
+            @Suppress("UNCHECKED_CAST")
+            val result = resultAny as List<Map<String, Any?>>
             assertTrue(result.isEmpty())
         }
     }
