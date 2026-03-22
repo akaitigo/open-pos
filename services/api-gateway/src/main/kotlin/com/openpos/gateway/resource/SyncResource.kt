@@ -13,11 +13,23 @@ import openpos.pos.v1.PaymentMethod
 import openpos.pos.v1.PosServiceGrpc
 import openpos.pos.v1.SyncOfflineTransactionsRequest
 import org.eclipse.microprofile.faulttolerance.Timeout
+import org.jboss.logging.Logger
 
+/**
+ * オフライン取引同期エンドポイント。
+ *
+ * WARNING: クライアント送信の unitPrice/taxRate はオフライン時のスナップショットであり、
+ * サーバー側で商品マスタの最新価格と突き合わせ検証すべき。
+ * 現在は価格差異をログ出力するのみ。v1.1 でサーバー側価格検証を実装予定。
+ */
 @Path("/api/sync")
 @Blocking
 @Timeout(30000)
 class SyncResource {
+    companion object {
+        private val log = Logger.getLogger(SyncResource::class.java)
+    }
+
     @Inject
     @GrpcClient("pos-service")
     lateinit var stub: PosServiceGrpc.PosServiceBlockingStub
@@ -42,6 +54,16 @@ class SyncResource {
                             .apply { t.createdAt?.let { setCreatedAt(it) } }
                             .addAllItems(
                                 t.items.map { item ->
+                                    // WARNING: クライアント提供の unitPrice はオフラインスナップショット
+                                    // サーバー側で商品マスタ価格との突き合わせ検証が必要（v1.1実装予定）
+                                    if (item.unitPrice <= 0) {
+                                        log.warnf(
+                                            "Suspicious offline item price: productId=%s, unitPrice=%d, clientId=%s",
+                                            item.productId,
+                                            item.unitPrice,
+                                            t.clientId,
+                                        )
+                                    }
                                     OfflineTransactionItem
                                         .newBuilder()
                                         .setProductId(item.productId)
