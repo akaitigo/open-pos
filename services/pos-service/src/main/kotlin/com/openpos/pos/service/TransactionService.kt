@@ -21,6 +21,8 @@ import com.openpos.pos.repository.TaxSummaryRepository
 import com.openpos.pos.repository.TransactionDiscountRepository
 import com.openpos.pos.repository.TransactionItemRepository
 import com.openpos.pos.repository.TransactionRepository
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
 import io.quarkus.panache.common.Page
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -34,6 +36,30 @@ import java.util.UUID
 class TransactionService {
     @Inject
     lateinit var transactionRepository: TransactionRepository
+
+    @Inject
+    lateinit var meterRegistry: MeterRegistry
+
+    private val transactionsCompletedCounter: Counter by lazy {
+        Counter
+            .builder("openpos_transactions_completed_total")
+            .description("Total number of completed transactions")
+            .register(meterRegistry)
+    }
+
+    private val transactionsVoidedCounter: Counter by lazy {
+        Counter
+            .builder("openpos_transactions_voided_total")
+            .description("Total number of voided transactions")
+            .register(meterRegistry)
+    }
+
+    private val revenueCounter: Counter by lazy {
+        Counter
+            .builder("openpos_revenue_total")
+            .description("Total revenue in sen (smallest currency unit)")
+            .register(meterRegistry)
+    }
 
     @Inject
     lateinit var itemRepository: TransactionItemRepository
@@ -347,6 +373,10 @@ class TransactionService {
 
         publishSaleCompletedEvent(tx, items)
 
+        // ビジネスメトリクス更新
+        transactionsCompletedCounter.increment()
+        revenueCounter.increment(tx.total.toDouble())
+
         return tx
     }
 
@@ -373,6 +403,8 @@ class TransactionService {
 
         val items = itemRepository.findByTransactionId(transactionId)
         publishSaleVoidedEvent(tx, items)
+
+        transactionsVoidedCounter.increment()
 
         return tx
     }
