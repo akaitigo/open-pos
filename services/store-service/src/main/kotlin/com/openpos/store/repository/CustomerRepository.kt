@@ -5,6 +5,7 @@ import io.quarkus.hibernate.orm.panache.kotlin.PanacheRepositoryBase
 import io.quarkus.panache.common.Page
 import io.quarkus.panache.common.Sort
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.persistence.LockModeType
 import java.util.UUID
 
 @ApplicationScoped
@@ -14,4 +15,6 @@ class CustomerRepository : PanacheRepositoryBase<CustomerEntity, UUID> {
     fun findByEmail(email: String): CustomerEntity? = find("email", email).firstResult()
 
     fun findAllByOrganizationId(organizationId: UUID): List<CustomerEntity> = find("organizationId = ?1", organizationId).list()
+
+    fun findByIdForUpdate(id: UUID): CustomerEntity? = find("id = ?1", id).withLock(LockModeType.PESSIMISTIC_WRITE).firstResult()
 }
