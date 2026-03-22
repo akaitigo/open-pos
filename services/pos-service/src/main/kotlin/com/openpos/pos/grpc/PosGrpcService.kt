@@ -1,13 +1,17 @@
 package com.openpos.pos.grpc
 
+import com.openpos.pos.entity.DrawerEntity
 import com.openpos.pos.entity.JournalEntryEntity
 import com.openpos.pos.entity.PaymentEntity
+import com.openpos.pos.entity.SettlementEntity
 import com.openpos.pos.entity.TaxSummaryEntity
 import com.openpos.pos.entity.TransactionDiscountEntity
 import com.openpos.pos.entity.TransactionEntity
 import com.openpos.pos.entity.TransactionItemEntity
+import com.openpos.pos.service.DrawerService
 import com.openpos.pos.service.JournalService
 import com.openpos.pos.service.PaymentInput
+import com.openpos.pos.service.SettlementService
 import com.openpos.pos.service.TransactionService
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -19,14 +23,23 @@ import openpos.pos.v1.AddTransactionItemRequest
 import openpos.pos.v1.AddTransactionItemResponse
 import openpos.pos.v1.ApplyDiscountRequest
 import openpos.pos.v1.ApplyDiscountResponse
+import openpos.pos.v1.CloseDrawerRequest
+import openpos.pos.v1.CloseDrawerResponse
+import openpos.pos.v1.CreateSettlementRequest
+import openpos.pos.v1.CreateSettlementResponse
 import openpos.pos.v1.CreateTransactionRequest
 import openpos.pos.v1.CreateTransactionResponse
+import openpos.pos.v1.Drawer
 import openpos.pos.v1.FinalizeTransactionRequest
 import openpos.pos.v1.FinalizeTransactionResponse
+import openpos.pos.v1.GetDrawerStatusRequest
+import openpos.pos.v1.GetDrawerStatusResponse
 import openpos.pos.v1.GetInvoiceReceiptRequest
 import openpos.pos.v1.GetInvoiceReceiptResponse
 import openpos.pos.v1.GetReceiptRequest
 import openpos.pos.v1.GetReceiptResponse
+import openpos.pos.v1.GetSettlementRequest
+import openpos.pos.v1.GetSettlementResponse
 import openpos.pos.v1.GetTransactionRequest
 import openpos.pos.v1.GetTransactionResponse
 import openpos.pos.v1.JournalEntry
@@ -34,12 +47,18 @@ import openpos.pos.v1.ListJournalEntriesRequest
 import openpos.pos.v1.ListJournalEntriesResponse
 import openpos.pos.v1.ListTransactionsRequest
 import openpos.pos.v1.ListTransactionsResponse
+import openpos.pos.v1.OpenDrawerRequest
+import openpos.pos.v1.OpenDrawerResponse
 import openpos.pos.v1.Payment
 import openpos.pos.v1.PaymentMethod
 import openpos.pos.v1.PosServiceGrpc
 import openpos.pos.v1.Receipt
 import openpos.pos.v1.RemoveTransactionItemRequest
 import openpos.pos.v1.RemoveTransactionItemResponse
+import openpos.pos.v1.Settlement
+import openpos.pos.v1.SyncOfflineTransactionsRequest
+import openpos.pos.v1.SyncOfflineTransactionsResponse
+import openpos.pos.v1.SyncResult
 import openpos.pos.v1.TaxSummary
 import openpos.pos.v1.Transaction
 import openpos.pos.v1.TransactionDiscount
@@ -61,6 +80,12 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
 
     @Inject
     lateinit var journalService: JournalService
+
+    @Inject
+    lateinit var drawerService: DrawerService
+
+    @Inject
+    lateinit var settlementService: SettlementService
 
     @Inject
     lateinit var productServiceClient: ProductServiceClient
@@ -533,6 +558,201 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             throw mapToGrpcException(e)
         }
     }
+
+    // === Drawer (#783) ===
+
+    override fun openDrawer(
+        request: OpenDrawerRequest,
+        responseObserver: StreamObserver<OpenDrawerResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        try {
+            val entity =
+                drawerService.openDrawer(
+                    storeId = request.storeId.toUUID(),
+                    terminalId = request.terminalId.toUUID(),
+                    openingAmount = request.openingAmount,
+                )
+            responseObserver.onNext(
+                OpenDrawerResponse
+                    .newBuilder()
+                    .setDrawer(entity.toProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    override fun closeDrawer(
+        request: CloseDrawerRequest,
+        responseObserver: StreamObserver<CloseDrawerResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val entity =
+                drawerService.closeDrawer(
+                    storeId = request.storeId.toUUID(),
+                    terminalId = request.terminalId.toUUID(),
+                )
+            responseObserver.onNext(
+                CloseDrawerResponse
+                    .newBuilder()
+                    .setDrawer(entity.toProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    override fun getDrawerStatus(
+        request: GetDrawerStatusRequest,
+        responseObserver: StreamObserver<GetDrawerStatusResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val entity =
+                drawerService.getDrawerStatus(
+                    storeId = request.storeId.toUUID(),
+                    terminalId = request.terminalId.toUUID(),
+                )
+            responseObserver.onNext(
+                GetDrawerStatusResponse
+                    .newBuilder()
+                    .setDrawer(entity.toProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    // === Settlement (#784) ===
+
+    override fun createSettlement(
+        request: CreateSettlementRequest,
+        responseObserver: StreamObserver<CreateSettlementResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        try {
+            val entity =
+                settlementService.createSettlement(
+                    storeId = request.storeId.toUUID(),
+                    terminalId = request.terminalId.toUUID(),
+                    staffId = request.staffId.toUUID(),
+                    cashActual = request.cashActual,
+                )
+            responseObserver.onNext(
+                CreateSettlementResponse
+                    .newBuilder()
+                    .setSettlement(entity.toProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    override fun getSettlement(
+        request: GetSettlementRequest,
+        responseObserver: StreamObserver<GetSettlementResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val entity = settlementService.getSettlement(request.id.toUUID())
+            responseObserver.onNext(
+                GetSettlementResponse
+                    .newBuilder()
+                    .setSettlement(entity.toProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    // === SyncOfflineTransactions (#785) ===
+
+    override fun syncOfflineTransactions(
+        request: SyncOfflineTransactionsRequest,
+        responseObserver: StreamObserver<SyncOfflineTransactionsResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        val results =
+            request.transactionsList.map { offlineTx ->
+                try {
+                    val type = "SALE"
+                    val entity =
+                        transactionService.createTransaction(
+                            storeId = offlineTx.storeId.toUUID(),
+                            terminalId = offlineTx.terminalId.toUUID(),
+                            staffId = offlineTx.staffId.toUUID(),
+                            type = type,
+                            clientId = offlineTx.clientId.ifBlank { null },
+                        )
+                    SyncResult
+                        .newBuilder()
+                        .setClientId(offlineTx.clientId)
+                        .setSuccess(true)
+                        .setTransactionId(entity.id.toString())
+                        .build()
+                } catch (e: Exception) {
+                    SyncResult
+                        .newBuilder()
+                        .setClientId(offlineTx.clientId)
+                        .setSuccess(false)
+                        .setError(e.message ?: "Unknown error")
+                        .build()
+                }
+            }
+        responseObserver.onNext(
+            SyncOfflineTransactionsResponse
+                .newBuilder()
+                .addAllResults(results)
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    // === Drawer / Settlement Mapper Extensions ===
+
+    private fun DrawerEntity.toProto(): Drawer =
+        Drawer
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setStoreId(storeId.toString())
+            .setTerminalId(terminalId.toString())
+            .setOpeningAmount(openingAmount)
+            .setCurrentAmount(currentAmount)
+            .setIsOpen(isOpen)
+            .setOpenedAt(openedAt?.toString().orEmpty())
+            .setClosedAt(closedAt?.toString().orEmpty())
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .build()
+
+    private fun SettlementEntity.toProto(): Settlement =
+        Settlement
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setStoreId(storeId.toString())
+            .setTerminalId(terminalId.toString())
+            .setStaffId(staffId.toString())
+            .setCashExpected(cashExpected)
+            .setCashActual(cashActual)
+            .setDifference(difference)
+            .setSettledAt(settledAt.toString())
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .build()
 
     private fun buildInvoiceReceiptData(
         tx: TransactionEntity,
