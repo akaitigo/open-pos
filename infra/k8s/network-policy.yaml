@@ -95,6 +95,37 @@ spec:
         - protocol: TCP
           port: 9000
 ---
+## Allow backend services to reach infrastructure (DB, Redis, RabbitMQ, Hydra)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-infra-egress
+  namespace: openpos
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: openpos
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5432 # PostgreSQL
+        - protocol: TCP
+          port: 6379 # Redis
+        - protocol: TCP
+          port: 5672 # RabbitMQ AMQP
+        - protocol: TCP
+          port: 4444 # Hydra Public
+        - protocol: TCP
+          port: 4445 # Hydra Admin
+        - protocol: TCP
+          port: 8080 # inter-service HTTP
+        - protocol: TCP
+          port: 9000 # inter-service gRPC
+---
 ## Allow DNS resolution for all pods
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
