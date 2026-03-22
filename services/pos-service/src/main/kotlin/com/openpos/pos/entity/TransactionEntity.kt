@@ -70,6 +70,10 @@ class TransactionEntity : BaseEntity() {
     @Column(name = "deleted", nullable = false)
     var deleted: Boolean = false
 
+    /** 取引内容のSHA-256ハッシュ（電子帳簿保存法 真正性確保） */
+    @Column(name = "content_hash", length = 64)
+    var contentHash: String? = null
+
     /**
      * 楽観的ロック用バージョン番号。
      */
