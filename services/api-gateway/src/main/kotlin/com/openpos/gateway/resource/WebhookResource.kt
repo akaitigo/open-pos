@@ -39,6 +39,7 @@ class WebhookResource {
 
     @POST
     fun create(body: CreateWebhookBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val orgId = tenantContext.organizationId ?: return Response.status(Response.Status.BAD_REQUEST).build()
         val registration =
             webhookStore.register(
