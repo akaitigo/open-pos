@@ -53,11 +53,16 @@ services:
     container_name: openpos-redis
     ports:
       - '16379:6379'
-    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    # WARNING: 本番では REDIS_PASSWORD を必ず設定すること
+    command: >-
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-openpos_dev}
     volumes:
       - openpos-redis:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-openpos_dev}', 'ping']
       interval: 5s
       timeout: 3s
       retries: 5
@@ -114,7 +119,8 @@ services:
       URLS_LOGIN: http://localhost:3000/login
       URLS_LOGOUT: http://localhost:3000/logout
       LOG_LEVEL: info
-    command: serve all --dev
+    # WARNING: --dev はローカル開発専用。本番では --dev を削除し、TLS を有効化すること。
+    command: serve all ${HYDRA_SERVE_FLAGS:---dev}
     depends_on:
       postgres:
         condition: service_healthy
@@ -147,7 +153,7 @@ services:
     environment:
       QUARKUS_PROFILE: docker
       QUARKUS_HTTP_PORT: 8080
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-openpos_dev}@redis:6379
       HYDRA_JWKS_URL: http://hydra:4444/.well-known/jwks.json
       HYDRA_ISSUER: http://hydra:4444/
       OPENPOS_AUTH_ENABLED: '${OPENPOS_AUTH_ENABLED:-true}'
@@ -197,7 +203,7 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-openpos_dev}@redis:6379
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
@@ -240,7 +246,7 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-openpos_dev}@redis:6379
       PRODUCT_SERVICE_HOST: product-service
       PRODUCT_SERVICE_PORT: 9000
       RABBITMQ_HOST: rabbitmq
@@ -285,7 +291,7 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-openpos_dev}@redis:6379
       PRODUCT_SERVICE_HOST: product-service
       PRODUCT_SERVICE_PORT: 9000
       RABBITMQ_HOST: rabbitmq
@@ -330,7 +336,7 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-openpos_dev}@redis:6379
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
@@ -373,7 +379,7 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/openpos
       DB_USER: openpos
       DB_PASSWORD: ${POSTGRES_PASSWORD:-openpos_dev}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-openpos_dev}@redis:6379
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER:-openpos}
