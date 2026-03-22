@@ -61,6 +61,7 @@ class WebhookResource {
         @PathParam("id") id: String,
         body: UpdateWebhookBody,
     ): Response {
+        val orgId = tenantContext.organizationId ?: return Response.status(Response.Status.BAD_REQUEST).build()
         val webhookId =
             try {
                 UUID.fromString(id)
@@ -68,6 +69,9 @@ class WebhookResource {
                 return Response.status(Response.Status.BAD_REQUEST).build()
             }
         val existing = webhookStore.findById(webhookId) ?: return Response.status(Response.Status.NOT_FOUND).build()
+        if (existing.organizationId != orgId) {
+            return Response.status(Response.Status.NOT_FOUND).build()
+        }
         val updated =
             webhookStore.update(
                 existing.copy(
@@ -84,12 +88,17 @@ class WebhookResource {
     fun delete(
         @PathParam("id") id: String,
     ): Response {
+        val orgId = tenantContext.organizationId ?: return Response.status(Response.Status.BAD_REQUEST).build()
         val webhookId =
             try {
                 UUID.fromString(id)
             } catch (e: IllegalArgumentException) {
                 return Response.status(Response.Status.BAD_REQUEST).build()
             }
+        val existing = webhookStore.findById(webhookId) ?: return Response.status(Response.Status.NOT_FOUND).build()
+        if (existing.organizationId != orgId) {
+            return Response.status(Response.Status.NOT_FOUND).build()
+        }
         return if (webhookStore.delete(webhookId)) {
             Response.noContent().build()
         } else {
@@ -121,12 +130,17 @@ class WebhookResource {
     fun listDeliveries(
         @PathParam("id") id: String,
     ): Response {
+        val orgId = tenantContext.organizationId ?: return Response.status(Response.Status.BAD_REQUEST).build()
         val webhookId =
             try {
                 UUID.fromString(id)
             } catch (e: IllegalArgumentException) {
                 return Response.status(Response.Status.BAD_REQUEST).build()
             }
+        val existing = webhookStore.findById(webhookId) ?: return Response.status(Response.Status.NOT_FOUND).build()
+        if (existing.organizationId != orgId) {
+            return Response.status(Response.Status.NOT_FOUND).build()
+        }
         val deliveries = webhookStore.findDeliveries(webhookId)
         return Response.ok(deliveries.map { it.toMap() }).build()
     }
@@ -134,7 +148,8 @@ class WebhookResource {
     @POST
     @Path("/retry")
     fun retryPending(): Response {
-        val retried = deliveryService.retryPendingDeliveries()
+        val orgId = tenantContext.organizationId ?: return Response.status(Response.Status.BAD_REQUEST).build()
+        val retried = deliveryService.retryPendingDeliveries(orgId)
         return Response.ok(mapOf("retriedCount" to retried)).build()
     }
 }

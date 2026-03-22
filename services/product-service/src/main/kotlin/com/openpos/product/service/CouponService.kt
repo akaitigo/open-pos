@@ -130,4 +130,49 @@ class CouponService {
 
         return CouponValidationResult(isValid = true, coupon = coupon, discount = discount)
     }
+
+    /**
+     * クーポンを使用済みとしてマークし、usedCount をインクリメントする。
+     * 悲観的ロック（SELECT FOR UPDATE）で並行利用を防止する。
+     */
+    @Transactional
+    fun redeem(code: String): CouponValidationResult {
+        tenantFilterService.enableFilter()
+        val coupon =
+            couponRepository.findByCodeForUpdate(code)
+                ?: return CouponValidationResult(isValid = false, reason = "NOT_FOUND")
+
+        if (!coupon.isActive) {
+            return CouponValidationResult(isValid = false, coupon = coupon, reason = "COUPON_INACTIVE")
+        }
+
+        val now = Instant.now()
+
+        coupon.validFrom?.let { from ->
+            if (now.isBefore(from)) {
+                return CouponValidationResult(isValid = false, coupon = coupon, reason = "NOT_YET_VALID")
+            }
+        }
+        coupon.validUntil?.let { until ->
+            if (now.isAfter(until)) {
+                return CouponValidationResult(isValid = false, coupon = coupon, reason = "EXPIRED")
+            }
+        }
+
+        coupon.maxUses?.let { max ->
+            if (coupon.usedCount >= max) {
+                return CouponValidationResult(isValid = false, coupon = coupon, reason = "MAX_USES_REACHED")
+            }
+        }
+
+        val discount = discountRepository.findById(coupon.discountId)
+        if (discount == null || !discount.isActive) {
+            return CouponValidationResult(isValid = false, coupon = coupon, reason = "DISCOUNT_INACTIVE")
+        }
+
+        coupon.usedCount += 1
+        couponRepository.persist(coupon)
+
+        return CouponValidationResult(isValid = true, coupon = coupon, discount = discount)
+    }
 }
