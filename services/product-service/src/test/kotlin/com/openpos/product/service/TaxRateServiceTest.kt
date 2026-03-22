@@ -72,6 +72,40 @@ class TaxRateServiceTest {
         }
 
         @Test
+        fun `デフォルト税率作成時は既存デフォルトを解除する`() {
+            // Arrange
+            val existingDefaultId = UUID.randomUUID()
+            val existingDefault =
+                TaxRateEntity().apply {
+                    this.id = existingDefaultId
+                    this.organizationId = orgId
+                    this.name = "旧デフォルト税率"
+                    this.rate = BigDecimal("0.1000")
+                    this.taxType = "STANDARD"
+                    this.isDefault = true
+                    this.isActive = true
+                }
+            whenever(taxRateRepository.findDefaultsByOrganizationId(orgId)).thenReturn(listOf(existingDefault))
+            doNothing().whenever(taxRateRepository).persist(any<TaxRateEntity>())
+
+            // Act
+            val result =
+                taxRateService.create(
+                    name = "新デフォルト税率12%",
+                    rate = BigDecimal("0.1200"),
+                    taxType = "STANDARD",
+                    isDefault = true,
+                )
+
+            // Assert
+            assertEquals("新デフォルト税率12%", result.name)
+            assertEquals(true, result.isDefault)
+            assertEquals(false, existingDefault.isDefault)
+            verify(taxRateRepository).findDefaultsByOrganizationId(orgId)
+            verify(taxRateRepository).persist(any<TaxRateEntity>())
+        }
+
+        @Test
         fun `軽減税率を作成する`() {
             // Arrange
             doNothing().whenever(taxRateRepository).persist(any<TaxRateEntity>())

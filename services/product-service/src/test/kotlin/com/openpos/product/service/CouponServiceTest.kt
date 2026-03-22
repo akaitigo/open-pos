@@ -192,6 +192,260 @@ class CouponServiceTest {
         }
     }
 
+    // === redeem ===
+
+    @Nested
+    inner class Redeem {
+        @Test
+        fun `存在しないクーポンコードはNOT_FOUNDを返す`() {
+            // Arrange
+            whenever(couponRepository.findByCodeForUpdate("NOTEXIST")).thenReturn(null)
+
+            // Act
+            val result = couponService.redeem("NOTEXIST")
+
+            // Assert
+            assertFalse(result.isValid)
+            assertNull(result.coupon)
+            assertEquals("NOT_FOUND", result.reason)
+            verify(tenantFilterService).enableFilter()
+        }
+
+        @Test
+        fun `無効化されたクーポンの利用はCOUPON_INACTIVEを返す`() {
+            // Arrange
+            val entity =
+                CouponEntity().apply {
+                    this.id = UUID.randomUUID()
+                    this.organizationId = orgId
+                    this.code = "INACTIVE"
+                    this.discountId = this@CouponServiceTest.discountId
+                    this.usedCount = 0
+                    this.isActive = false
+                }
+            whenever(couponRepository.findByCodeForUpdate("INACTIVE")).thenReturn(entity)
+
+            // Act
+            val result = couponService.redeem("INACTIVE")
+
+            // Assert
+            assertFalse(result.isValid)
+            assertNotNull(result.coupon)
+            assertEquals("COUPON_INACTIVE", result.reason)
+        }
+
+        @Test
+        fun `有効期間開始前のクーポン利用はNOT_YET_VALIDを返す`() {
+            // Arrange
+            val futureStart = Instant.now().plus(7, ChronoUnit.DAYS)
+            val entity =
+                CouponEntity().apply {
+                    this.id = UUID.randomUUID()
+                    this.organizationId = orgId
+                    this.code = "FUTURE"
+                    this.discountId = this@CouponServiceTest.discountId
+                    this.usedCount = 0
+                    this.validFrom = futureStart
+                    this.validUntil = futureStart.plus(30, ChronoUnit.DAYS)
+                }
+            whenever(couponRepository.findByCodeForUpdate("FUTURE")).thenReturn(entity)
+
+            // Act
+            val result = couponService.redeem("FUTURE")
+
+            // Assert
+            assertFalse(result.isValid)
+            assertNotNull(result.coupon)
+            assertEquals("NOT_YET_VALID", result.reason)
+        }
+
+        @Test
+        fun `有効期間終了後のクーポン利用はEXPIREDを返す`() {
+            // Arrange
+            val pastEnd = Instant.now().minus(1, ChronoUnit.DAYS)
+            val entity =
+                CouponEntity().apply {
+                    this.id = UUID.randomUUID()
+                    this.organizationId = orgId
+                    this.code = "EXPIRED"
+                    this.discountId = this@CouponServiceTest.discountId
+                    this.usedCount = 0
+                    this.validFrom = pastEnd.minus(30, ChronoUnit.DAYS)
+                    this.validUntil = pastEnd
+                }
+            whenever(couponRepository.findByCodeForUpdate("EXPIRED")).thenReturn(entity)
+
+            // Act
+            val result = couponService.redeem("EXPIRED")
+
+            // Assert
+            assertFalse(result.isValid)
+            assertNotNull(result.coupon)
+            assertEquals("EXPIRED", result.reason)
+        }
+
+        @Test
+        fun `利用回数上限に達したクーポン利用はMAX_USES_REACHEDを返す`() {
+            // Arrange
+            val entity =
+                CouponEntity().apply {
+                    this.id = UUID.randomUUID()
+                    this.organizationId = orgId
+                    this.code = "MAXED"
+                    this.discountId = this@CouponServiceTest.discountId
+                    this.maxUses = 10
+                    this.usedCount = 10
+                    this.validFrom = Instant.now().minus(7, ChronoUnit.DAYS)
+                    this.validUntil = Instant.now().plus(7, ChronoUnit.DAYS)
+                }
+            whenever(couponRepository.findByCodeForUpdate("MAXED")).thenReturn(entity)
+
+            // Act
+            val result = couponService.redeem("MAXED")
+
+            // Assert
+            assertFalse(result.isValid)
+            assertNotNull(result.coupon)
+            assertEquals("MAX_USES_REACHED", result.reason)
+        }
+
+        @Test
+        fun `紐付き割引が無効の場合はDISCOUNT_INACTIVEを返す`() {
+            // Arrange
+            val entity =
+                CouponEntity().apply {
+                    this.id = UUID.randomUUID()
+                    this.organizationId = orgId
+                    this.code = "INACTIVE_DISC"
+                    this.discountId = this@CouponServiceTest.discountId
+                    this.usedCount = 0
+                    this.validFrom = Instant.now().minus(7, ChronoUnit.DAYS)
+                    this.validUntil = Instant.now().plus(7, ChronoUnit.DAYS)
+                }
+            val inactiveDiscount =
+                DiscountEntity().apply {
+                    this.id = discountId
+                    this.organizationId = orgId
+                    this.name = "無効割引"
+                    this.discountType = "PERCENTAGE"
+                    this.value = 10
+                    this.isActive = false
+                }
+            whenever(couponRepository.findByCodeForUpdate("INACTIVE_DISC")).thenReturn(entity)
+            whenever(discountRepository.findById(discountId)).thenReturn(inactiveDiscount)
+
+            // Act
+            val result = couponService.redeem("INACTIVE_DISC")
+
+            // Assert
+            assertFalse(result.isValid)
+            assertNotNull(result.coupon)
+            assertEquals("DISCOUNT_INACTIVE", result.reason)
+        }
+
+        @Test
+        fun `紐付き割引が存在しない場合はDISCOUNT_INACTIVEを返す`() {
+            // Arrange
+            val entity =
+                CouponEntity().apply {
+                    this.id = UUID.randomUUID()
+                    this.organizationId = orgId
+                    this.code = "NO_DISC"
+                    this.discountId = this@CouponServiceTest.discountId
+                    this.usedCount = 0
+                    this.validFrom = Instant.now().minus(7, ChronoUnit.DAYS)
+                    this.validUntil = Instant.now().plus(7, ChronoUnit.DAYS)
+                }
+            whenever(couponRepository.findByCodeForUpdate("NO_DISC")).thenReturn(entity)
+            whenever(discountRepository.findById(discountId)).thenReturn(null)
+
+            // Act
+            val result = couponService.redeem("NO_DISC")
+
+            // Assert
+            assertFalse(result.isValid)
+            assertNotNull(result.coupon)
+            assertEquals("DISCOUNT_INACTIVE", result.reason)
+        }
+
+        @Test
+        fun `全条件を満たすクーポン利用はusedCountをインクリメントする`() {
+            // Arrange
+            val entity =
+                CouponEntity().apply {
+                    this.id = UUID.randomUUID()
+                    this.organizationId = orgId
+                    this.code = "VALID"
+                    this.discountId = this@CouponServiceTest.discountId
+                    this.maxUses = 100
+                    this.usedCount = 5
+                    this.validFrom = Instant.now().minus(7, ChronoUnit.DAYS)
+                    this.validUntil = Instant.now().plus(7, ChronoUnit.DAYS)
+                }
+            val activeDiscount =
+                DiscountEntity().apply {
+                    this.id = discountId
+                    this.organizationId = orgId
+                    this.name = "有効割引"
+                    this.discountType = "PERCENTAGE"
+                    this.value = 10
+                    this.isActive = true
+                }
+            whenever(couponRepository.findByCodeForUpdate("VALID")).thenReturn(entity)
+            whenever(discountRepository.findById(discountId)).thenReturn(activeDiscount)
+            doNothing().whenever(couponRepository).persist(any<CouponEntity>())
+
+            // Act
+            val result = couponService.redeem("VALID")
+
+            // Assert
+            assertTrue(result.isValid)
+            assertNotNull(result.coupon)
+            assertNotNull(result.discount)
+            assertNull(result.reason)
+            assertEquals(6, result.coupon!!.usedCount)
+            verify(couponRepository).persist(any<CouponEntity>())
+        }
+
+        @Test
+        fun `利用回数無制限かつ期間無制限のクーポン利用は成功する`() {
+            // Arrange
+            val entity =
+                CouponEntity().apply {
+                    this.id = UUID.randomUUID()
+                    this.organizationId = orgId
+                    this.code = "UNLIMITED"
+                    this.discountId = this@CouponServiceTest.discountId
+                    this.maxUses = null
+                    this.usedCount = 999
+                    this.validFrom = null
+                    this.validUntil = null
+                }
+            val activeDiscount =
+                DiscountEntity().apply {
+                    this.id = discountId
+                    this.organizationId = orgId
+                    this.name = "常時有効割引"
+                    this.discountType = "FIXED_AMOUNT"
+                    this.value = 50000
+                    this.isActive = true
+                }
+            whenever(couponRepository.findByCodeForUpdate("UNLIMITED")).thenReturn(entity)
+            whenever(discountRepository.findById(discountId)).thenReturn(activeDiscount)
+            doNothing().whenever(couponRepository).persist(any<CouponEntity>())
+
+            // Act
+            val result = couponService.redeem("UNLIMITED")
+
+            // Assert
+            assertTrue(result.isValid)
+            assertNotNull(result.coupon)
+            assertNull(result.reason)
+            assertEquals(1000, result.coupon!!.usedCount)
+            verify(couponRepository).persist(any<CouponEntity>())
+        }
+    }
+
     // === validate ===
 
     @Nested
