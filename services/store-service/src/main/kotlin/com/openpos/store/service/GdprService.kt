@@ -22,7 +22,7 @@ import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import java.time.Instant
 import java.util.UUID
-import java.util.logging.Logger
+import org.jboss.logging.Logger
 
 /**
  * GDPR / 個人情報保護サービス。
@@ -63,7 +63,7 @@ class GdprService {
     @Inject lateinit var consentRepository: DataProcessingConsentRepository
 
     companion object {
-        private val logger: Logger = Logger.getLogger(GdprService::class.java.name)
+        private val logger: Logger = Logger.getLogger(GdprService::class::class.java)
 
         /** 匿名化に使う固定文字列 */
         const val ANONYMIZED_NAME = "[削除済み]"
