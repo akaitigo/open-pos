@@ -344,12 +344,13 @@ message UpdateProductRequest {
   int32 display_order = 10;
   // 有効フラグ
   bool is_active = 11;
-  // 販売価格（presence 付き更新用）
-  google.protobuf.Int64Value price_value = 12;
-  // 表示順序（presence 付き更新用）
-  google.protobuf.Int32Value display_order_value = 13;
-  // 有効フラグ（presence 付き更新用）
-  google.protobuf.BoolValue is_active_value = 14;
+  // Deprecated: price_value は冗長です。代わりに optional price (field 6) を使用してください。
+  // presence 検出が必要な場合は proto3 optional を使用してください。
+  google.protobuf.Int64Value price_value = 12 [deprecated = true];
+  // Deprecated: display_order_value は冗長です。代わりに optional display_order (field 10) を使用してください。
+  google.protobuf.Int32Value display_order_value = 13 [deprecated = true];
+  // Deprecated: is_active_value は冗長です。代わりに optional is_active (field 11) を使用してください。
+  google.protobuf.BoolValue is_active_value = 14 [deprecated = true];
 }
 
 // 商品削除リクエスト
