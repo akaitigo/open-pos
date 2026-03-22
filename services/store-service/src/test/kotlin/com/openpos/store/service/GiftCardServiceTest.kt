@@ -59,7 +59,7 @@ class GiftCardServiceTest {
                 initialBalance = 500000
                 status = "ACTIVE"
             }
-        whenever(giftCardRepository.findByCodeForUpdate("GIFT-001")).thenReturn(card)
+        whenever(giftCardRepository.findByCode("GIFT-001")).thenReturn(card)
 
         // Act
         val result = service.redeem("GIFT-001", 20000) // 200 yen > 100 yen
@@ -80,7 +80,7 @@ class GiftCardServiceTest {
                 initialBalance = 10000
                 status = "ACTIVE"
             }
-        whenever(giftCardRepository.findByCodeForUpdate("GIFT-001")).thenReturn(card)
+        whenever(giftCardRepository.findByCode("GIFT-001")).thenReturn(card)
 
         // Act
         val result = service.redeem("GIFT-001", 10000)
@@ -125,7 +125,7 @@ class GiftCardServiceTest {
                 initialBalance = 10000
                 status = "USED"
             }
-        whenever(giftCardRepository.findByCodeForUpdate("GIFT-001")).thenReturn(card)
+        whenever(giftCardRepository.findByCode("GIFT-001")).thenReturn(card)
 
         // Act
         val result = service.redeem("GIFT-001", 5000)

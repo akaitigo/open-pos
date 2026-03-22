@@ -20,8 +20,6 @@ class AuthFilterTest {
     private val uriInfo: UriInfo = mock()
     private val headers = MultivaluedHashMap<String, String>()
 
-    private val tenantContext = TenantContext()
-
     private val filter =
         AuthFilter().also {
             val jwtField = AuthFilter::class.java.getDeclaredField("jwt")
@@ -35,10 +33,6 @@ class AuthFilterTest {
             val skipPathsField = AuthFilter::class.java.getDeclaredField("skipPaths")
             skipPathsField.isAccessible = true
             skipPathsField.set(it, "/api/health,/api/staff/{id}/authenticate,/q/")
-
-            val tcField = AuthFilter::class.java.getDeclaredField("tenantContext")
-            tcField.isAccessible = true
-            tcField.set(it, tenantContext)
         }
 
     @BeforeEach

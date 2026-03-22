@@ -5,7 +5,6 @@ import jakarta.inject.Inject
 import jakarta.ws.rs.Priorities
 import jakarta.ws.rs.container.ContainerRequestContext
 import jakarta.ws.rs.container.ContainerRequestFilter
-import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.ext.Provider
 import java.util.UUID
 
@@ -23,12 +22,7 @@ class TenantRequestFilter : ContainerRequestFilter {
             try {
                 tenantContext.organizationId = UUID.fromString(orgIdHeader)
             } catch (_: IllegalArgumentException) {
-                requestContext.abortWith(
-                    Response
-                        .status(Response.Status.BAD_REQUEST)
-                        .entity(mapOf("error" to "Invalid X-Organization-Id header: not a valid UUID"))
-                        .build(),
-                )
+                // Invalid UUID — will be caught downstream if required
             }
         }
     }

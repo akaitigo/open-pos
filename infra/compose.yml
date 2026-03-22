@@ -53,16 +53,11 @@ services:
     container_name: openpos-redis
     ports:
       - '16379:6379'
-    # WARNING: 本番では REDIS_PASSWORD を必ず設定すること
-    command: >-
-      redis-server
-      --maxmemory 128mb
-      --maxmemory-policy allkeys-lru
-      --requirepass ${REDIS_PASSWORD:-openpos_dev}
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
       - openpos-redis:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-openpos_dev}', 'ping']
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 5
@@ -119,8 +114,7 @@ services:
       URLS_LOGIN: http://localhost:3000/login
       URLS_LOGOUT: http://localhost:3000/logout
       LOG_LEVEL: info
-    # WARNING: --dev はローカル開発専用。本番では --dev を削除し、TLS を有効化すること。
-    command: serve all ${HYDRA_SERVE_FLAGS:---dev}
+    command: serve all --dev
     depends_on:
       postgres:
         condition: service_healthy

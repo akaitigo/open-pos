@@ -280,7 +280,7 @@ export function useCheckout(onOpenChange: (open: boolean) => void) {
         return
       }
 
-      addDiscount(code, result.discount, subtotal)
+      addDiscount(code, result.discount, grossTotal)
       setCouponCode('')
       toast({ title: `クーポン「${code}」を適用しました` })
     } catch (err) {

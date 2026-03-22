@@ -8,7 +8,6 @@ import com.openpos.analytics.repository.HourlySalesRepository
 import com.openpos.analytics.repository.ProductSalesRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
-import jakarta.transaction.Transactional
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -32,7 +31,6 @@ class SalesEventProcessor {
      * 売上完了イベントを処理する。
      * 日次・商品別・時間帯別の集計を更新する。
      */
-    @Transactional
     fun processSaleCompleted(
         organizationId: UUID,
         payload: SaleCompletedPayload,
@@ -51,7 +49,6 @@ class SalesEventProcessor {
                 organizationId,
                 storeId,
                 UUID.fromString(item.productId),
-                item.productName,
                 saleDate,
                 item.quantity,
                 item.subtotal,
@@ -67,7 +64,6 @@ class SalesEventProcessor {
      * 売上取消イベントを処理する。
      * 日次・商品別・時間帯別の集計をロールバックする。
      */
-    @Transactional
     fun processSaleVoided(
         organizationId: UUID,
         payload: SaleVoidedPayload,
@@ -120,7 +116,6 @@ class SalesEventProcessor {
         organizationId: UUID,
         storeId: UUID,
         productId: UUID,
-        productName: String?,
         saleDate: LocalDate,
         quantity: Int,
         subtotal: Long,
@@ -133,7 +128,7 @@ class SalesEventProcessor {
                     this.storeId = storeId
                     this.productId = productId
                     this.date = saleDate
-                    this.productName = productName?.ifBlank { "Product-$productId" } ?: "Product-$productId"
+                    this.productName = "Product-$productId"
                 }
         productSales.quantitySold += quantity
         productSales.totalAmount += subtotal

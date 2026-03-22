@@ -8,7 +8,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import java.util.UUID
-import org.jboss.logging.Logger
+import java.util.logging.Logger
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -29,7 +29,7 @@ class WebhookService {
     lateinit var organizationIdHolder: OrganizationIdHolder
 
     companion object {
-        private val logger: Logger = Logger.getLogger(WebhookService::class::class.java)
+        private val logger: Logger = Logger.getLogger(WebhookService::class.java.name)
     }
 
     fun listByOrganizationId(organizationId: UUID): List<WebhookEntity> {
