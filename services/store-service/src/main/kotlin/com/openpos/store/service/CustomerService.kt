@@ -12,6 +12,10 @@ import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import java.util.UUID
 
+/**
+ * 顧客管理のビジネスロジック層。
+ * 顧客の CRUD 操作およびポイントの付与・利用を提供する。
+ */
 @ApplicationScoped
 class CustomerService {
     @Inject lateinit var customerRepository: CustomerRepository
@@ -22,6 +26,14 @@ class CustomerService {
 
     @Inject lateinit var organizationIdHolder: OrganizationIdHolder
 
+    /**
+     * 新規顧客を作成する。
+     *
+     * @param name 顧客名
+     * @param email メールアドレス（省略可）
+     * @param phone 電話番号（省略可）
+     * @return 作成された顧客エンティティ
+     */
     @Transactional
     fun create(
         name: String,
@@ -40,11 +52,24 @@ class CustomerService {
         return entity
     }
 
+    /**
+     * 顧客をIDで取得する。
+     *
+     * @param id 顧客ID
+     * @return 顧客エンティティ（存在しない場合は null）
+     */
     fun findById(id: UUID): CustomerEntity? {
         tenantFilterService.enableFilter()
         return customerRepository.findById(id)
     }
 
+    /**
+     * 顧客一覧を取得する（ページネーション対応）。
+     *
+     * @param page ページ番号（0始まり）
+     * @param pageSize ページサイズ
+     * @return Pair<顧客リスト, 総件数>
+     */
     fun list(
         page: Int,
         pageSize: Int,
@@ -55,6 +80,17 @@ class CustomerService {
         return Pair(customers, total)
     }
 
+    /**
+     * 顧客情報を更新する。
+     *
+     * null でないパラメータのみ更新される（部分更新）。
+     *
+     * @param id 顧客ID
+     * @param name 新しい顧客名（省略可）
+     * @param email 新しいメールアドレス（省略可）
+     * @param phone 新しい電話番号（省略可）
+     * @return 更新後の顧客エンティティ（顧客が存在しない場合は null）
+     */
     @Transactional
     fun update(
         id: UUID,
@@ -71,7 +107,18 @@ class CustomerService {
         return entity
     }
 
-    /** 100円（10000銭）につき1ポイント付与 (#141) */
+    /**
+     * 取引金額に応じてポイントを付与する。
+     *
+     * 100円（10000銭）につき1ポイントを計算し、顧客のポイント残高に加算する。
+     * ポイント取引履歴も記録する。
+     *
+     * @param customerId 顧客ID
+     * @param transactionTotal 取引合計額（銭単位）
+     * @param transactionId 関連する取引ID（省略可）
+     * @return 付与されたポイント数（0の場合もあり）
+     * @throws IllegalArgumentException 顧客が存在しない場合
+     */
     @Transactional
     fun earnPoints(
         customerId: UUID,
@@ -101,6 +148,18 @@ class CustomerService {
         return points
     }
 
+    /**
+     * 顧客のポイントを利用（消費）する。
+     *
+     * 悲観的ロック（SELECT FOR UPDATE）で残高を確認し、十分なポイントがある場合に減算する。
+     * ポイント取引履歴も記録する。
+     *
+     * @param customerId 顧客ID
+     * @param points 利用するポイント数
+     * @param transactionId 関連する取引ID（省略可）
+     * @return true: ポイント利用成功、false: ポイント残高不足
+     * @throws IllegalArgumentException 顧客が存在しない場合
+     */
     @Transactional
     fun redeemPoints(
         customerId: UUID,

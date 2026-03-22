@@ -42,6 +42,10 @@ class StockService {
 
     /**
      * 店舗×商品の在庫を取得する。
+     *
+     * @param storeId 店舗ID
+     * @param productId 商品ID
+     * @return 在庫エンティティ（存在しない場合は null）
      */
     fun getStock(
         storeId: UUID,
@@ -54,6 +58,10 @@ class StockService {
     /**
      * 店舗の在庫一覧を取得する（ページネーション対応）。
      *
+     * @param storeId 店舗ID
+     * @param lowStockOnly true の場合、低在庫のみに絞り込む
+     * @param page ページ番号（0始まり）
+     * @param pageSize ページサイズ
      * @return Pair<在庫リスト, 総件数>
      */
     fun listStocks(
@@ -77,10 +85,17 @@ class StockService {
 
     /**
      * 在庫を調整する。
-     * 1. stocks テーブルから store_id + product_id を SELECT FOR UPDATE で検索（なければ新規作成）
-     * 2. quantity を更新（結果が負になる場合は FAILED_PRECONDITION 例外）
-     * 3. stock_movements に記録
      *
+     * 悲観的ロック（SELECT FOR UPDATE）で在庫行を取得し、数量を更新する。
+     * 在庫レコードが存在しない場合は新規作成する。調整後に移動履歴を記録し、
+     * 在庫が閾値以下に下がった場合は StockLowEvent を発行する。
+     *
+     * @param storeId 店舗ID
+     * @param productId 商品ID
+     * @param quantityChange 数量変更値（正: 入庫、負: 出庫）
+     * @param movementType 移動種別（"SALE", "ADJUSTMENT", "RETURN" 等）
+     * @param referenceId 関連する取引IDなどの参照情報（省略可）
+     * @param note 備考（省略可）
      * @return 調整後の在庫エンティティ
      * @throws InsufficientStockException 在庫不足の場合（gRPC FAILED_PRECONDITION にマッピング）
      */
@@ -151,6 +166,12 @@ class StockService {
     /**
      * 在庫移動履歴を取得する（ページネーション対応）。
      *
+     * @param storeId 店舗ID
+     * @param productId 商品IDフィルタ（省略可）
+     * @param startDate 開始日時フィルタ（省略可）
+     * @param endDate 終了日時フィルタ（省略可）
+     * @param page ページ番号（0始まり）
+     * @param pageSize ページサイズ
      * @return Pair<移動履歴リスト, 総件数>
      */
     fun listMovements(
