@@ -366,4 +366,177 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
             "TRANSFER" -> MovementType.MOVEMENT_TYPE_TRANSFER
             else -> MovementType.MOVEMENT_TYPE_UNSPECIFIED
         }
+
+    // === Purchase Order RPCs (#593) ===
+
+    @Inject
+    lateinit var purchaseOrderService: com.openpos.inventory.service.PurchaseOrderService
+
+    override fun createPurchaseOrder(
+        request: openpos.inventory.v1.CreatePurchaseOrderRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.inventory.v1.CreatePurchaseOrderResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        try {
+            val items =
+                request.itemsList.map { item ->
+                    com.openpos.inventory.service.PurchaseOrderItemInput(
+                        productId = java.util.UUID.fromString(item.productId),
+                        orderedQuantity = item.orderedQuantity,
+                        unitCost = item.unitCost,
+                    )
+                }
+            val order =
+                purchaseOrderService.create(
+                    storeId = java.util.UUID.fromString(request.storeId),
+                    supplierName = request.supplierName,
+                    note = request.note.ifBlank { null },
+                    items = items,
+                )
+            val orderItems = purchaseOrderService.getItems(order.id)
+            responseObserver.onNext(
+                openpos.inventory.v1.CreatePurchaseOrderResponse
+                    .newBuilder()
+                    .setPurchaseOrder(order.toProto(orderItems))
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            responseObserver.onError(Status.INTERNAL.withDescription(e.message).asRuntimeException())
+        }
+    }
+
+    override fun getPurchaseOrder(
+        request: openpos.inventory.v1.GetPurchaseOrderRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.inventory.v1.GetPurchaseOrderResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val order = purchaseOrderService.findById(java.util.UUID.fromString(request.id))
+        if (order == null) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription("Purchase order not found").asRuntimeException())
+            return
+        }
+        val items = purchaseOrderService.getItems(order.id)
+        responseObserver.onNext(
+            openpos.inventory.v1.GetPurchaseOrderResponse
+                .newBuilder()
+                .setPurchaseOrder(order.toProto(items))
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun listPurchaseOrders(
+        request: openpos.inventory.v1.ListPurchaseOrdersRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.inventory.v1.ListPurchaseOrdersResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val page = if (request.hasPagination()) request.pagination.page - 1 else 0
+        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize.coerceAtMost(100) else 20
+        val storeId = java.util.UUID.fromString(request.storeId)
+        val statusFilter =
+            if (request.status != openpos.inventory.v1.PurchaseOrderStatus.PURCHASE_ORDER_STATUS_UNSPECIFIED) {
+                request.status.toDbValue()
+            } else {
+                null
+            }
+        val (orders, total) = purchaseOrderService.list(storeId, statusFilter, page, pageSize)
+        val totalPages = if (total > 0) ((total + pageSize - 1) / pageSize).toInt() else 0
+        responseObserver.onNext(
+            openpos.inventory.v1.ListPurchaseOrdersResponse
+                .newBuilder()
+                .addAllPurchaseOrders(orders.map { it.toProto(purchaseOrderService.getItems(it.id)) })
+                .setPagination(
+                    PaginationResponse
+                        .newBuilder()
+                        .setPage(
+                            page + 1,
+                        ).setPageSize(pageSize)
+                        .setTotalCount(total)
+                        .setTotalPages(totalPages)
+                        .build(),
+                ).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun updatePurchaseOrderStatus(
+        request: openpos.inventory.v1.UpdatePurchaseOrderStatusRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.inventory.v1.UpdatePurchaseOrderStatusResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val receivedItems =
+                request.receivedItemsList.map {
+                    com.openpos.inventory.service.ReceivedItemInput(
+                        productId = java.util.UUID.fromString(it.productId),
+                        receivedQuantity = it.receivedQuantity,
+                    )
+                }
+            val order =
+                purchaseOrderService.updateStatus(
+                    id = java.util.UUID.fromString(request.id),
+                    newStatus = request.status.toDbValue(),
+                    receivedItems = receivedItems,
+                )
+            val items = purchaseOrderService.getItems(order.id)
+            responseObserver.onNext(
+                openpos.inventory.v1.UpdatePurchaseOrderStatusResponse
+                    .newBuilder()
+                    .setPurchaseOrder(order.toProto(items))
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: IllegalArgumentException) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription(e.message).asRuntimeException())
+        } catch (e: Exception) {
+            responseObserver.onError(Status.INTERNAL.withDescription(e.message).asRuntimeException())
+        }
+    }
+
+    private fun com.openpos.inventory.entity.PurchaseOrderEntity.toProto(
+        items: List<com.openpos.inventory.entity.PurchaseOrderItemEntity>,
+    ): openpos.inventory.v1.PurchaseOrder =
+        openpos.inventory.v1.PurchaseOrder
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setStoreId(storeId.toString())
+            .setStatus(status.toProtoPurchaseOrderStatus())
+            .addAllItems(items.map { it.toProto() })
+            .setSupplierName(supplierName)
+            .setNote(note.orEmpty())
+            .setOrderedAt(orderedAt?.toString().orEmpty())
+            .setReceivedAt(receivedAt?.toString().orEmpty())
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .build()
+
+    private fun com.openpos.inventory.entity.PurchaseOrderItemEntity.toProto(): openpos.inventory.v1.PurchaseOrderItem =
+        openpos.inventory.v1.PurchaseOrderItem
+            .newBuilder()
+            .setId(id.toString())
+            .setProductId(productId.toString())
+            .setOrderedQuantity(orderedQuantity)
+            .setReceivedQuantity(receivedQuantity)
+            .setUnitCost(unitCost)
+            .build()
+
+    private fun String.toProtoPurchaseOrderStatus(): openpos.inventory.v1.PurchaseOrderStatus =
+        when (this) {
+            "DRAFT" -> openpos.inventory.v1.PurchaseOrderStatus.PURCHASE_ORDER_STATUS_DRAFT
+            "ORDERED" -> openpos.inventory.v1.PurchaseOrderStatus.PURCHASE_ORDER_STATUS_ORDERED
+            "RECEIVED" -> openpos.inventory.v1.PurchaseOrderStatus.PURCHASE_ORDER_STATUS_RECEIVED
+            "CANCELLED" -> openpos.inventory.v1.PurchaseOrderStatus.PURCHASE_ORDER_STATUS_CANCELLED
+            else -> openpos.inventory.v1.PurchaseOrderStatus.PURCHASE_ORDER_STATUS_UNSPECIFIED
+        }
+
+    private fun openpos.inventory.v1.PurchaseOrderStatus.toDbValue(): String =
+        when (this) {
+            openpos.inventory.v1.PurchaseOrderStatus.PURCHASE_ORDER_STATUS_DRAFT -> "DRAFT"
+            openpos.inventory.v1.PurchaseOrderStatus.PURCHASE_ORDER_STATUS_ORDERED -> "ORDERED"
+            openpos.inventory.v1.PurchaseOrderStatus.PURCHASE_ORDER_STATUS_RECEIVED -> "RECEIVED"
+            openpos.inventory.v1.PurchaseOrderStatus.PURCHASE_ORDER_STATUS_CANCELLED -> "CANCELLED"
+            else -> "DRAFT"
+        }
 }

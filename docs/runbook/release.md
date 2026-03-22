@@ -6,14 +6,13 @@
 
 - `open-pos` は SemVer に準拠します。
 - `1.0.0` までのリリースは `0.x.y` を想定しており、明確に文書化された上で破壊的変更を含む場合があります。
-- すべてのリリースには Git タグ、GitHub Release エントリ、および対応する `CHANGELOG.md` の更新が必要です。
+- すべてのリリースには Git タグと GitHub Release エントリが必要です。
 
 ## リリース前チェックリスト
 
 1. クリーンな `main` ブランチから開始する。
 2. リリースのスコープと未解決のリスクを確認する。
-3. [../../CHANGELOG.md](../../CHANGELOG.md) を更新する。
-4. ローカルチェックを実行する:
+3. ローカルチェックを実行する:
 
 ```bash
 make doctor
@@ -49,7 +48,6 @@ gh release create v0.x.y --generate-notes
 1. GitHub Release のリリースノートが正しいことを確認する。
 2. タグが期待するコミットを指していることを確認する。
 3. 未完了の Issue を次のマイルストーンに移動する。
-4. 必要に応じて [../../CHANGELOG.md](../../CHANGELOG.md) に新しい `Unreleased` セクションを追加する。
 
 ## Hotfix
 

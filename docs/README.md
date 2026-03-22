@@ -4,12 +4,7 @@ This directory contains the project design, runbooks, product requirements, and 
 
 ## Start Here
 
-- [../README.md](../README.md): repository overview, quick start, and top-level policies
-- [../CONTRIBUTING.md](../CONTRIBUTING.md): contribution workflow and local verification
-- [../SUPPORT.md](../SUPPORT.md): how to ask for help or report problems
-- [../SECURITY.md](../SECURITY.md): private vulnerability reporting policy
-- [../GOVERNANCE.md](../GOVERNANCE.md): maintainer-led decision process and escalation paths
-- [../CHANGELOG.md](../CHANGELOG.md): release notes and notable changes
+- [../README.md](../README.md): repository overview and quick start
 
 ## Setup and Daily Development
 
@@ -17,10 +12,9 @@ This directory contains the project design, runbooks, product requirements, and 
 - [guides/local-development.md](guides/local-development.md): quarkusDev / local-demo / docker-demo モードの比較と使い分け
 - [guides/demo-assets.md](guides/demo-assets.md): regenerate README screenshots and GIFs from the supported local demo flow
 - [runbook/local-dev.md](runbook/local-dev.md): supported local modes, runtime config outputs, and troubleshooting
-- [guides/contributing.md](guides/contributing.md): lightweight contribution workflow
+- [guides/contributing.md](guides/contributing.md): ブランチ戦略とコミット規約
 - [guides/branching-strategy.md](guides/branching-strategy.md): branch and PR conventions
-- [runbook/release.md](runbook/release.md): maintainer release checklist
-- [runbook/triage.md](runbook/triage.md): issue, PR, and label triage policy
+- [runbook/release.md](runbook/release.md): release checklist
 - [runbook/labels.md](runbook/labels.md): label taxonomy and PR auto-labeling rules
 
 ## Architecture
