@@ -148,7 +148,7 @@ services:
       REDIS_URL: redis://redis:6379
       HYDRA_JWKS_URL: http://hydra:4444/.well-known/jwks.json
       HYDRA_ISSUER: http://hydra:4444/
-      OPENPOS_AUTH_ENABLED: '${OPENPOS_AUTH_ENABLED:-false}'
+      OPENPOS_AUTH_ENABLED: '${OPENPOS_AUTH_ENABLED:-true}'
       PRODUCT_SERVICE_HOST: product-service
       PRODUCT_SERVICE_PORT: 9000
       STORE_SERVICE_HOST: store-service
