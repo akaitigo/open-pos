@@ -140,3 +140,34 @@
 .large-font .text-xs {
   font-size: 0.875rem;
 }
+
+/* レシート印刷用スタイル（58mm幅サーマルプリンター対応） */
+@media print {
+  /* ナビゲーション・サイドバー・ヘッダーを非表示 */
+  nav,
+  header,
+  aside,
+  .no-print,
+  [data-testid='sidebar'],
+  [data-testid='header'] {
+    display: none !important;
+  }
+
+  /* 背景色を除去 */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* 印刷幅を58mmに制限 */
+  @page {
+    size: 58mm auto;
+    margin: 2mm;
+  }
+
+  /* フォントサイズを小さく */
+  body {
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+  }
+}
