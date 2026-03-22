@@ -31,6 +31,9 @@ class StaffService {
     companion object {
         private const val MAX_PIN_FAILURES = 5
         private const val LOCK_DURATION_MINUTES = 30L
+
+        // タイミングサイドチャネル対策用ダミーハッシュ（bcrypt cost=12）
+        private const val DUMMY_BCRYPT_HASH = "\$2a\$12\$LJ3m4ys4yz0z4H7kZ2V6OuQ1q1q1q1q1q1q1q1q1q1q1q1q1q1q1q"
     }
 
     @Transactional
@@ -106,12 +109,15 @@ class StaffService {
         pinVerifier: (String, String) -> Boolean,
     ): PinAuthResult {
         tenantFilterService.enableFilter()
-        val staff = staffRepository.findById(staffId) ?: return PinAuthResult(false, reason = "NOT_FOUND")
-        if (staff.storeId != storeId) {
+        val staff = staffRepository.findById(staffId)
+        if (staff == null || staff.storeId != storeId) {
+            // タイミングサイドチャネル対策: ダミー bcrypt 検証で応答時間を均一化
+            pinVerifier("dummy", DUMMY_BCRYPT_HASH)
             return PinAuthResult(false, reason = "NOT_FOUND")
         }
 
         if (!staff.isActive) {
+            pinVerifier("dummy", DUMMY_BCRYPT_HASH)
             return PinAuthResult(false, staff = staff, reason = "ACCOUNT_INACTIVE")
         }
 
