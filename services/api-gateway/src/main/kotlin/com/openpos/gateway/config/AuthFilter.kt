@@ -10,7 +10,7 @@ import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.ext.Provider
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.jwt.JsonWebToken
-import java.util.logging.Logger
+import org.jboss.logging.Logger
 
 /**
  * JWT 認証フィルター。
@@ -33,7 +33,7 @@ class AuthFilter : ContainerRequestFilter {
     lateinit var skipPaths: String
 
     companion object {
-        private val logger: Logger = Logger.getLogger(AuthFilter::class.java.name)
+        private val logger: Logger = Logger.getLogger(AuthFilter::class::class.java)
     }
 
     override fun filter(requestContext: ContainerRequestContext) {
@@ -56,7 +56,7 @@ class AuthFilter : ContainerRequestFilter {
         // Authorization ヘッダーの取得
         val authHeader = requestContext.getHeaderString("Authorization")
         if (authHeader == null || !authHeader.startsWith("Bearer ", ignoreCase = true)) {
-            logger.fine { "Missing or invalid Authorization header for path: $path" }
+            logger.debugf("Missing or invalid Authorization header for path: %s", path)
             requestContext.abortWith(
                 Response
                     .status(Response.Status.UNAUTHORIZED)
@@ -70,7 +70,7 @@ class AuthFilter : ContainerRequestFilter {
         // トークンが無効なら jwt.name は null になる。
         val subject = jwt.subject
         if (subject.isNullOrBlank()) {
-            logger.fine { "JWT validation failed: no subject claim" }
+            logger.debug("JWT validation failed: no subject claim")
             requestContext.abortWith(
                 Response
                     .status(Response.Status.UNAUTHORIZED)

@@ -11,7 +11,7 @@ import jakarta.transaction.Transactional
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.UUID
-import java.util.logging.Logger
+import org.jboss.logging.Logger
 
 /**
  * 税率変更スケジュールサービス。
@@ -32,7 +32,7 @@ class TaxRateScheduleService {
     lateinit var organizationIdHolder: OrganizationIdHolder
 
     companion object {
-        private val logger: Logger = Logger.getLogger(TaxRateScheduleService::class.java.name)
+        private val logger: Logger = Logger.getLogger(TaxRateScheduleService::class::class.java)
     }
 
     fun listByTaxRateId(taxRateId: UUID): List<TaxRateScheduleEntity> {

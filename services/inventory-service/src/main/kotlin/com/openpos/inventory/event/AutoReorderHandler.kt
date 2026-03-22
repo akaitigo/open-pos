@@ -5,8 +5,8 @@ import com.openpos.inventory.repository.StockRepository
 import com.openpos.inventory.service.PurchaseOrderService
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import org.jboss.logging.Logger
 import java.util.UUID
-import java.util.logging.Logger
 
 /**
  * 在庫自動発注ハンドラー。
@@ -24,7 +24,7 @@ class AutoReorderHandler {
     lateinit var tenantFilterService: TenantFilterService
 
     companion object {
-        private val logger: Logger = Logger.getLogger(AutoReorderHandler::class.java.name)
+        private val logger: Logger = Logger.getLogger(AutoReorderHandler::class::class.java)
     }
 
     /**
@@ -41,7 +41,7 @@ class AutoReorderHandler {
         val stock = stockRepository.findByStoreAndProduct(storeId, productId) ?: return
 
         if (stock.reorderPoint <= 0 || stock.reorderQuantity <= 0) {
-            logger.fine("Auto-reorder skipped: reorderPoint or reorderQuantity not configured for product=$productId")
+            logger.debug("Auto-reorder skipped: reorderPoint or reorderQuantity not configured for product=$productId")
             return
         }
 
