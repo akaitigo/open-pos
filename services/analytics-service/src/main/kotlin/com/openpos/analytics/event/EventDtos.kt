@@ -20,7 +20,16 @@ data class SaleCompletedPayload(
     val terminalId: String,
     val items: List<SaleItemPayload>,
     val totalAmount: Long,
+    val taxTotal: Long = 0,
+    val discountTotal: Long = 0,
+    val payments: List<SalePaymentPayload> = emptyList(),
     val transactedAt: String,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SalePaymentPayload(
+    val method: String = "",
+    val amount: Long = 0,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)

@@ -10,6 +10,7 @@ import com.openpos.pos.entity.TransactionItemEntity
 import com.openpos.pos.event.EventPublisher
 import com.openpos.pos.event.SaleCompletedEventDto
 import com.openpos.pos.event.SaleItemDto
+import com.openpos.pos.event.SalePaymentDto
 import com.openpos.pos.event.SaleVoidedEventDto
 import com.openpos.pos.grpc.BusinessPreconditionException
 import com.openpos.pos.grpc.InvalidInputException
@@ -458,6 +459,7 @@ class TransactionService {
         tx: TransactionEntity,
         items: List<TransactionItemEntity>,
     ) {
+        val payments = paymentRepository.findByTransactionId(tx.id)
         val event =
             SaleCompletedEventDto(
                 transactionId = tx.id.toString(),
@@ -474,6 +476,15 @@ class TransactionService {
                         )
                     },
                 totalAmount = tx.total,
+                taxTotal = tx.taxTotal,
+                discountTotal = tx.discountTotal,
+                payments =
+                    payments.map { p ->
+                        SalePaymentDto(
+                            method = p.method,
+                            amount = p.amount,
+                        )
+                    },
                 transactedAt = tx.completedAt.toString(),
             )
         eventPublisher.publish("sale.completed", tx.organizationId, event)
