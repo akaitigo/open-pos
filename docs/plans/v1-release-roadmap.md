@@ -1,7 +1,7 @@
-# open-pos v1.0.0 — OSS Public Release ロードマップ
+# open-pos v1.0.0 ロードマップ
 
-> **マイルストーン**: [v1.0.0 — OSS Public Release](https://github.com/akaitigo/open-pos/milestone/18)
-> **全65件のイシューを全てクローズすれば、OSS v1.0 として公開可能**
+> **マイルストーン**: [v1.0.0](https://github.com/akaitigo/open-pos/milestone/18)
+> **全65件のイシューを全てクローズすれば v1.0 マイルストーン達成**
 > **作成**: 2026-03-16 / Claude + Gemini + Codex による包括レビュー
 
 ## 実行フェーズと依存関係

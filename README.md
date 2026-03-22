@@ -9,14 +9,14 @@
 
 マルチテナント・オフライン対応の汎用 POS（Point of Sale）システム。マイクロサービスアーキテクチャで構築。
 
-> [!NOTE]
-> **v1.0 リリース候補。** 認証（ORY Hydra OIDC/PKCE）と RBAC は実装済み。公開デプロイ前に [SECURITY.md](SECURITY.md) のサポートバージョンマトリックスと脆弱性報告プロセスを確認してください。
+> [!IMPORTANT]
+> **このリポジトリは AI 駆動開発の実験プロジェクトです。**
+> コミュニティサポート、外部コントリビューションの受付、メンテナンスの保証は行いません。
 
 ## プロジェクト状態
 
-- **バージョン**: v1.0 リリース候補
-- **サポートされるデモフロー**: `make local-demo` / `make docker-demo`
-- **`main` ブランチの品質ゲート**: CI、依存関係監査、シークレットスキャン、CodeQL、Playwright E2E
+- **デモフロー**: `make local-demo` / `make docker-demo`
+- **品質ゲート**: CI、依存関係監査、シークレットスキャン、CodeQL、Playwright E2E
 - **認証**: ORY Hydra v2.2（OIDC/PKCE）+ RBAC（Owner / Manager / Cashier）
 
 ## 主な機能
@@ -336,24 +336,6 @@ make down
 docker volume rm $(docker volume ls -q | grep open-pos) 2>/dev/null || true
 make local-demo
 ```
-
-## サポート
-
-- 質問・セットアップ支援: [GitHub Discussions](https://github.com/akaitigo/open-pos/discussions)
-- サポートポリシー: [SUPPORT.md](SUPPORT.md)
-- セキュリティ報告: [SECURITY.md](SECURITY.md)
-- ガバナンス: [GOVERNANCE.md](GOVERNANCE.md)
-- メンテナー: [MAINTAINERS.md](MAINTAINERS.md)
-- リリース履歴: [CHANGELOG.md](CHANGELOG.md)
-- 引用情報: [CITATION.cff](CITATION.cff)
-
-## コントリビューション
-
-[CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。`make doctor` でツール確認後、`make verify` を実行してから PR を作成してください。
-
-## セキュリティ
-
-セキュリティポリシーと脆弱性報告については [SECURITY.md](SECURITY.md) を参照してください。
 
 ## ライセンス
 
