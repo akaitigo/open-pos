@@ -53,6 +53,7 @@ export function PaymentCashTab({
           data-testid="checkout-exact-btn"
           variant="outline"
           size="sm"
+          aria-label="正確な金額を自動計算"
           onClick={() => setReceivedAmount(String(Math.ceil(remainingAmount / 100)))}
         >
           ぴったり
@@ -62,12 +63,18 @@ export function PaymentCashTab({
             key={yen}
             variant="outline"
             size="sm"
+            aria-label={`${yen}円を設定`}
             onClick={() => setReceivedAmount(String(yen))}
           >
             ¥{yen.toLocaleString('ja-JP')}
           </Button>
         ))}
-        <Button variant="ghost" size="sm" onClick={() => setReceivedAmount('')}>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label="金額をクリア"
+          onClick={() => setReceivedAmount('')}
+        >
           C
         </Button>
       </div>
@@ -87,8 +94,13 @@ export function PaymentCashTab({
       </div>
 
       {cashShortfall > 0 && parsedReceivedAmount > 0 && (
-        <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-          あと {formatMoney(cashShortfall)} 不足しています。
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-lg border-2 border-destructive bg-destructive/5 p-3 text-sm text-destructive"
+        >
+          <span className="font-bold">不足：</span>あと {formatMoney(cashShortfall)}{' '}
+          不足しています。
         </div>
       )}
 

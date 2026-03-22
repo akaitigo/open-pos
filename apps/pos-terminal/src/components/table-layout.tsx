@@ -35,6 +35,12 @@ const statusLabels: Record<TableStatus, string> = {
   BILL_REQUESTED: '会計待ち',
 }
 
+const statusIcons: Record<TableStatus, string> = {
+  OPEN: '○',
+  OCCUPIED: '●',
+  BILL_REQUESTED: '△',
+}
+
 export function TableLayout({
   tables,
   onSelectTable,
@@ -52,6 +58,7 @@ export function TableLayout({
         {tables.map((table) => (
           <button
             key={table.tableNumber}
+            aria-label={`テーブル${table.tableNumber}: ${statusLabels[table.status]}${table.status !== 'OPEN' ? `, ${table.guestCount}名, ${formatMoney(table.totalAmount)}` : ''}`}
             className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-colors min-h-[100px] ${
               statusColors[table.status]
             } ${selectedTable === table.tableNumber ? 'ring-2 ring-primary' : ''}`}
@@ -62,7 +69,10 @@ export function TableLayout({
             data-testid={`table-${table.tableNumber}`}
           >
             <span className="text-lg font-bold">{table.tableNumber}</span>
-            <span className="text-xs mt-1">{statusLabels[table.status]}</span>
+            <span className="text-xs mt-1" aria-hidden="true">
+              {statusIcons[table.status]}
+            </span>
+            <span className="text-xs">{statusLabels[table.status]}</span>
             {table.status !== 'OPEN' && (
               <>
                 <span className="text-xs mt-1">{table.guestCount}名</span>
