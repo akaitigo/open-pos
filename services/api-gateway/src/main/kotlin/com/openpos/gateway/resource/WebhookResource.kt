@@ -74,6 +74,12 @@ class WebhookResource {
         validateWebhookUrl(body.url)?.let {
             return Response.status(Response.Status.BAD_REQUEST).entity(mapOf("error" to it)).build()
         }
+        if (body.secret.length < 32) {
+            return Response
+                .status(Response.Status.BAD_REQUEST)
+                .entity(mapOf("error" to "Webhook secret must be at least 32 characters for HMAC-SHA256 security"))
+                .build()
+        }
         val registration =
             webhookStore.register(
                 WebhookRegistration(
