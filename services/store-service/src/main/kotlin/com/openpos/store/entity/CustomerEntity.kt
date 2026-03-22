@@ -30,6 +30,10 @@ class CustomerEntity : BaseEntity() {
     @Column(name = "points", nullable = false)
     var points: Long = 0
 
+    /** 顧客ランク: REGULAR, SILVER, GOLD, VIP */
+    @Column(name = "tier", nullable = false, length = 20)
+    var tier: String = "REGULAR"
+
     @Column(name = "is_active", nullable = false)
     var isActive: Boolean = true
 }
