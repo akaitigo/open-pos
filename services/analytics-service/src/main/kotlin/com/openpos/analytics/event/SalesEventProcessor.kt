@@ -8,6 +8,7 @@ import com.openpos.analytics.repository.HourlySalesRepository
 import com.openpos.analytics.repository.ProductSalesRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import jakarta.transaction.Transactional
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -31,6 +32,7 @@ class SalesEventProcessor {
      * 売上完了イベントを処理する。
      * 日次・商品別・時間帯別の集計を更新する。
      */
+    @Transactional
     fun processSaleCompleted(
         organizationId: UUID,
         payload: SaleCompletedPayload,
@@ -65,6 +67,7 @@ class SalesEventProcessor {
      * 売上取消イベントを処理する。
      * 日次・商品別・時間帯別の集計をロールバックする。
      */
+    @Transactional
     fun processSaleVoided(
         organizationId: UUID,
         payload: SaleVoidedPayload,
