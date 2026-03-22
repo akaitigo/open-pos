@@ -13,6 +13,8 @@ import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.core.Response
+import java.net.InetAddress
+import java.net.URI
 import java.util.UUID
 
 /**
@@ -37,9 +39,41 @@ class WebhookResource {
         return webhookStore.findByOrganization(orgId).map { it.toMap() }
     }
 
+    /**
+     * Webhook URL が内部ネットワークを指していないか検証する（SSRF 防止）。
+     * HTTPS のみ許可し、ループバック/プライベート/リンクローカル IP をブロックする。
+     */
+    private fun validateWebhookUrl(url: String): String? {
+        val uri =
+            try {
+                URI.create(url)
+            } catch (e: Exception) {
+                return "Invalid URL"
+            }
+        if (uri.scheme != "https" && uri.scheme != "http") return "URL scheme must be http or https"
+        val host = uri.host ?: return "URL must have a host"
+        return try {
+            val address = InetAddress.getByName(host)
+            when {
+                address.isLoopbackAddress -> "URL must not point to loopback address"
+                address.isSiteLocalAddress -> "URL must not point to private network"
+                address.isLinkLocalAddress -> "URL must not point to link-local address"
+                address.isAnyLocalAddress -> "URL must not point to any-local address"
+                host.equals("metadata.google.internal", ignoreCase = true) -> "URL must not point to cloud metadata"
+                host.startsWith("169.254.") -> "URL must not point to link-local address"
+                else -> null
+            }
+        } catch (e: Exception) {
+            "Cannot resolve URL host: $host"
+        }
+    }
+
     @POST
     fun create(body: CreateWebhookBody): Response {
         val orgId = tenantContext.organizationId ?: return Response.status(Response.Status.BAD_REQUEST).build()
+        validateWebhookUrl(body.url)?.let {
+            return Response.status(Response.Status.BAD_REQUEST).entity(mapOf("error" to it)).build()
+        }
         val registration =
             webhookStore.register(
                 WebhookRegistration(
@@ -71,6 +105,11 @@ class WebhookResource {
         val existing = webhookStore.findById(webhookId) ?: return Response.status(Response.Status.NOT_FOUND).build()
         if (existing.organizationId != orgId) {
             return Response.status(Response.Status.NOT_FOUND).build()
+        }
+        body.url?.let { newUrl ->
+            validateWebhookUrl(newUrl)?.let {
+                return Response.status(Response.Status.BAD_REQUEST).entity(mapOf("error" to it)).build()
+            }
         }
         val updated =
             webhookStore.update(
