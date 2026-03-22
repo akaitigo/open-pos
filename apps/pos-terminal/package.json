@@ -54,6 +54,7 @@
     "eslint": "^10.0.3",
     "eslint-plugin-react": "^7.37.0",
     "eslint-plugin-react-hooks": "^7.0.0",
+    "fast-check": "^4.6.0",
     "jsdom": "^28.1.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^4.2.1",
