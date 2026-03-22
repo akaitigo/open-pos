@@ -88,6 +88,21 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # Container image signing with Cosign (#657)
+  # TODO: Enable after Cosign key setup in repository secrets
+  # sign-images:
+  #   needs: [version, build-and-push]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: sigstore/cosign-installer@v3
+  #     - name: Sign container images
+  #       run: |
+  #         for SERVICE in api-gateway product-service store-service pos-service inventory-service analytics-service; do
+  #           cosign sign --key env://COSIGN_KEY ${{ env.IMAGE_PREFIX }}/${SERVICE}:${{ github.sha }}
+  #         done
+  #       env:
+  #         COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+
   deploy-staging:
     needs: [version, build-and-push]
     runs-on: ubuntu-latest
