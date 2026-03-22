@@ -127,7 +127,11 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => checkout.removeDiscount(entry.couponCode)}
+                        onClick={() => {
+                          if (window.confirm(`クーポン「${entry.couponCode}」を削除しますか？`)) {
+                            checkout.removeDiscount(entry.couponCode)
+                          }
+                        }}
                         aria-label={`クーポン ${entry.couponCode} を削除`}
                       >
                         <X className="h-4 w-4" />
