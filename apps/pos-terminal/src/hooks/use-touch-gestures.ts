@@ -25,7 +25,10 @@ export function useTouchGestures<T extends HTMLElement>(
   options: TouchGestureOptions,
 ): void {
   const optionsRef = useRef(options)
-  optionsRef.current = options
+
+  useEffect(() => {
+    optionsRef.current = options
+  })
 
   useEffect(() => {
     const element = ref.current
