@@ -1,10 +1,8 @@
 name: CD Pipeline
 
 on:
-  workflow_run:
-    workflows: ['CI']
-    branches: [main]
-    types: [completed]
+  push:
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -20,7 +18,7 @@ env:
 
 jobs:
   version:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -74,7 +72,7 @@ jobs:
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v4
 
       - name: Build and push
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198e362a7d2c83 # v7
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v7
         with:
           context: .
           file: infra/docker/Dockerfile.service
