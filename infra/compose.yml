@@ -106,6 +106,8 @@ services:
       - '14445:4445'
     environment:
       DSN: postgres://openpos:${POSTGRES_PASSWORD:-openpos_dev}@postgres:5432/openpos?sslmode=disable&search_path=hydra
+      # WARNING: 本番環境では必ず HYDRA_SECRETS_SYSTEM をランダムな値に設定してください。
+      # デフォルト値はローカル開発専用です。例: openssl rand -hex 32
       SECRETS_SYSTEM: ${HYDRA_SECRETS_SYSTEM:-openpos-hydra-secret-for-dev-only}
       URLS_SELF_ISSUER: http://localhost:14444/
       URLS_CONSENT: http://localhost:3000/consent
@@ -417,9 +419,10 @@ services:
     ports:
       - '13000:3000'
     environment:
+      # WARNING: 本番環境では GRAFANA_ADMIN_PASSWORD を変更し、匿名アクセスを無効にしてください
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
-      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ENABLED: '${GRAFANA_ANONYMOUS_ENABLED:-true}'
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
       - openpos-grafana:/var/lib/grafana
