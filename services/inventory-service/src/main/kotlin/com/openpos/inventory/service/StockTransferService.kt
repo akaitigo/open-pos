@@ -13,20 +13,29 @@ import java.util.UUID
 @ApplicationScoped
 class StockTransferService {
     @Inject lateinit var stockTransferRepository: StockTransferRepository
+
     @Inject lateinit var tenantFilterService: TenantFilterService
+
     @Inject lateinit var organizationIdHolder: OrganizationIdHolder
 
     @Transactional
-    fun create(fromStoreId: UUID, toStoreId: UUID, items: String, note: String?): StockTransferEntity {
+    fun create(
+        fromStoreId: UUID,
+        toStoreId: UUID,
+        items: String,
+        note: String?,
+    ): StockTransferEntity {
+        require(fromStoreId != toStoreId) { "fromStoreId and toStoreId must be different" }
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
-        val entity = StockTransferEntity().apply {
-            this.organizationId = orgId
-            this.fromStoreId = fromStoreId
-            this.toStoreId = toStoreId
-            this.items = items
-            this.note = note
-            this.status = "PENDING"
-        }
+        val entity =
+            StockTransferEntity().apply {
+                this.organizationId = orgId
+                this.fromStoreId = fromStoreId
+                this.toStoreId = toStoreId
+                this.items = items
+                this.note = note
+                this.status = "PENDING"
+            }
         stockTransferRepository.persist(entity)
         return entity
     }
@@ -36,7 +45,10 @@ class StockTransferService {
         return stockTransferRepository.findById(id)
     }
 
-    fun list(page: Int, pageSize: Int): Pair<List<StockTransferEntity>, Long> {
+    fun list(
+        page: Int,
+        pageSize: Int,
+    ): Pair<List<StockTransferEntity>, Long> {
         tenantFilterService.enableFilter()
         val items = stockTransferRepository.listPaginated(Page.of(page, pageSize))
         val total = stockTransferRepository.count()
@@ -44,7 +56,10 @@ class StockTransferService {
     }
 
     @Transactional
-    fun updateStatus(id: UUID, status: String): StockTransferEntity? {
+    fun updateStatus(
+        id: UUID,
+        status: String,
+    ): StockTransferEntity? {
         tenantFilterService.enableFilter()
         val entity = stockTransferRepository.findById(id) ?: return null
         entity.status = status
