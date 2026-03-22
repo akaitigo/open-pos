@@ -43,7 +43,7 @@ class SalesEventProcessor {
         val hour = transactedAt.atZone(ZoneOffset.UTC).hour
 
         // 日次売上更新
-        updateDailySales(organizationId, storeId, saleDate, payload.totalAmount)
+        updateDailySales(organizationId, storeId, saleDate, payload.totalAmount, payload.taxTotal, payload.discountTotal, payload.payments)
 
         // 商品別売上更新
         for (item in payload.items) {
@@ -102,6 +102,9 @@ class SalesEventProcessor {
         storeId: UUID,
         saleDate: LocalDate,
         totalAmount: Long,
+        taxTotal: Long = 0,
+        discountTotal: Long = 0,
+        payments: List<SalePaymentPayload>? = null,
     ) {
         val daily =
             dailySalesRepository.findByStoreAndDate(storeId, saleDate)
@@ -111,8 +114,20 @@ class SalesEventProcessor {
                     this.date = saleDate
                 }
         daily.grossAmount += totalAmount
+        daily.taxAmount += taxTotal
+        daily.discountAmount += discountTotal
         daily.transactionCount += 1
         daily.netAmount = daily.grossAmount - daily.taxAmount - daily.discountAmount
+
+        // 支払方法別売上の更新
+        payments?.forEach { payment ->
+            when (payment.method.uppercase()) {
+                "CASH" -> daily.cashAmount += payment.amount
+                "CREDIT_CARD" -> daily.cardAmount += payment.amount
+                "QR_CODE" -> daily.qrAmount += payment.amount
+            }
+        }
+
         dailySalesRepository.persist(daily)
     }
 
