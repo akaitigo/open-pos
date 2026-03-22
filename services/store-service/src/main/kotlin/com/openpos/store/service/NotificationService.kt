@@ -10,6 +10,7 @@ import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import java.util.UUID
 
+@Deprecated("v1.0未使用: gRPC RPC未接続")
 @ApplicationScoped
 class NotificationService {
     @Inject lateinit var notificationRepository: NotificationRepository

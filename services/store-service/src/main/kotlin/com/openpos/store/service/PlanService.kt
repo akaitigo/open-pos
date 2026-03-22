@@ -7,13 +7,14 @@ import com.openpos.store.repository.SubscriptionRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
-import java.util.UUID
 import org.jboss.logging.Logger
+import java.util.UUID
 
 /**
  * プラン・サブスクリプション管理サービス。
  * プランの CRUD とテナントのサブスクリプション管理を提供する。
  */
+@Deprecated("v1.0未使用: gRPC RPC未接続")
 @ApplicationScoped
 class PlanService {
     @Inject
