@@ -106,7 +106,7 @@ class CustomerServiceTest {
                 name = "テスト顧客"
                 points = 30
             }
-        whenever(customerRepository.findById(customerId)).thenReturn(customer)
+        whenever(customerRepository.findByIdForUpdate(customerId)).thenReturn(customer)
 
         // Act
         val result = service.redeemPoints(customerId, 50, null)
@@ -126,7 +126,7 @@ class CustomerServiceTest {
                 name = "テスト顧客"
                 points = 100
             }
-        whenever(customerRepository.findById(customerId)).thenReturn(customer)
+        whenever(customerRepository.findByIdForUpdate(customerId)).thenReturn(customer)
 
         // Act
         val result = service.redeemPoints(customerId, 50, null)
