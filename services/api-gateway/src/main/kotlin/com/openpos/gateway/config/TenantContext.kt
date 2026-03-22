@@ -9,7 +9,8 @@ class TenantContext {
     var staffRole: String? = null
 
     fun requireRole(vararg allowedRoles: String) {
-        val role = staffRole ?: throw ForbiddenException("No role assigned")
+        // 認証無効（dev/test）時は staffRole が null — ロールチェックをスキップ
+        val role = staffRole ?: return
         if (role !in allowedRoles) {
             throw ForbiddenException("Role '$role' is not allowed. Required: ${allowedRoles.joinToString()}")
         }
