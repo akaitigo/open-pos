@@ -51,6 +51,7 @@ class SalesEventProcessor {
                 organizationId,
                 storeId,
                 UUID.fromString(item.productId),
+                item.productName,
                 saleDate,
                 item.quantity,
                 item.subtotal,
@@ -119,6 +120,7 @@ class SalesEventProcessor {
         organizationId: UUID,
         storeId: UUID,
         productId: UUID,
+        productName: String?,
         saleDate: LocalDate,
         quantity: Int,
         subtotal: Long,
@@ -131,7 +133,7 @@ class SalesEventProcessor {
                     this.storeId = storeId
                     this.productId = productId
                     this.date = saleDate
-                    this.productName = "Product-$productId"
+                    this.productName = productName?.ifBlank { "Product-$productId" } ?: "Product-$productId"
                 }
         productSales.quantitySold += quantity
         productSales.totalAmount += subtotal
