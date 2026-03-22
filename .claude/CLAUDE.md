@@ -170,12 +170,35 @@ pnpm dev:admin   # 管理画面 dev server (port 5174)
 - **`git push --force` to main は絶対に使わない**
 - CI が失敗している PR をマージしない
 
+### PR 作成前のローカル CI 検証（必須）
+PR を作成する前に、変更箇所に応じて以下を実行し、全て pass することを確認する。
+
+```bash
+# Proto 変更がある場合
+cd proto && buf lint
+cd proto && buf breaking --against '../.git#branch=main,subdir=proto'
+
+# Backend 変更がある場合
+./gradlew --parallel build                    # ビルド
+./gradlew --parallel test jacocoTestCoverageVerification  # テスト + カバレッジ検証
+
+# Frontend 変更がある場合
+pnpm -r typecheck       # 型チェック
+pnpm -r lint            # ESLint
+pnpm -r run test        # ユニット/機能テスト
+pnpm -r build           # ビルド確認
+```
+
+- 失敗したら PR を作成せず、原因を修正してから再実行
+- `make verify` で Proto 以外の基本チェックをまとめて実行可能
+
 ### 必須手順
 1. ブランチ作成 → コミット → push
-2. `gh pr create` で PR 作成
-3. **`gh pr merge --squash --auto`** でオートマージ設定
-4. CI が全て pass したら自動的にマージされる
-5. CI が失敗したら **原因を調査・修正して再 push**（リトライではなく修正）
+2. 上記のローカル CI 検証を実行し、全 pass を確認
+3. `gh pr create` で PR 作成
+4. **`gh pr merge --squash --auto`** でオートマージ設定
+5. CI が全て pass したら自動的にマージされる
+6. CI が失敗したら **原因を調査・修正して再 push**（リトライではなく修正）
 
 ### CI 失敗時の対応
 - E2E テスト失敗 → ログを確認し、コード起因か flaky かを判断
