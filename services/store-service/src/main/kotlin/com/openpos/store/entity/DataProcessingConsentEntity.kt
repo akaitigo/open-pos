@@ -7,6 +7,9 @@ import jakarta.persistence.Id
 import jakarta.persistence.PrePersist
 import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
+import org.hibernate.annotations.Filter
+import org.hibernate.annotations.FilterDef
+import org.hibernate.annotations.ParamDef
 import java.time.Instant
 import java.util.UUID
 
@@ -14,11 +17,14 @@ import java.util.UUID
  * データ処理同意エンティティ。
  * GDPR / 個人情報保護法に基づく同意管理を行う。
  * テナント（組織）単位でデータ処理への同意を追跡する。
- *
- * organizations テーブルを参照するため BaseEntity を継承しない（organization_id フィルタ不要）。
  */
 @Entity
 @Table(name = "data_processing_consents", schema = "store_schema")
+@FilterDef(
+    name = "organizationFilter",
+    parameters = [ParamDef(name = "organizationId", type = UUID::class)],
+)
+@Filter(name = "organizationFilter", condition = "organization_id = :organizationId")
 class DataProcessingConsentEntity {
     @Id
     @GeneratedValue
