@@ -70,6 +70,7 @@ class WebhookResource {
 
     @POST
     fun create(body: CreateWebhookBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val orgId = tenantContext.organizationId ?: return Response.status(Response.Status.BAD_REQUEST).build()
         validateWebhookUrl(body.url)?.let {
             return Response.status(Response.Status.BAD_REQUEST).entity(mapOf("error" to it)).build()
