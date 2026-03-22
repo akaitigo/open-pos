@@ -401,11 +401,21 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             )
         val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
 
+        val relations = transactionService.batchLoadRelations(transactions.map { it.id })
+
         responseObserver.onNext(
             ListTransactionsResponse
                 .newBuilder()
-                .addAllTransactions(transactions.map { it.toFullProto() })
-                .setPagination(
+                .addAllTransactions(
+                    transactions.map { tx ->
+                        tx.toBatchProto(
+                            items = relations.items[tx.id] ?: emptyList(),
+                            payments = relations.payments[tx.id] ?: emptyList(),
+                            discounts = relations.discounts[tx.id] ?: emptyList(),
+                            taxSummaries = relations.taxSummaries[tx.id] ?: emptyList(),
+                        )
+                    },
+                ).setPagination(
                     PaginationResponse
                         .newBuilder()
                         .setPage(page + 1)
@@ -634,6 +644,37 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             .setCompletedAt(completedAt?.toString().orEmpty())
             .build()
     }
+
+    private fun TransactionEntity.toBatchProto(
+        items: List<TransactionItemEntity>,
+        payments: List<PaymentEntity>,
+        discounts: List<TransactionDiscountEntity>,
+        taxSummaries: List<TaxSummaryEntity>,
+    ): Transaction =
+        Transaction
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setStoreId(storeId.toString())
+            .setTerminalId(terminalId.toString())
+            .setStaffId(staffId.toString())
+            .setTransactionNumber(transactionNumber)
+            .setType(type.toProtoTransactionType())
+            .setStatus(status.toProtoTransactionStatus())
+            .setClientId(clientId.orEmpty())
+            .addAllItems(items.map { it.toProto() })
+            .addAllDiscounts(discounts.map { it.toProto() })
+            .addAllPayments(payments.map { it.toProto() })
+            .addAllTaxSummaries(taxSummaries.map { it.toProto() })
+            .setSubtotal(subtotal)
+            .setTaxTotal(taxTotal)
+            .setDiscountTotal(discountTotal)
+            .setTotal(total)
+            .setChangeAmount(changeAmount)
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .setCompletedAt(completedAt?.toString().orEmpty())
+            .build()
 
     private fun TransactionItemEntity.toProto(): TransactionItem =
         TransactionItem
