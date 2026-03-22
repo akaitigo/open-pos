@@ -172,3 +172,23 @@ The system supports the `UpdateTaxRate` RPC for rate management. Tax rate schedu
 - [National Tax Agency: Qualified Invoice System](https://www.nta.go.jp/taxes/shiraberu/zeimokubetsu/shohi/keigenzeiritsu/invoice_about.htm)
 - [Consumption Tax Act, Article 57-4](https://elaws.e-gov.go.jp/document?lawid=363AC0000000108)
 - [Invoice Q&A (国税庁)](https://www.nta.go.jp/taxes/shiraberu/zeimokubetsu/shohi/keigenzeiritsu/qa_invoice.htm)
+
+## 返品時の税率処理ルール
+
+### 原則
+返品時は**購入時の税率スナップショット**を使用して相殺する。
+
+### 理由
+- インボイス制度では適用税率の正確性が求められる
+- 税率改定後に旧税率で購入した商品を返品する場合、旧税率で相殺するのが会計上正しい
+- TransactionItem に tax_rate / is_reduced_tax がスナップショットとして保存済み
+
+### 実装指針
+1. RETURN 型トランザクション作成時、元取引の TransactionItem から tax_rate をコピー
+2. 返品取引の tax_summaries は元取引のスナップショットを使用
+3. 現在の商品マスタ税率ではなく、元取引記録の税率を参照
+
+### 例
+- 2026-01-01: 軽減税率8%で商品500円を販売 → tax 40円
+- 2026-06-01: 税率改定で当該商品が10%に変更
+- 2026-07-01: 返品 → **8%（購入時の税率）で相殺** → -tax 40円
