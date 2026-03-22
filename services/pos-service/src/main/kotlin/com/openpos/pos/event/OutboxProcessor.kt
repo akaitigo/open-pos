@@ -31,14 +31,14 @@ class OutboxProcessor {
 
     companion object {
         const val MAX_RETRY_COUNT = 10
-        const val BATCH_SIZE = 50
+        const val BATCH_SIZE = 100
     }
 
     /**
-     * 30秒ごとに PENDING イベントを処理する。
-     * cron 式ではなく every 式を使用して間隔実行する。
+     * 10秒ごとに PENDING イベントを処理する。
+     * バッチサイズ100件で高スループット環境での遅延を削減。
      */
-    @Scheduled(every = "30s", identity = "outbox-processor")
+    @Scheduled(every = "10s", identity = "outbox-processor")
     fun processOutbox() {
         val pendingEvents = outboxRepository.findPendingEvents(BATCH_SIZE)
         if (pendingEvents.isEmpty()) {
