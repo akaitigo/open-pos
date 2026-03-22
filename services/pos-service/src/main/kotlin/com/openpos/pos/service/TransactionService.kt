@@ -467,6 +467,7 @@ class TransactionService {
                     items.map { item ->
                         SaleItemDto(
                             productId = item.productId.toString(),
+                            productName = item.productName,
                             quantity = item.quantity,
                             unitPrice = item.unitPrice,
                             subtotal = item.subtotal,
@@ -491,6 +492,7 @@ class TransactionService {
                     items.map { item ->
                         SaleItemDto(
                             productId = item.productId.toString(),
+                            productName = item.productName,
                             quantity = item.quantity,
                             unitPrice = item.unitPrice,
                             subtotal = item.subtotal,
