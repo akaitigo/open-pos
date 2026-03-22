@@ -162,3 +162,23 @@ pnpm dev:admin   # 管理画面 dev server (port 5174)
 - ブランチ: `feature/#{issue番号}-短い説明`
 - PR に `Closes #{issue番号}` を記載
 - ラベル: `svc:*`, `app:*`, `type:*`, `P{0-3}:*`
+
+## PR マージルール（厳守）
+
+### 絶対禁止
+- **`gh pr merge --admin` は絶対に使わない** — CIバイパスは禁止
+- **`git push --force` to main は絶対に使わない**
+- CI が失敗している PR をマージしない
+
+### 必須手順
+1. ブランチ作成 → コミット → push
+2. `gh pr create` で PR 作成
+3. **`gh pr merge --squash --auto`** でオートマージ設定
+4. CI が全て pass したら自動的にマージされる
+5. CI が失敗したら **原因を調査・修正して再 push**（リトライではなく修正）
+
+### CI 失敗時の対応
+- E2E テスト失敗 → ログを確認し、コード起因か flaky かを判断
+- flaky の場合 → `gh run rerun {run_id} --failed` でリトライ（1回のみ）
+- コード起因の場合 → ブランチ上で修正して push
+- **絶対に `--admin` で強制マージしない**
