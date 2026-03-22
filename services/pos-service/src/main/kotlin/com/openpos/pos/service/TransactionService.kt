@@ -334,6 +334,7 @@ class TransactionService {
 
         tx.status = "COMPLETED"
         tx.completedAt = Instant.now()
+        tx.contentHash = computeContentHash(tx, items)
         transactionRepository.persist(tx)
 
         publishSaleCompletedEvent(tx, items)
@@ -453,6 +454,32 @@ class TransactionService {
         val date = LocalDate.now(ZoneOffset.UTC)
         val seq = UUID.randomUUID().toString().take(8)
         return "T-$date-$seq"
+    }
+
+    /**
+     * 取引内容のSHA-256ハッシュを計算する（電子帳簿保存法 真正性確保）。
+     */
+    private fun computeContentHash(
+        tx: TransactionEntity,
+        items: List<TransactionItemEntity>,
+    ): String {
+        val content =
+            buildString {
+                append(tx.id)
+                append(tx.transactionNumber)
+                append(tx.subtotal)
+                append(tx.taxTotal)
+                append(tx.discountTotal)
+                append(tx.total)
+                items.sortedBy { it.id }.forEach { item ->
+                    append(item.productId)
+                    append(item.quantity)
+                    append(item.unitPrice)
+                    append(item.subtotal)
+                }
+            }
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        return digest.digest(content.toByteArray()).joinToString("") { "%02x".format(it) }
     }
 
     private fun publishSaleCompletedEvent(
