@@ -10,7 +10,15 @@ data class SaleCompletedEventDto(
     val terminalId: String,
     val items: List<SaleItemDto>,
     val totalAmount: Long,
+    val taxTotal: Long = 0,
+    val discountTotal: Long = 0,
+    val payments: List<SalePaymentDto> = emptyList(),
     val transactedAt: String,
+)
+
+data class SalePaymentDto(
+    val method: String,
+    val amount: Long,
 )
 
 data class SaleItemDto(
