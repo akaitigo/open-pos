@@ -247,6 +247,15 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
           </div>
 
           <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              variant="ghost"
+              className="w-full text-muted-foreground"
+              size="sm"
+              disabled={checkout.processing}
+              onClick={() => onOpenChange(false)}
+            >
+              取引をキャンセル
+            </Button>
             {checkout.paymentMethod !== 'CASH' && (
               <Button
                 variant="outline"
