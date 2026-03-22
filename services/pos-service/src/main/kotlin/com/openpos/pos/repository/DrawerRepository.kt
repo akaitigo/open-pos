@@ -3,6 +3,7 @@ package com.openpos.pos.repository
 import com.openpos.pos.entity.DrawerEntity
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheRepositoryBase
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.persistence.LockModeType
 import java.util.UUID
 
 @ApplicationScoped
@@ -12,6 +13,14 @@ class DrawerRepository : PanacheRepositoryBase<DrawerEntity, UUID> {
         terminalId: UUID,
     ): DrawerEntity? =
         find("storeId = ?1 and terminalId = ?2 and isOpen = true", storeId, terminalId)
+            .firstResult()
+
+    fun findByTerminalForUpdate(
+        storeId: UUID,
+        terminalId: UUID,
+    ): DrawerEntity? =
+        find("storeId = ?1 and terminalId = ?2 and isOpen = true", storeId, terminalId)
+            .withLock(LockModeType.PESSIMISTIC_WRITE)
             .firstResult()
 
     fun findLatestByTerminal(
