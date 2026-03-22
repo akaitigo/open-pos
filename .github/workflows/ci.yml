@@ -97,8 +97,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
-      - name: Kotlin Lint (detekt)
-        run: ./gradlew detekt --parallel || true
+      # TODO: detekt CI統合（Gradle plugin方式でConfiguration Cache競合のため保留 #638）
       - name: Build
         run: >-
           ./gradlew --parallel
