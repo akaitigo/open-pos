@@ -24,16 +24,11 @@ class StaffResourceTest {
     private val stub: StoreServiceGrpc.StoreServiceBlockingStub = mock()
     private val grpc: GrpcClientHelper = mock()
     private val sessionTokenService: SessionTokenService = mock()
-    private val tenantContext =
-        com.openpos.gateway.config
-            .TenantContext()
-            .apply { staffRole = "OWNER" }
     private val resource =
         StaffResource().also { r ->
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
             ProductResourceTest.setField(r, "sessionTokenService", sessionTokenService)
-            ProductResourceTest.setField(r, "tenantContext", tenantContext)
         }
 
     private val orgId = UUID.randomUUID().toString()

@@ -114,8 +114,6 @@ class ProductServiceClient {
     /**
      * クーポンコードを検証し、紐付く割引情報を取得する。
      */
-    @CircuitBreaker(requestVolumeThreshold = 10, failureRatio = 0.5, delay = 10000)
-    @Retry(maxRetries = 2, delay = 500)
     fun validateCoupon(
         couponCode: String,
         organizationId: UUID,
@@ -151,8 +149,6 @@ class ProductServiceClient {
     /**
      * 割引IDから割引マスタ情報を取得する。
      */
-    @CircuitBreaker(requestVolumeThreshold = 10, failureRatio = 0.5, delay = 10000)
-    @Retry(maxRetries = 2, delay = 500)
     fun getDiscount(
         discountId: UUID,
         organizationId: UUID,

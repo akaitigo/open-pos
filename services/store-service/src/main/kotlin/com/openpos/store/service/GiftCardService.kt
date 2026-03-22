@@ -64,7 +64,7 @@ class GiftCardService {
         amount: Long,
     ): GiftCardEntity? {
         tenantFilterService.enableFilter()
-        val entity = giftCardRepository.findByCodeForUpdate(code) ?: return null
+        val entity = giftCardRepository.findByCode(code) ?: return null
         if (entity.status != "ACTIVE" || entity.balance < amount) return null
         entity.balance -= amount
         if (entity.balance <= 0) entity.status = "USED"

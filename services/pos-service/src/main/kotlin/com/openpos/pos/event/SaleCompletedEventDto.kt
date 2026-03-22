@@ -15,7 +15,6 @@ data class SaleCompletedEventDto(
 
 data class SaleItemDto(
     val productId: String,
-    val productName: String,
     val quantity: Int,
     val unitPrice: Long,
     val subtotal: Long,

@@ -8,7 +8,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import java.util.UUID
-import org.jboss.logging.Logger
+import java.util.logging.Logger
 
 /**
  * プラン・サブスクリプション管理サービス。
@@ -23,7 +23,7 @@ class PlanService {
     lateinit var subscriptionRepository: SubscriptionRepository
 
     companion object {
-        private val logger: Logger = Logger.getLogger(PlanService::class::class.java)
+        private val logger: Logger = Logger.getLogger(PlanService::class.java.name)
     }
 
     fun listPlans(): List<PlanEntity> = planRepository.findActive()

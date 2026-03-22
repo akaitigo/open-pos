@@ -5,7 +5,7 @@ import io.quarkus.scheduler.Scheduled
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import java.time.LocalDate
-import org.jboss.logging.Logger
+import java.util.logging.Logger
 
 /**
  * 日次レポートジョブ。
@@ -18,7 +18,7 @@ class DailyReportJob {
     lateinit var dailySalesRepository: DailySalesRepository
 
     companion object {
-        private val logger: Logger = Logger.getLogger(DailyReportJob::class::class.java)
+        private val logger: Logger = Logger.getLogger(DailyReportJob::class.java.name)
     }
 
     /**
