@@ -30,7 +30,7 @@ class DrawerService {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
         tenantFilterService.enableFilter()
 
-        val existing = drawerRepository.findByTerminal(storeId, terminalId)
+        val existing = drawerRepository.findByTerminalForUpdate(storeId, terminalId)
         require(existing == null) { "Drawer is already open for this terminal" }
 
         val drawer =
