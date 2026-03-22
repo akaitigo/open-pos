@@ -36,7 +36,8 @@ jobs:
           # Derive version from git describe (falls back to 0.0.0 if no tags)
           RAW_VERSION=$(git describe --tags --always 2>/dev/null || echo "v0.0.0-0-g$(git rev-parse --short HEAD)")
           # Strip leading 'v' if present and normalize to semver
-          SEMVER=$(echo "$RAW_VERSION" | sed 's/^v//' | sed 's/-\([0-9]*\)-g\([a-f0-9]*\)$/+\1.\2/')
+          # OCI仕様でDockerタグに + は使用不可のため - に置換
+          SEMVER=$(echo "$RAW_VERSION" | sed 's/^v//' | sed 's/-\([0-9]*\)-g\([a-f0-9]*\)$/-\1.\2/')
           SHORT_SHA=$(git rev-parse --short HEAD)
           echo "semver=${SEMVER}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
