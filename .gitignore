@@ -68,3 +68,4 @@ hs_err_pid*.log
 # Local tool caches
 .gradle-home/
 .pnpm-home/
+personal-playbook/
