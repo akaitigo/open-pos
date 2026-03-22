@@ -5,6 +5,24 @@
       "password_hash": "l5GyEzSXS1nYBMcs2lz4gbFzBOHWo4u5cR9VmojOJOLFNyJB",
       "hashing_algorithm": "rabbit_password_hashing_sha256",
       "tags": "administrator"
+    },
+    {
+      "name": "openpos-pos",
+      "password_hash": "l5GyEzSXS1nYBMcs2lz4gbFzBOHWo4u5cR9VmojOJOLFNyJB",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ""
+    },
+    {
+      "name": "openpos-inventory",
+      "password_hash": "l5GyEzSXS1nYBMcs2lz4gbFzBOHWo4u5cR9VmojOJOLFNyJB",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ""
+    },
+    {
+      "name": "openpos-analytics",
+      "password_hash": "l5GyEzSXS1nYBMcs2lz4gbFzBOHWo4u5cR9VmojOJOLFNyJB",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ""
     }
   ],
   "vhosts": [{ "name": "/" }],
@@ -15,6 +33,27 @@
       "configure": ".*",
       "write": ".*",
       "read": ".*"
+    },
+    {
+      "user": "openpos-pos",
+      "vhost": "/",
+      "configure": "",
+      "write": "openpos\\.events",
+      "read": ""
+    },
+    {
+      "user": "openpos-inventory",
+      "vhost": "/",
+      "configure": "",
+      "write": "openpos\\.events\\.dlx",
+      "read": "inventory\\..*|dlq\\.inventory\\..*"
+    },
+    {
+      "user": "openpos-analytics",
+      "vhost": "/",
+      "configure": "",
+      "write": "openpos\\.events\\.dlx",
+      "read": "analytics\\..*|dlq\\.analytics\\..*"
     }
   ],
   "exchanges": [
