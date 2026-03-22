@@ -139,7 +139,7 @@ export function DashboardPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold" data-testid="summary-value">
                 {todaySummary ? formatMoney(todaySummary.totalGross) : '...'}
               </div>
               {salesDiff !== null && (
@@ -165,7 +165,7 @@ export function DashboardPage() {
               <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold" data-testid="summary-value">
                 {todaySummary ? todaySummary.totalTransactions.toLocaleString() : '...'}
               </div>
             </CardContent>
@@ -177,7 +177,7 @@ export function DashboardPage() {
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold" data-testid="summary-value">
                 {todaySummary ? formatMoney(todaySummary.averageTransaction) : '...'}
               </div>
             </CardContent>
@@ -189,7 +189,7 @@ export function DashboardPage() {
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold" data-testid="summary-value">
                 {yesterdaySummary ? formatMoney(yesterdaySummary.totalGross) : '...'}
               </div>
             </CardContent>
@@ -239,7 +239,7 @@ export function DashboardPage() {
                 <card.icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold" data-testid="summary-value">
                   {card.value !== null ? card.value.toLocaleString() : '...'}
                 </div>
               </CardContent>

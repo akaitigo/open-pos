@@ -8,7 +8,7 @@ plugins {
 
 allprojects {
     group = "com.openpos"
-    version = "0.1.0-SNAPSHOT"
+    version = "1.0.0"
 
     repositories {
         mavenCentral()
@@ -77,6 +77,9 @@ subprojects {
                     rule {
                         limit {
                             counter = "LINE"
+                            // TODO: 段階的に 80% へ引き上げ予定。現状は全サービスで 80% を満たしていないため
+                            //       ビルドを壊さないよう 30% に設定。新規コードは 80%+ を目標とすること。
+                            //       ロードマップ: 30% → 50% → 65% → 80%
                             minimum = "0.30".toBigDecimal()
                         }
                     }
