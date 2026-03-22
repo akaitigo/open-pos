@@ -1,6 +1,7 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { reportError } from '@/lib/error-reporter'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -22,9 +23,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return { hasError: true, error }
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // eslint-disable-next-line no-console -- intentional error logging for debugging
-    console.error('ErrorBoundary caught an error:', error, errorInfo)
+  componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
+    reportError(error, { componentStack: _errorInfo.componentStack ?? undefined })
   }
 
   handleReset = () => {
