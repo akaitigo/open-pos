@@ -169,6 +169,60 @@ class ProductServiceTest {
         }
     }
 
+    // === findByIds ===
+
+    @Nested
+    inner class FindByIds {
+        @Test
+        fun `複数IDで商品を一括取得する`() {
+            // Arrange
+            val id1 = UUID.randomUUID()
+            val id2 = UUID.randomUUID()
+            val entity1 =
+                ProductEntity().apply {
+                    this.id = id1
+                    this.organizationId = orgId
+                    this.name = "商品A"
+                    this.price = 10000L
+                    this.displayOrder = 1
+                    this.isActive = true
+                }
+            val entity2 =
+                ProductEntity().apply {
+                    this.id = id2
+                    this.organizationId = orgId
+                    this.name = "商品B"
+                    this.price = 20000L
+                    this.displayOrder = 2
+                    this.isActive = true
+                }
+            whenever(productRepository.findByIds(listOf(id1, id2))).thenReturn(listOf(entity1, entity2))
+
+            // Act
+            val result = productService.findByIds(listOf(id1, id2))
+
+            // Assert
+            assertEquals(2, result.size)
+            assertEquals("商品A", result[0].name)
+            assertEquals("商品B", result[1].name)
+            verify(tenantFilterService).enableFilter()
+            verify(productRepository).findByIds(listOf(id1, id2))
+        }
+
+        @Test
+        fun `空のIDリストの場合は空リストを返す`() {
+            // Arrange
+            whenever(productRepository.findByIds(emptyList())).thenReturn(emptyList())
+
+            // Act
+            val result = productService.findByIds(emptyList())
+
+            // Assert
+            assertEquals(0, result.size)
+            verify(tenantFilterService).enableFilter()
+        }
+    }
+
     // === findByBarcode ===
 
     @Nested
