@@ -60,6 +60,10 @@ class TransactionEntity : BaseEntity() {
     @Column(name = "table_number", length = 20)
     var tableNumber: String? = null
 
+    /** 顧客ID（ポイント利用・購買履歴分析用、任意） */
+    @Column(name = "customer_id")
+    var customerId: UUID? = null
+
     @Column(name = "completed_at")
     var completedAt: Instant? = null
 
