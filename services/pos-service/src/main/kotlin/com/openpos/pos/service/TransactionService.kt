@@ -15,6 +15,7 @@ import com.openpos.pos.event.SaleVoidedEventDto
 import com.openpos.pos.grpc.BusinessPreconditionException
 import com.openpos.pos.grpc.InvalidInputException
 import com.openpos.pos.grpc.ProductServiceClient
+import com.openpos.pos.grpc.ProductSnapshot
 import com.openpos.pos.grpc.ResourceNotFoundException
 import com.openpos.pos.repository.PaymentRepository
 import com.openpos.pos.repository.TaxSummaryRepository
@@ -122,17 +123,27 @@ class TransactionService {
 
     // === Item Operations ===
 
+    /**
+     * 商品スナップショットを取得する（@Transactional外で呼ぶこと）。
+     * gRPC 外部呼び出しのためDBロック保持中に実行しない。
+     */
+    fun fetchProductSnapshot(
+        productId: UUID,
+        organizationId: UUID,
+    ): ProductSnapshot = productServiceClient.getProductSnapshot(productId, organizationId)
+
     @Transactional
     fun addItem(
         transactionId: UUID,
         productId: UUID,
         quantity: Int,
+        productSnapshot: ProductSnapshot? = null,
     ): TransactionEntity {
         if (quantity <= 0) throw InvalidInputException("quantity must be positive")
         val tx = getWritableTransaction(transactionId)
         val orgId = tx.organizationId
 
-        val product = productServiceClient.getProductSnapshot(productId, orgId)
+        val product = productSnapshot ?: productServiceClient.getProductSnapshot(productId, orgId)
 
         val existingItem = itemRepository.findByTransactionAndProduct(transactionId, productId)
         if (existingItem != null) {

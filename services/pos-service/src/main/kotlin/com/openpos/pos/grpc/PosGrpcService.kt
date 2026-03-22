@@ -110,11 +110,17 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         tenantHelper.setupTenantContext()
         val quantity = if (request.quantity > 0) request.quantity else 1
         try {
+            // gRPC外部呼び出しを@Transactional外で実行（デッドロック防止 #608）
+            val productId = request.productId.toUUID()
+            val orgId = requireNotNull(tenantHelper.organizationIdHolder.organizationId) { "organizationId is not set" }
+            val snapshot = transactionService.fetchProductSnapshot(productId, orgId)
+
             val entity =
                 transactionService.addItem(
                     transactionId = request.transactionId.toUUID(),
-                    productId = request.productId.toUUID(),
+                    productId = productId,
                     quantity = quantity,
+                    productSnapshot = snapshot,
                 )
             responseObserver.onNext(
                 AddTransactionItemResponse
