@@ -4,6 +4,7 @@ quarkus = "3.32.1"
 mockito-kotlin = "6.2.3"
 testcontainers = "2.0.3"
 owasp-depcheck = "12.2.0"
+detekt = "1.23.8"
 bcrypt = "0.10.2"
 jacoco = "0.8.12"
 
@@ -60,3 +61,4 @@ kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "ko
 kotlin-noarg = { id = "org.jetbrains.kotlin.plugin.noarg", version.ref = "kotlin" }
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
 owasp-depcheck = { id = "org.owasp.dependencycheck", version.ref = "owasp-depcheck" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

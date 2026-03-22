@@ -4,6 +4,14 @@ plugins {
     alias(libs.plugins.kotlin.noarg) apply false
     alias(libs.plugins.quarkus) apply false
     alias(libs.plugins.owasp.depcheck) apply false
+    alias(libs.plugins.detekt) apply false
+}
+
+// detekt を全サービスサブプロジェクトに適用
+subprojects {
+    if (project.path.startsWith(":services:")) {
+        apply(plugin = "io.gitlab.arturbosch.detekt")
+    }
 }
 
 allprojects {
