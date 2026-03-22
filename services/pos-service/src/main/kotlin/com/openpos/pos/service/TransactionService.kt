@@ -91,6 +91,18 @@ class TransactionService {
 
     // === Create ===
 
+    /**
+     * 新規取引を作成する。
+     *
+     * clientId が指定されている場合、同一 clientId の既存取引があればそれを返す（冪等性保証）。
+     *
+     * @param storeId 店舗ID
+     * @param terminalId 端末ID
+     * @param staffId スタッフID
+     * @param type 取引種別（空白の場合は "SALE"）
+     * @param clientId クライアント側で生成した一意ID（オフライン対応用、省略可）
+     * @return 作成または既存の取引エンティティ
+     */
     @Transactional
     fun createTransaction(
         storeId: UUID,
@@ -125,13 +137,32 @@ class TransactionService {
 
     /**
      * 商品スナップショットを取得する（@Transactional外で呼ぶこと）。
+     *
      * gRPC 外部呼び出しのためDBロック保持中に実行しない。
+     *
+     * @param productId 商品ID
+     * @param organizationId 組織ID
+     * @return 商品スナップショット
      */
     fun fetchProductSnapshot(
         productId: UUID,
         organizationId: UUID,
     ): ProductSnapshot = productServiceClient.getProductSnapshot(productId, organizationId)
 
+    /**
+     * 取引に商品を追加する。
+     *
+     * 同一商品が既に存在する場合は数量を加算する。追加後、取引合計を再計算する。
+     *
+     * @param transactionId 取引ID
+     * @param productId 商品ID
+     * @param quantity 追加数量（1以上）
+     * @param productSnapshot 事前取得済みの商品スナップショット（省略時は内部で取得）
+     * @return 更新後の取引エンティティ
+     * @throws InvalidInputException 数量が0以下の場合
+     * @throws ResourceNotFoundException 取引が存在しない場合
+     * @throws BusinessPreconditionException 取引がDRAFTステータスでない場合
+     */
     @Transactional
     fun addItem(
         transactionId: UUID,
@@ -182,6 +213,19 @@ class TransactionService {
         return tx
     }
 
+    /**
+     * 取引内の商品の数量を更新する。
+     *
+     * 税額・小計を再計算し、取引合計も再計算する。
+     *
+     * @param transactionId 取引ID
+     * @param itemId 取引明細ID
+     * @param quantity 新しい数量（1以上）
+     * @return 更新後の取引エンティティ
+     * @throws InvalidInputException 数量が0以下の場合
+     * @throws ResourceNotFoundException 取引または明細が存在しない場合
+     * @throws BusinessPreconditionException 明細が指定取引に属さない場合、または取引がDRAFTでない場合
+     */
     @Transactional
     fun updateItem(
         transactionId: UUID,
@@ -207,6 +251,17 @@ class TransactionService {
         return tx
     }
 
+    /**
+     * 取引から商品を削除する。
+     *
+     * 削除後、取引合計を再計算する。
+     *
+     * @param transactionId 取引ID
+     * @param itemId 取引明細ID
+     * @return 更新後の取引エンティティ
+     * @throws ResourceNotFoundException 取引または明細が存在しない場合
+     * @throws BusinessPreconditionException 明細が指定取引に属さない場合、または取引がDRAFTでない場合
+     */
     @Transactional
     fun removeItem(
         transactionId: UUID,
@@ -226,6 +281,23 @@ class TransactionService {
 
     // === Discount ===
 
+    /**
+     * 取引に割引を適用する。
+     *
+     * PERCENTAGE または FIXED_AMOUNT の割引種別をサポートする。
+     * 同一 discountId の重複適用は拒否される。適用後、取引合計を再計算する。
+     *
+     * @param transactionId 取引ID
+     * @param discountId 割引マスタID（省略可）
+     * @param name 割引名称
+     * @param discountType 割引種別（"PERCENTAGE" または "FIXED_AMOUNT"）
+     * @param value 割引値（パーセンテージの場合は "0"〜"100" の文字列）
+     * @param amount 割引額（銭単位）
+     * @param transactionItemId 明細単位の割引の場合の対象明細ID（省略可）
+     * @return 更新後の取引エンティティ
+     * @throws IllegalArgumentException 割引種別が不正、値が範囲外、または割引額が対象金額を超過する場合
+     * @throws BusinessPreconditionException 取引がDRAFTでない場合
+     */
     @Transactional
     fun applyDiscount(
         transactionId: UUID,
@@ -305,6 +377,18 @@ class TransactionService {
 
     // === Finalize ===
 
+    /**
+     * 取引を確定する。
+     *
+     * 支払い情報を登録し、税サマリを集計し、コンテンツハッシュを計算してステータスを COMPLETED に遷移する。
+     * 確定後に sale.completed イベントを発行し、ビジネスメトリクスを更新する。
+     *
+     * @param transactionId 取引ID
+     * @param payments 支払い情報のリスト（合計額が取引合計以上であること）
+     * @return 確定済みの取引エンティティ
+     * @throws ResourceNotFoundException 取引が存在しない場合
+     * @throws BusinessPreconditionException 取引がDRAFTでない場合、明細が空の場合、または支払い不足の場合
+     */
     @Transactional
     fun finalizeTransaction(
         transactionId: UUID,
@@ -393,6 +477,18 @@ class TransactionService {
 
     // === Void ===
 
+    /**
+     * 完了済み取引を無効化（VOID）する。
+     *
+     * ステータスを VOIDED に変更し、sale.voided イベントを発行する。
+     *
+     * @param transactionId 取引ID
+     * @param reason 無効化理由（必須）
+     * @return 無効化後の取引エンティティ
+     * @throws ResourceNotFoundException 取引が存在しない場合
+     * @throws BusinessPreconditionException 取引がCOMPLETEDでない場合
+     * @throws InvalidInputException 理由が空白の場合
+     */
     @Transactional
     fun voidTransaction(
         transactionId: UUID,
@@ -422,21 +518,64 @@ class TransactionService {
 
     // === Query ===
 
+    /**
+     * 取引をIDで取得する。
+     *
+     * @param transactionId 取引ID
+     * @return 取引エンティティ
+     * @throws ResourceNotFoundException 取引が存在しない場合
+     */
     fun getTransaction(transactionId: UUID): TransactionEntity {
         tenantFilterService.enableFilter()
         return transactionRepository.findById(transactionId)
             ?: throw ResourceNotFoundException("Transaction not found: $transactionId")
     }
 
+    /**
+     * 取引に紐づく明細一覧を取得する。
+     *
+     * @param transactionId 取引ID
+     * @return 取引明細のリスト
+     */
     fun getTransactionItems(transactionId: UUID): List<TransactionItemEntity> = itemRepository.findByTransactionId(transactionId)
 
+    /**
+     * 取引に紐づく支払い一覧を取得する。
+     *
+     * @param transactionId 取引ID
+     * @return 支払いのリスト
+     */
     fun getTransactionPayments(transactionId: UUID): List<PaymentEntity> = paymentRepository.findByTransactionId(transactionId)
 
+    /**
+     * 取引に紐づく割引一覧を取得する。
+     *
+     * @param transactionId 取引ID
+     * @return 割引のリスト
+     */
     fun getTransactionDiscounts(transactionId: UUID): List<TransactionDiscountEntity> =
         discountRepository.findByTransactionId(transactionId)
 
+    /**
+     * 取引に紐づく税サマリ一覧を取得する。
+     *
+     * @param transactionId 取引ID
+     * @return 税サマリのリスト
+     */
     fun getTransactionTaxSummaries(transactionId: UUID): List<TaxSummaryEntity> = taxSummaryRepository.findByTransactionId(transactionId)
 
+    /**
+     * 取引一覧をフィルタ条件付きで取得する（ページネーション対応）。
+     *
+     * @param storeId 店舗IDフィルタ（省略可）
+     * @param terminalId 端末IDフィルタ（省略可）
+     * @param status ステータスフィルタ（省略可）
+     * @param startDate 開始日時フィルタ（省略可）
+     * @param endDate 終了日時フィルタ（省略可）
+     * @param page ページ番号（0始まり）
+     * @param pageSize ページサイズ
+     * @return Pair<取引リスト, 総件数>
+     */
     fun listTransactions(
         storeId: UUID?,
         terminalId: UUID?,
@@ -467,6 +606,12 @@ class TransactionService {
         val taxSummaries: Map<UUID, List<TaxSummaryEntity>>,
     )
 
+    /**
+     * 複数取引の関連エンティティ（明細・支払い・割引・税サマリ）を一括取得する。
+     *
+     * @param transactionIds 取引IDのリスト
+     * @return 取引IDをキーとした関連エンティティのマップ群
+     */
     fun batchLoadRelations(transactionIds: List<UUID>): TransactionRelations {
         if (transactionIds.isEmpty()) {
             return TransactionRelations(emptyMap(), emptyMap(), emptyMap(), emptyMap())
