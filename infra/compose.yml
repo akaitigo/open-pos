@@ -53,11 +53,16 @@ services:
     container_name: openpos-redis
     ports:
       - '16379:6379'
-    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    # WARNING: 本番では REDIS_PASSWORD を必ず設定すること
+    command: >-
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-openpos_dev}
     volumes:
       - openpos-redis:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-openpos_dev}', 'ping']
       interval: 5s
       timeout: 3s
       retries: 5
