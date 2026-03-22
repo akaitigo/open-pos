@@ -419,6 +419,24 @@ services:
     networks:
       - openpos-net
 
+  promtail:
+    image: grafana/promtail:3.4.2
+    container_name: openpos-promtail
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./promtail/config.yml:/etc/promtail/config.yml:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - openpos-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
   grafana:
     image: grafana/grafana:12.0.1
     container_name: openpos-grafana
