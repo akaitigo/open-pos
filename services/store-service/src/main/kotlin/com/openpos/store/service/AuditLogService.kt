@@ -5,8 +5,8 @@ import com.openpos.store.repository.AuditLogRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
+import org.jboss.logging.Logger
 import java.util.UUID
-import java.util.logging.Logger
 
 /**
  * 監査ログサービス。
@@ -19,7 +19,7 @@ class AuditLogService {
     lateinit var auditLogRepository: AuditLogRepository
 
     companion object {
-        private val logger: Logger = Logger.getLogger(AuditLogService::class.java.name)
+        private val logger: Logger = Logger.getLogger(AuditLogService::class::class.java)
     }
 
     /**
@@ -54,7 +54,7 @@ class AuditLogService {
                 this.ipAddress = maskIpAddress(ipAddress)
             }
         auditLogRepository.persist(entity)
-        logger.fine { "Audit: $action $entityType ${entityId ?: "(none)"} by ${staffId ?: "system"}" }
+        logger.debugf("Audit: %s %s %s by %s", action, entityType, entityId ?: "(none)", staffId ?: "system")
     }
 
     /**
