@@ -3,6 +3,7 @@ package com.openpos.pos.repository
 import com.openpos.pos.entity.OutboxEventEntity
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheRepositoryBase
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.persistence.LockModeType
 import java.util.UUID
 
 /**
@@ -18,6 +19,7 @@ class OutboxRepository : PanacheRepositoryBase<OutboxEventEntity, UUID> {
      */
     fun findPendingEvents(limit: Int): List<OutboxEventEntity> =
         find("status = ?1 order by createdAt asc", "PENDING")
+            .withLock(LockModeType.PESSIMISTIC_WRITE)
             .range(0, limit - 1)
             .list()
 }
