@@ -204,6 +204,14 @@ class TransactionService {
         // バリデーション: 負の割引額を拒否
         require(amount >= 0) { "Discount amount must not be negative: $amount" }
 
+        // 同一割引の重複適用を防止
+        if (discountId != null) {
+            val existingDiscounts = discountRepository.findByTransactionId(transactionId)
+            require(existingDiscounts.none { it.discountId == discountId }) {
+                "Discount $discountId is already applied to this transaction"
+            }
+        }
+
         // 割引種別ごとのバリデーション
         when (discountType) {
             "PERCENTAGE" -> {
