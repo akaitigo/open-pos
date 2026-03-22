@@ -350,13 +350,14 @@ message RemoveTransactionItemRequest {
 }
 
 // 割引適用リクエスト
-// discount_id または coupon_code のいずれか一方を指定します
+// discount_id または coupon_code のいずれか一方を指定します。
+// 新しいクライアントは oneof discount フィールドを使用してください。
 message ApplyDiscountRequest {
   // 取引ID（必須）
   string transaction_id = 1;
-  // 割引ID（直接割引を適用する場合）
+  // 割引ID（直接割引を適用する場合）- 後方互換のため維持
   string discount_id = 2;
-  // クーポンコード（クーポン経由で割引を適用する場合）
+  // クーポンコード（クーポン経由で割引を適用する場合）- 後方互換のため維持
   string coupon_code = 3;
   // 明細ID（明細レベルの割引を適用する場合、省略時は取引全体）
   string transaction_item_id = 4;
@@ -368,6 +369,14 @@ message ApplyDiscountRequest {
   string discount_value = 7;
   // 割引額（銭単位、FIXED_AMOUNT の場合は実際の割引額）
   int64 discount_amount = 8;
+
+  // 割引の指定方法（推奨）。新しいクライアントはこちらを使用してください。
+  oneof discount {
+    // 割引IDで直接適用する
+    string apply_discount_id = 9;
+    // クーポンコードで割引を適用する
+    string apply_coupon_code = 10;
+  }
 }
 
 // 取引確定リクエスト
