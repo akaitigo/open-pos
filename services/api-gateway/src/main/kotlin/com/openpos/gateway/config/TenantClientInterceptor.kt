@@ -20,6 +20,8 @@ class TenantClientInterceptor : ClientInterceptor {
     companion object {
         private val ORG_ID_KEY: Metadata.Key<String> =
             Metadata.Key.of("x-organization-id", Metadata.ASCII_STRING_MARSHALLER)
+        private val REQUEST_ID_KEY: Metadata.Key<String> =
+            Metadata.Key.of("x-request-id", Metadata.ASCII_STRING_MARSHALLER)
     }
 
     override fun <ReqT, RespT> interceptCall(
@@ -36,6 +38,13 @@ class TenantClientInterceptor : ClientInterceptor {
             ) {
                 tenantContext.organizationId?.let { orgId ->
                     headers.put(ORG_ID_KEY, orgId.toString())
+                }
+                // Correlation ID を gRPC metadata に伝播
+                val requestId =
+                    org.jboss.logging.MDC
+                        .get(CorrelationIdFilter.MDC_KEY)
+                if (requestId != null) {
+                    headers.put(REQUEST_ID_KEY, requestId.toString())
                 }
                 super.start(responseListener, headers)
             }
