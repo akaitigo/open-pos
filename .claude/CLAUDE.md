@@ -5,7 +5,7 @@
 
 ## v1.0 リリースロードマップ
 **必ず [`docs/plans/v1-release-roadmap.md`](../../docs/plans/v1-release-roadmap.md) を参照してから作業すること。**
-- GitHub マイルストーン: [v1.0.0 — OSS Public Release](https://github.com/akaitigo/open-pos/milestone/18) (65 issues)
+- GitHub マイルストーン: [v1.0.0](https://github.com/akaitigo/open-pos/milestone/18) (65 issues)
 - Phase 0（ブロッカー解除）→ Phase 1（セキュリティ）→ Phase 2（ビジネスロジック）→ Phase 3（耐障害性）→ Phase 4（ドキュメント）→ Phase 5（品質）
 - イシュー番号に `gh issue view #XXX` で詳細を確認してから着手
 - 既存PR: #313 (Docker build), #314 (テスト), #316 (Flyway) が未マージ
