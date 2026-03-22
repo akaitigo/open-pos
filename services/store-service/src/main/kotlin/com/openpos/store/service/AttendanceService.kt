@@ -11,6 +11,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
+@Deprecated("v1.0未使用: gRPC RPC未接続")
 @ApplicationScoped
 class AttendanceService {
     @Inject lateinit var attendanceRepository: AttendanceRepository

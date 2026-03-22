@@ -11,6 +11,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
 
+@Deprecated("v1.0未使用: gRPC RPC未接続")
 @ApplicationScoped
 class ShiftService {
     @Inject lateinit var shiftRepository: ShiftRepository

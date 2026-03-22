@@ -13,6 +13,7 @@ import java.util.UUID
  * お気に入り商品サービス。
  * スタッフごとのクイックアクセス商品を管理する。
  */
+@Deprecated("v1.0未使用: gRPC RPC未接続")
 @ApplicationScoped
 class FavoriteProductService {
     @Inject
