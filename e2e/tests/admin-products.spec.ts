@@ -17,13 +17,13 @@ test.describe('Admin Smoke', () => {
     const staffCard = page.getByTestId('summary-card-staff')
     const txCard = page.getByTestId('summary-card-transactions')
 
-    await expect(productCard.locator('.text-2xl')).toHaveText('40', { timeout: 15_000 })
-    await expect(storeCard.locator('.text-2xl')).toHaveText('2', { timeout: 15_000 })
-    await expect(staffCard.locator('.text-2xl')).toHaveText('3', { timeout: 15_000 })
+    await expect(productCard.getByTestId('summary-value')).toHaveText('40', { timeout: 15_000 })
+    await expect(storeCard.getByTestId('summary-value')).toHaveText('2', { timeout: 15_000 })
+    await expect(staffCard.getByTestId('summary-value')).toHaveText('3', { timeout: 15_000 })
     await expect
       .poll(
         async () => {
-          const text = await txCard.locator('.text-2xl').textContent()
+          const text = await txCard.getByTestId('summary-value').textContent()
           return Number(text?.trim() ?? '0')
         },
         { timeout: 15_000 },

@@ -450,7 +450,7 @@ class TransactionService {
 
     private fun generateTransactionNumber(): String {
         val date = LocalDate.now(ZoneOffset.UTC)
-        val seq = (System.nanoTime() % 1_000_000).toString().padStart(6, '0')
+        val seq = UUID.randomUUID().toString().take(8)
         return "T-$date-$seq"
     }
 

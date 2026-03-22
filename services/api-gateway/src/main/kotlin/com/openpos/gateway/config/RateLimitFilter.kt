@@ -58,7 +58,7 @@ class RateLimitFilter :
 
         val tenantKey = tenantContext.organizationId?.toString() ?: ANONYMOUS_KEY
         val minuteKey = currentMinuteKey()
-        val redisKey = "ratelimit:$tenantKey:$minuteKey"
+        val redisKey = "openpos:api-gateway:ratelimit:$tenantKey:$minuteKey"
 
         val currentCount = tryIncrement(redisKey)
 
