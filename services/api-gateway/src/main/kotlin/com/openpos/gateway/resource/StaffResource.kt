@@ -16,7 +16,6 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Response
-import org.eclipse.microprofile.config.inject.ConfigProperty
 import openpos.common.v1.PaginationRequest
 import openpos.store.v1.AuthenticateByPinRequest
 import openpos.store.v1.CreateStaffRequest
@@ -25,6 +24,7 @@ import openpos.store.v1.ListStaffRequest
 import openpos.store.v1.StaffRole
 import openpos.store.v1.StoreServiceGrpc
 import openpos.store.v1.UpdateStaffRequest
+import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/staff")
@@ -41,11 +41,15 @@ class StaffResource {
     @Inject
     lateinit var sessionTokenService: SessionTokenService
 
+    @Inject
+    lateinit var tenantContext: com.openpos.gateway.config.TenantContext
+
     @ConfigProperty(name = "openpos.auth.enabled", defaultValue = "true")
     var authEnabled: Boolean = true
 
     @POST
     fun create(body: CreateStaffBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             CreateStaffRequest
                 .newBuilder()
@@ -100,6 +104,7 @@ class StaffResource {
         @PathParam("id") id: String,
         body: UpdateStaffBody,
     ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             UpdateStaffRequest
                 .newBuilder()

@@ -86,8 +86,12 @@ class AuthFilter : ContainerRequestFilter {
         val role = jwt.getClaim<String>("role")
         if (!role.isNullOrBlank()) {
             requestContext.headers.putSingle("X-Staff-Role", role)
+            tenantContext.staffRole = role
         }
     }
+
+    @Inject
+    lateinit var tenantContext: TenantContext
 
     private fun shouldSkipAuth(path: String): Boolean {
         val normalizedPath = path.removePrefix("/")
