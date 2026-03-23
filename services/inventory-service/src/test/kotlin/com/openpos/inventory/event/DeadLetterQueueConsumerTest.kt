@@ -173,6 +173,40 @@ class DeadLetterQueueConsumerTest {
     }
 
     @Nested
+    inner class ErrorHandling {
+        @Test
+        fun `nacks message when emitter throws exception on sale completed`() {
+            val body = buildMessageBody(retryCount = 0)
+            val message = mockMessage(body)
+            whenever(saleCompletedRetryEmitter.send(any<Message<String>>())).thenThrow(RuntimeException("send failed"))
+
+            consumer.onDlqSaleCompleted(message)
+
+            verify(message).nack(any<Throwable>())
+        }
+
+        @Test
+        fun `nacks message when emitter throws exception on sale voided`() {
+            val body = buildMessageBody(retryCount = 0)
+            val message = mockMessage(body)
+            whenever(saleVoidedRetryEmitter.send(any<Message<String>>())).thenThrow(RuntimeException("send failed"))
+
+            consumer.onDlqSaleVoided(message)
+
+            verify(message).nack(any<Throwable>())
+        }
+
+        @Test
+        fun `handles invalid JSON gracefully for extractField and extractRetryCount`() {
+            val message = mockMessage("not valid json at all")
+
+            consumer.onDlqSaleCompleted(message)
+
+            verify(message).ack()
+        }
+    }
+
+    @Nested
     inner class MaxRetryCount {
         @Test
         fun `MAX_RETRY_COUNTは3である`() {
