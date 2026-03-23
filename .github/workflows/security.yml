@@ -7,6 +7,7 @@ on:
     branches: [main]
   schedule:
     - cron: '0 9 * * 1' # Every Monday at 9:00 UTC
+  workflow_dispatch: # Allow manual full-history scan
 
 permissions:
   contents: read
@@ -66,14 +67,28 @@ jobs:
             log_opts="--all"
           fi
 
+          verbose_flag=""
+          if [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            verbose_flag="--verbose"
+          fi
+
           gitleaks git \
             --no-banner \
             --redact \
+            ${verbose_flag} \
             --exit-code=2 \
             --report-format=sarif \
             --report-path=results.sarif \
             --log-opts="${log_opts}" \
             .
+      - name: Upload SARIF report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gitleaks-sarif
+          path: results.sarif
+          retention-days: 90
+          if-no-files-found: ignore
 
   dependency-audit:
     name: Dependency Vulnerability Scan
