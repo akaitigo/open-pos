@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CheckoutDialog } from './checkout-dialog'
 import { useCartStore } from '@/stores/cart-store'
 import { useAuthStore } from '@/stores/auth-store'
+import { useDiscountStore } from '@/stores/discount-store'
 import { FinalizeTransactionResponseSchema } from '@shared-types/openpos'
 import type { Product, Staff } from '@shared-types/openpos'
 
@@ -60,6 +61,7 @@ describe('CheckoutDialog', () => {
       storeName: '渋谷本店',
       terminalId: 'terminal-1',
     })
+    useDiscountStore.setState({ appliedDiscounts: [] })
     mockApiPost.mockReset()
     mockApiGet.mockReset()
     mockApiGet.mockResolvedValue([])
@@ -330,5 +332,309 @@ describe('CheckoutDialog', () => {
     const input = screen.getByPlaceholderText('0') as HTMLInputElement
     expect(input.value).toBe('204')
     expect(screen.getByText('お会計を確定')).not.toBeDisabled()
+  })
+
+  it('クーポン適用時に割引表示セクションが表示される', () => {
+    useDiscountStore.setState({
+      appliedDiscounts: [
+        {
+          couponCode: 'SAVE10',
+          discount: {
+            id: 'disc-1',
+            organizationId: 'org-1',
+            name: '10% オフ',
+            discountType: 'PERCENTAGE',
+            value: '0.10',
+            isActive: true,
+            startDate: null,
+            endDate: null,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          },
+          amount: 3000,
+        },
+      ],
+    })
+
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    expect(screen.getByText('10% オフ')).toBeInTheDocument()
+    expect(screen.getByText('SAVE10')).toBeInTheDocument()
+    expect(screen.getByText(/10% 割引/)).toBeInTheDocument()
+  })
+
+  it('クーポン削除ボタンで確認後に削除される', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    useDiscountStore.setState({
+      appliedDiscounts: [
+        {
+          couponCode: 'SAVE10',
+          discount: {
+            id: 'disc-1',
+            organizationId: 'org-1',
+            name: '10% オフ',
+            discountType: 'PERCENTAGE',
+            value: '0.10',
+            isActive: true,
+            startDate: null,
+            endDate: null,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          },
+          amount: 3000,
+        },
+      ],
+    })
+
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+    await userEvent.click(screen.getByLabelText('クーポン SAVE10 を削除'))
+
+    expect(window.confirm).toHaveBeenCalled()
+  })
+
+  it('固定金額クーポンの場合は金額割引の表示になる', () => {
+    useDiscountStore.setState({
+      appliedDiscounts: [
+        {
+          couponCode: 'FLAT500',
+          discount: {
+            id: 'disc-2',
+            organizationId: 'org-1',
+            name: '500円引き',
+            discountType: 'FIXED_AMOUNT',
+            value: '50000',
+            isActive: true,
+            startDate: null,
+            endDate: null,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          },
+          amount: 50000,
+        },
+      ],
+    })
+
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    expect(screen.getByText('500円引き')).toBeInTheDocument()
+    expect(screen.getByText(/￥500 割引/)).toBeInTheDocument()
+  })
+
+  it('取引キャンセルボタンでダイアログが閉じる', async () => {
+    const onOpenChange = vi.fn()
+    render(<CheckoutDialog open={true} onOpenChange={onOpenChange} />)
+
+    await userEvent.click(screen.getByText('取引をキャンセル'))
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('クーポンコードを入力して適用ボタンで有効クーポンを適用できる', async () => {
+    mockApiGet.mockImplementation((path: string) => {
+      if (typeof path === 'string' && path.includes('/api/coupons/validate/')) {
+        return Promise.resolve({
+          isValid: true,
+          coupon: null,
+          discount: {
+            id: 'disc-coupon-1',
+            organizationId: 'org-1',
+            name: '20% オフ',
+            discountType: 'PERCENTAGE',
+            value: '0.20',
+            isActive: true,
+            startDate: null,
+            endDate: null,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          },
+          reason: null,
+        })
+      }
+      return Promise.resolve([])
+    })
+
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    const couponInput = screen.getByPlaceholderText('クーポンコードを入力')
+    await userEvent.type(couponInput, 'WELCOME20')
+    await userEvent.click(screen.getByText('適用'))
+
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith('/api/coupons/validate/WELCOME20', expect.anything())
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('20% オフ')).toBeInTheDocument()
+    })
+  })
+
+  it('無効なクーポンコードの場合はエラーが表示される', async () => {
+    mockApiGet.mockImplementation((path: string) => {
+      if (typeof path === 'string' && path.includes('/api/coupons/validate/')) {
+        return Promise.resolve({
+          isValid: false,
+          coupon: null,
+          discount: null,
+          reason: '期限切れのクーポンです',
+        })
+      }
+      return Promise.resolve([])
+    })
+
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    const couponInput = screen.getByPlaceholderText('クーポンコードを入力')
+    await userEvent.type(couponInput, 'EXPIRED')
+    await userEvent.click(screen.getByText('適用'))
+
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith('/api/coupons/validate/EXPIRED', expect.anything())
+    })
+  })
+
+  it('クーポン検証APIエラー時にエラーが表示される', async () => {
+    mockApiGet.mockImplementation((path: string) => {
+      if (typeof path === 'string' && path.includes('/api/coupons/validate/')) {
+        return Promise.reject(new Error('ネットワークエラー'))
+      }
+      return Promise.resolve([])
+    })
+
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    const couponInput = screen.getByPlaceholderText('クーポンコードを入力')
+    await userEvent.type(couponInput, 'BADCODE')
+    await userEvent.click(screen.getByText('適用'))
+
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith('/api/coupons/validate/BADCODE', expect.anything())
+    })
+  })
+
+  it('既に適用済みのクーポンコードを再適用するとエラーになる', async () => {
+    useDiscountStore.setState({
+      appliedDiscounts: [
+        {
+          couponCode: 'EXISTING',
+          discount: {
+            id: 'disc-existing',
+            organizationId: 'org-1',
+            name: '既存クーポン',
+            discountType: 'PERCENTAGE',
+            value: '0.05',
+            isActive: true,
+            startDate: null,
+            endDate: null,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          },
+          amount: 1500,
+        },
+      ],
+    })
+
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    const couponInput = screen.getByPlaceholderText('クーポンコードを入力')
+    await userEvent.type(couponInput, 'EXISTING')
+    await userEvent.click(screen.getByText('適用'))
+
+    // APIは呼ばれない（重複チェックで弾かれる）
+    expect(mockApiGet).not.toHaveBeenCalledWith(
+      expect.stringContaining('/api/coupons/validate/'),
+      expect.anything(),
+    )
+  })
+
+  it('Enterキーでクーポンを適用できる', async () => {
+    mockApiGet.mockImplementation((path: string) => {
+      if (typeof path === 'string' && path.includes('/api/coupons/validate/')) {
+        return Promise.resolve({
+          isValid: true,
+          coupon: null,
+          discount: {
+            id: 'disc-enter',
+            organizationId: 'org-1',
+            name: 'Enterクーポン',
+            discountType: 'FIXED_AMOUNT',
+            value: '10000',
+            isActive: true,
+            startDate: null,
+            endDate: null,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          },
+          reason: null,
+        })
+      }
+      return Promise.resolve([])
+    })
+
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    const couponInput = screen.getByPlaceholderText('クーポンコードを入力')
+    await userEvent.type(couponInput, 'ENTERCODE{Enter}')
+
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith('/api/coupons/validate/ENTERCODE', expect.anything())
+    })
+  })
+
+  it('テンキーのバックスペースで入力を削除できる', async () => {
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    // 123 を入力
+    await userEvent.click(screen.getByRole('button', { name: '1' }))
+    await userEvent.click(screen.getByRole('button', { name: '2' }))
+    await userEvent.click(screen.getByRole('button', { name: '3' }))
+
+    const input = screen.getByPlaceholderText('0') as HTMLInputElement
+    expect(input.value).toBe('123')
+
+    // バックスペースで末尾を削除
+    await userEvent.click(screen.getByRole('button', { name: '⌫' }))
+    expect(input.value).toBe('12')
+  })
+
+  it('追加済み支払から削除ボタンで支払を削除できる', async () => {
+    const txResponse = {
+      id: 'tx-1',
+      organizationId: 'org-1',
+      storeId: 'store-1',
+      terminalId: 'terminal-1',
+      staffId: 'staff-1',
+      transactionNumber: 'TX-001',
+      type: 'SALE',
+      status: 'DRAFT',
+      items: [],
+      payments: [],
+      appliedDiscounts: [],
+      taxSummaries: [],
+      subtotal: 0,
+      discountTotal: 0,
+      taxTotal: 0,
+      total: 0,
+      clientId: '',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    }
+    mockApiPost.mockResolvedValue(txResponse)
+
+    render(<CheckoutDialog open={true} onOpenChange={vi.fn()} />)
+
+    // カード支払を追加
+    await userEvent.click(screen.getByText('カード'))
+    const amountInput = screen.getByPlaceholderText('残額を入力')
+    await userEvent.clear(amountInput)
+    await userEvent.type(amountInput, '100')
+    await userEvent.type(screen.getByPlaceholderText('カード承認番号'), 'CARD-DEL')
+    await userEvent.click(screen.getByText('この支払を追加'))
+
+    expect(screen.getByText('追加済みの支払')).toBeInTheDocument()
+
+    // 支払を削除
+    await userEvent.click(screen.getByLabelText('カード 支払を削除'))
+
+    expect(screen.queryByText('追加済みの支払')).not.toBeInTheDocument()
   })
 })

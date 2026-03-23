@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { CartPanel } from './cart-panel'
 import { useCartStore } from '@/stores/cart-store'
+import { useParkingStore } from '@/stores/parking-store'
 import type { Product } from '@shared-types/openpos'
 
 vi.mock('@/lib/api', () => ({
@@ -56,6 +57,7 @@ const mockProduct2: Product = {
 describe('CartPanel', () => {
   beforeEach(() => {
     useCartStore.setState({ items: [] })
+    useParkingStore.setState({ parkedTransactions: [] })
   })
 
   it('空カートで「カートは空です」と表示する', () => {
@@ -225,5 +227,64 @@ describe('CartPanel', () => {
     })
     render(<CartPanel />)
     expect(screen.getAllByText('小計').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('保留中の取引を再開できる', async () => {
+    useParkingStore.setState({
+      parkedTransactions: [
+        {
+          id: 'parked-1',
+          items: [{ product: mockProduct, quantity: 3 }],
+          label: '保留取引 #1',
+          parkedAt: new Date().toISOString(),
+        },
+      ],
+    })
+    render(<CartPanel />)
+
+    // 保留中ボタンをクリック
+    await userEvent.click(screen.getByText(/保留中/))
+    expect(screen.getByText('保留取引 #1')).toBeInTheDocument()
+
+    // 再開ボタンをクリック
+    await userEvent.click(screen.getByText('再開'))
+    expect(useCartStore.getState().items).toHaveLength(1)
+    expect(useCartStore.getState().items[0]!.quantity).toBe(3)
+  })
+
+  it('保留上限で保留できない場合にエラーを表示する', async () => {
+    // 5件の保留取引を作成
+    useParkingStore.setState({
+      parkedTransactions: Array.from({ length: 5 }, (_, i) => ({
+        id: `parked-${i}`,
+        items: [{ product: mockProduct, quantity: 1 }],
+        label: `保留取引 #${i + 1}`,
+        parkedAt: new Date().toISOString(),
+      })),
+    })
+    useCartStore.setState({
+      items: [{ product: mockProduct, quantity: 1 }],
+    })
+    render(<CartPanel />)
+
+    await userEvent.click(screen.getByText('保留'))
+    // 5件上限のため保留できない → カートはそのまま
+    expect(useCartStore.getState().items).toHaveLength(1)
+  })
+
+  it('お会計ボタンをクリックするとチェックアウトダイアログが開く', async () => {
+    useCartStore.setState({
+      items: [{ product: mockProduct, quantity: 1 }],
+    })
+    render(<CartPanel />)
+
+    await userEvent.click(screen.getByRole('button', { name: /お会計/ }))
+    expect(screen.getByText('お会計')).toBeInTheDocument()
+  })
+
+  it('保留ボタンはカートが空の場合は表示されない', () => {
+    useCartStore.setState({ items: [] })
+    render(<CartPanel />)
+    expect(screen.queryByText('保留')).not.toBeInTheDocument()
   })
 })

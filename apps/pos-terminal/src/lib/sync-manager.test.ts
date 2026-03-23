@@ -6,6 +6,7 @@ import {
   acknowledgePriceConflicts,
   applyCurrentPrices,
   syncPendingTransactions,
+  setupAutoSync,
 } from './sync-manager'
 import type { OfflineTransactionItem } from './offline-db'
 
@@ -166,6 +167,236 @@ describe('sync-manager', () => {
       const result = await syncPendingTransactions()
       expect(result).toBeNull()
       expect(getSyncStatus().state).toBe('completed')
+    })
+
+    it('pending 取引がある場合に API を呼んで結果を処理する', async () => {
+      const {
+        getPendingTransactions,
+        updateTransactionSyncStatus,
+        cleanupSyncedTransactions,
+        getCachedProducts,
+      } = await import('@/lib/offline-db')
+      const { api } = await import('@/lib/api')
+
+      const pendingTx = {
+        localId: 1,
+        clientId: 'tx-1',
+        storeId: 'store-1',
+        terminalId: 'terminal-1',
+        staffId: 'staff-1',
+        items: [
+          {
+            productId: 'prod-1',
+            productName: 'テスト商品',
+            unitPrice: 10000,
+            quantity: 1,
+            taxRateName: '標準税率',
+            taxRate: '0.10',
+            isReducedTax: false,
+          },
+        ],
+        payments: [{ method: 'CASH', amount: 10000 }],
+        createdAt: '2026-01-01T00:00:00Z',
+        syncStatus: 'pending' as const,
+      }
+
+      vi.mocked(getPendingTransactions).mockResolvedValueOnce([pendingTx])
+      vi.mocked(getCachedProducts).mockResolvedValueOnce([])
+      vi.mocked(api.post).mockResolvedValueOnce({
+        results: [{ clientId: 'tx-1', success: true, transactionId: 'server-tx-1' }],
+      })
+
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
+      const result = await syncPendingTransactions()
+
+      expect(result).toBeTruthy()
+      expect(result?.results).toHaveLength(1)
+      expect(updateTransactionSyncStatus).toHaveBeenCalledWith(1, 'synced', 'server-tx-1')
+      expect(cleanupSyncedTransactions).toHaveBeenCalled()
+      expect(getSyncStatus().state).toBe('completed')
+    })
+
+    it('同期失敗の取引を failed に更新する', async () => {
+      const { getPendingTransactions, updateTransactionSyncStatus, getCachedProducts } =
+        await import('@/lib/offline-db')
+      const { api } = await import('@/lib/api')
+
+      const pendingTx = {
+        localId: 2,
+        clientId: 'tx-2',
+        storeId: 'store-1',
+        terminalId: 'terminal-1',
+        staffId: 'staff-1',
+        items: [],
+        payments: [],
+        createdAt: '2026-01-01T00:00:00Z',
+        syncStatus: 'pending' as const,
+      }
+
+      vi.mocked(getPendingTransactions).mockResolvedValueOnce([pendingTx])
+      vi.mocked(getCachedProducts).mockResolvedValueOnce([])
+      vi.mocked(api.post).mockResolvedValueOnce({
+        results: [{ clientId: 'tx-2', success: false, error: 'Invalid data' }],
+      })
+
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
+      await syncPendingTransactions()
+
+      expect(updateTransactionSyncStatus).toHaveBeenCalledWith(
+        2,
+        'failed',
+        undefined,
+        'Invalid data',
+      )
+    })
+
+    it('API エラー時にリトライ状態に遷移する', async () => {
+      const { getPendingTransactions, getCachedProducts } = await import('@/lib/offline-db')
+      const { api } = await import('@/lib/api')
+
+      vi.mocked(getPendingTransactions).mockResolvedValueOnce([
+        {
+          localId: 3,
+          clientId: 'tx-3',
+          storeId: 'store-1',
+          terminalId: 'terminal-1',
+          staffId: 'staff-1',
+          items: [],
+          payments: [],
+          createdAt: '2026-01-01T00:00:00Z',
+          syncStatus: 'pending' as const,
+        },
+      ])
+      vi.mocked(getCachedProducts).mockResolvedValueOnce([])
+      vi.mocked(api.post).mockRejectedValueOnce(new Error('Network error'))
+
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
+      await syncPendingTransactions()
+
+      const status = getSyncStatus()
+      expect(status.state).toBe('retrying')
+      expect(status.lastError).toBe('Network error')
+    })
+
+    it('価格競合を検出する', async () => {
+      const { getPendingTransactions, getCachedProducts } = await import('@/lib/offline-db')
+      const { api } = await import('@/lib/api')
+
+      vi.mocked(getPendingTransactions).mockResolvedValueOnce([
+        {
+          localId: 4,
+          clientId: 'tx-4',
+          storeId: 'store-1',
+          terminalId: 'terminal-1',
+          staffId: 'staff-1',
+          items: [
+            {
+              productId: 'prod-1',
+              productName: 'テスト商品',
+              unitPrice: 10000,
+              quantity: 1,
+              taxRateName: '標準税率',
+              taxRate: '0.10',
+              isReducedTax: false,
+            },
+          ],
+          payments: [{ method: 'CASH', amount: 10000 }],
+          createdAt: '2026-01-01T00:00:00Z',
+          syncStatus: 'pending' as const,
+        },
+      ])
+      vi.mocked(getCachedProducts).mockResolvedValueOnce([
+        {
+          id: 'prod-1',
+          name: 'テスト商品',
+          barcode: null,
+          sku: null,
+          price: 12000,
+          categoryId: null,
+          taxRateName: '標準税率',
+          taxRate: '0.10',
+          isReducedTax: false,
+          imageUrl: null,
+          displayOrder: 0,
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ])
+      vi.mocked(api.post).mockResolvedValueOnce({
+        results: [{ clientId: 'tx-4', success: true, transactionId: 'server-tx-4' }],
+      })
+
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
+      await syncPendingTransactions()
+
+      const status = getSyncStatus()
+      expect(status.priceConflicts).toHaveLength(1)
+      expect(status.priceConflicts[0]?.clientId).toBe('tx-4')
+    })
+
+    it('既に同期中の場合は null を返す', async () => {
+      const { getPendingTransactions } = await import('@/lib/offline-db')
+      await import('@/lib/api')
+
+      // Create a deferred promise for the first call
+      let resolveFirst: (() => void) | undefined
+      const firstCallPromise = new Promise<void>((resolve) => {
+        resolveFirst = resolve
+      })
+
+      vi.mocked(getPendingTransactions).mockImplementationOnce(async () => {
+        await firstCallPromise
+        return []
+      })
+
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
+
+      // Start first sync (will be pending)
+      const firstPromise = syncPendingTransactions()
+
+      // Try second sync while first is in progress
+      const secondResult = await syncPendingTransactions()
+      expect(secondResult).toBeNull()
+
+      // Resolve first
+      resolveFirst?.()
+      await firstPromise
+    })
+  })
+
+  describe('setupAutoSync', () => {
+    it('cleanup 関数を返す', () => {
+      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+      const cleanup = setupAutoSync()
+      expect(typeof cleanup).toBe('function')
+      cleanup()
+    })
+  })
+
+  describe('calculateBackoffMs (via retry behavior)', () => {
+    it('リトライカウントが増加する', async () => {
+      const { getPendingTransactions, getCachedProducts } = await import('@/lib/offline-db')
+      const { api } = await import('@/lib/api')
+
+      vi.mocked(getPendingTransactions).mockResolvedValue([
+        {
+          localId: 5,
+          clientId: 'tx-5',
+          storeId: 'store-1',
+          terminalId: 'terminal-1',
+          staffId: 'staff-1',
+          items: [],
+          payments: [],
+          createdAt: '2026-01-01T00:00:00Z',
+          syncStatus: 'pending' as const,
+        },
+      ])
+      vi.mocked(getCachedProducts).mockResolvedValue([])
+      vi.mocked(api.post).mockRejectedValue(new Error('fail'))
+
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
+      await syncPendingTransactions()
+
+      expect(getSyncStatus().retryCount).toBeGreaterThan(0)
     })
   })
 })

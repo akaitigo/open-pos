@@ -239,4 +239,168 @@ describe('ProductsPage', () => {
       )
     })
   })
+
+  it('編集ダイアログでフォーム送信すると更新APIを呼ぶ', async () => {
+    setupMocks()
+    mockApi.put.mockResolvedValue(mockProduct)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('編集'))
+    await waitFor(() => {
+      expect(screen.getByText('商品を編集')).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('商品名 *'), { target: { value: 'エスプレッソ' } })
+    fireEvent.click(screen.getByText('更新'))
+    await waitFor(() => {
+      expect(mockApi.put).toHaveBeenCalledWith(
+        '/api/products/prod-1',
+        expect.objectContaining({ name: 'エスプレッソ' }),
+        expect.anything(),
+      )
+    })
+  })
+
+  it('次へボタンでページ遷移する', async () => {
+    setupMocks([mockProduct], 3)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+    expect(screen.getByText('1 / 3')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('次へ'))
+    await waitFor(() => {
+      expect(mockApi.get).toHaveBeenCalledWith(
+        '/api/products',
+        expect.anything(),
+        expect.objectContaining({
+          params: expect.objectContaining({ page: 2 }),
+        }),
+      )
+    })
+  })
+
+  it('キャンセルボタンでダイアログを閉じる', async () => {
+    setupMocks()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('商品を追加'))
+    await waitFor(() => {
+      expect(
+        screen.getByText('商品を追加', { selector: '[class*="DialogTitle"], h2' }),
+      ).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('キャンセル'))
+    await waitFor(() => {
+      expect(
+        screen.queryByText('商品を追加', { selector: '[class*="DialogTitle"], h2' }),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it('CSVインポートボタンを表示する', async () => {
+    setupMocks()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('CSVインポート')).toBeInTheDocument()
+    })
+  })
+
+  it('説明フィールドを編集ダイアログに表示する', async () => {
+    setupMocks()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('編集'))
+    await waitFor(() => {
+      expect(screen.getByLabelText('説明')).toBeInTheDocument()
+    })
+    expect(screen.getByDisplayValue('おいしいコーヒー')).toBeInTheDocument()
+  })
+
+  it('CSVインポートでファイルを選択して商品を作成する', async () => {
+    setupMocks()
+    mockApi.post.mockResolvedValue(mockProduct)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('CSVインポート')).toBeInTheDocument()
+    })
+    const csvContent = 'name,price,barcode\n紅茶,200,4901234567891\n緑茶,150,4901234567892'
+    const file = new File([csvContent], 'products.csv', { type: 'text/csv' })
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('CSVインポートで name/price 列がない場合はエラーを表示する', async () => {
+    setupMocks()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('CSVインポート')).toBeInTheDocument()
+    })
+    const csvContent = 'barcode,sku\n4901234567891,SKU-001'
+    const file = new File([csvContent], 'products.csv', { type: 'text/csv' })
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+    // name/price がないのでエラートーストが出るはず（APIは呼ばれない）
+    await waitFor(() => {
+      expect(mockApi.post).not.toHaveBeenCalled()
+    })
+  })
+
+  it('CSVインポートで空のCSVの場合はエラーを表示する', async () => {
+    setupMocks()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('CSVインポート')).toBeInTheDocument()
+    })
+    const csvContent = 'name,price'
+    const file = new File([csvContent], 'empty.csv', { type: 'text/csv' })
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+    await waitFor(() => {
+      expect(mockApi.post).not.toHaveBeenCalled()
+    })
+  })
+
+  it('新規作成ダイアログでカテゴリと税率セレクトが表示される', async () => {
+    setupMocks()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('商品を追加'))
+    await waitFor(() => {
+      expect(screen.getByLabelText('カテゴリ')).toBeInTheDocument()
+    })
+    expect(screen.getByLabelText('税率')).toBeInTheDocument()
+    const categorySelect = screen.getByLabelText('カテゴリ') as HTMLSelectElement
+    expect(categorySelect.options.length).toBeGreaterThanOrEqual(2) // 未設定 + 飲み物
+  })
+
+  it('削除APIエラー時もクラッシュしない', async () => {
+    setupMocks()
+    mockApi.delete.mockRejectedValue(new Error('削除失敗'))
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('削除'))
+    await waitFor(() => {
+      expect(screen.getByText('本当に削除しますか？この操作は取り消せません。')).toBeInTheDocument()
+    })
+    const dialogDeleteButton = screen
+      .getAllByRole('button', { name: '削除' })
+      .find((btn) => btn.closest('[role="dialog"]') !== null)
+    fireEvent.click(dialogDeleteButton!)
+    await waitFor(() => {
+      expect(mockApi.delete).toHaveBeenCalled()
+    })
+  })
 })

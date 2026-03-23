@@ -107,4 +107,191 @@ describe('DiscountsPage', () => {
       expect(screen.getByText('WELCOME2024')).toBeInTheDocument()
     })
   })
+
+  it('割引を追加ダイアログでフォーム送信する', async () => {
+    const user = userEvent.setup()
+    mockApi.post.mockResolvedValue(mockDiscounts[0])
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('10%オフ')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('割引を追加'))
+    await waitFor(() => {
+      expect(screen.getByText('割引を追加', { selector: 'h2' })).toBeInTheDocument()
+    })
+    await user.type(screen.getByLabelText('名称 *'), '20%オフ')
+    await user.type(screen.getByLabelText('値 *'), '20')
+    await user.click(screen.getByRole('button', { name: '追加' }))
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith(
+        '/api/discounts',
+        expect.objectContaining({ name: '20%オフ', value: '20' }),
+        expect.anything(),
+      )
+    })
+  })
+
+  it('割引を編集ダイアログでフォーム送信する', async () => {
+    const user = userEvent.setup()
+    mockApi.put.mockResolvedValue(mockDiscounts[0])
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('10%オフ')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('編集'))
+    await waitFor(() => {
+      expect(screen.getByText('割引を編集')).toBeInTheDocument()
+    })
+    expect(screen.getByDisplayValue('10%オフ')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('10')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '更新' }))
+    await waitFor(() => {
+      expect(mockApi.put).toHaveBeenCalledWith(
+        `/api/discounts/${mockDiscounts[0]!.id}`,
+        expect.objectContaining({ name: '10%オフ' }),
+        expect.anything(),
+      )
+    })
+  })
+
+  it('割引を削除する', async () => {
+    const user = userEvent.setup()
+    mockApi.delete.mockResolvedValue(undefined)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('10%オフ')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('削除'))
+    await waitFor(() => {
+      expect(mockApi.delete).toHaveBeenCalledWith(`/api/discounts/${mockDiscounts[0]!.id}`)
+    })
+  })
+
+  it('割引が空の場合に空メッセージを表示する', async () => {
+    mockApi.get.mockImplementation((path: string) => {
+      if (path.includes('/coupons')) return Promise.resolve([])
+      return Promise.resolve([])
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('割引が登録されていません')).toBeInTheDocument()
+    })
+  })
+
+  it('固定額の割引を正しく表示する', async () => {
+    const fixedDiscount = {
+      ...mockDiscounts[0]!,
+      discountType: 'FIXED_AMOUNT' as const,
+      value: '10000',
+    }
+    mockApi.get.mockImplementation((path: string) => {
+      if (path.includes('/coupons')) return Promise.resolve([])
+      return Promise.resolve([fixedDiscount])
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('固定額')).toBeInTheDocument()
+    })
+    expect(screen.getByText('100円')).toBeInTheDocument()
+  })
+
+  it('期間付き割引を表示する', async () => {
+    const datedDiscount = {
+      ...mockDiscounts[0]!,
+      startDate: '2026-01-01T00:00:00Z',
+      endDate: '2026-12-31T00:00:00Z',
+    }
+    mockApi.get.mockImplementation((path: string) => {
+      if (path.includes('/coupons')) return Promise.resolve([])
+      return Promise.resolve([datedDiscount])
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('2026-01-01 ~ 2026-12-31')).toBeInTheDocument()
+    })
+  })
+
+  it('無効な割引に無効バッジを表示する', async () => {
+    const inactiveDiscount = { ...mockDiscounts[0]!, isActive: false }
+    mockApi.get.mockImplementation((path: string) => {
+      if (path.includes('/coupons')) return Promise.resolve([])
+      return Promise.resolve([inactiveDiscount])
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('無効')).toBeInTheDocument()
+    })
+  })
+
+  it('クーポンタブに空メッセージを表示する', async () => {
+    const user = userEvent.setup()
+    mockApi.get.mockImplementation((path: string) => {
+      if (path.includes('/coupons')) return Promise.resolve([])
+      return Promise.resolve(mockDiscounts)
+    })
+    renderPage()
+    const couponTab = screen.getByRole('tab', { name: 'クーポン' })
+    await user.click(couponTab)
+    await waitFor(() => {
+      expect(screen.getByText('クーポンが登録されていません')).toBeInTheDocument()
+    })
+  })
+
+  it('クーポン追加ダイアログを表示してフォーム送信する', async () => {
+    const user = userEvent.setup()
+    mockApi.post.mockResolvedValue(mockCoupons[0])
+    renderPage()
+    const couponTab = screen.getByRole('tab', { name: 'クーポン' })
+    await user.click(couponTab)
+    await waitFor(() => {
+      expect(screen.getByText('WELCOME2024')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('クーポンを追加'))
+    await waitFor(() => {
+      expect(screen.getByText('クーポンを追加', { selector: 'h2' })).toBeInTheDocument()
+    })
+    await user.type(screen.getByLabelText('クーポンコード *'), 'SUMMER2026')
+    await user.click(screen.getByRole('button', { name: '追加' }))
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith(
+        '/api/coupons',
+        expect.objectContaining({ code: 'SUMMER2026' }),
+        expect.anything(),
+      )
+    })
+  })
+
+  it('クーポンの期間を表示する', async () => {
+    const user = userEvent.setup()
+    const datedCoupon = {
+      ...mockCoupons[0]!,
+      startDate: '2026-01-01T00:00:00Z',
+      endDate: '2026-06-30T00:00:00Z',
+    }
+    mockApi.get.mockImplementation((path: string) => {
+      if (path.includes('/coupons')) return Promise.resolve([datedCoupon])
+      return Promise.resolve(mockDiscounts)
+    })
+    renderPage()
+    const couponTab = screen.getByRole('tab', { name: 'クーポン' })
+    await user.click(couponTab)
+    await waitFor(() => {
+      expect(screen.getByText('2026-01-01 ~ 2026-06-30')).toBeInTheDocument()
+    })
+  })
+
+  it('無制限利用のクーポンを表示する', async () => {
+    const user = userEvent.setup()
+    const unlimitedCoupon = { ...mockCoupons[0]!, maxUses: null }
+    mockApi.get.mockImplementation((path: string) => {
+      if (path.includes('/coupons')) return Promise.resolve([unlimitedCoupon])
+      return Promise.resolve(mockDiscounts)
+    })
+    renderPage()
+    const couponTab = screen.getByRole('tab', { name: 'クーポン' })
+    await user.click(couponTab)
+    await waitFor(() => {
+      expect(screen.getByText('無制限')).toBeInTheDocument()
+    })
+  })
 })

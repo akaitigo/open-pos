@@ -204,4 +204,69 @@ describe('CategoriesPage', () => {
     const dashCells = cells.filter((c) => c.textContent === '—')
     expect(dashCells.length).toBeGreaterThanOrEqual(1)
   })
+
+  it('ツリー表示に切り替える', async () => {
+    mockApi.get.mockResolvedValue(mockCategories)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getAllByText('飲み物').length).toBeGreaterThanOrEqual(1)
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'ツリー表示' }))
+    // ツリー表示では順序が表示される
+    await waitFor(() => {
+      expect(screen.getByText(/順序: 1/)).toBeInTheDocument()
+    })
+  })
+
+  it('ツリー表示で空の場合メッセージを表示する', async () => {
+    mockApi.get.mockResolvedValue([])
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('カテゴリが登録されていません')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'ツリー表示' }))
+    await waitFor(() => {
+      expect(screen.getByText('カテゴリが登録されていません')).toBeInTheDocument()
+    })
+  })
+
+  it('ツリー表示で子ノードの折りたたみができる', async () => {
+    mockApi.get.mockResolvedValue(mockCategories)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getAllByText('飲み物').length).toBeGreaterThanOrEqual(1)
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'ツリー表示' }))
+    await waitFor(() => {
+      expect(screen.getByText('食べ物')).toBeInTheDocument()
+    })
+    // 折りたたみボタンをクリック
+    const collapseButton = screen.getByRole('button', { name: '折りたたむ' })
+    fireEvent.click(collapseButton)
+    // 展開ボタンに変わる
+    expect(screen.getByRole('button', { name: '展開する' })).toBeInTheDocument()
+  })
+
+  it('編集ダイアログでフォーム更新送信する', async () => {
+    mockApi.get.mockResolvedValue(mockCategories)
+    mockApi.put.mockResolvedValue(mockCategories[0])
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getAllByText('飲み物').length).toBeGreaterThanOrEqual(1)
+    })
+    const editButtons = screen.getAllByText('編集')
+    fireEvent.click(editButtons[0]!)
+    await waitFor(() => {
+      expect(screen.getByText('カテゴリを編集')).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('カテゴリ名 *'), { target: { value: 'ドリンク' } })
+    fireEvent.click(screen.getByRole('button', { name: '更新' }))
+    await waitFor(() => {
+      expect(mockApi.put).toHaveBeenCalledWith(
+        '/api/categories/cat-1',
+        expect.objectContaining({ name: 'ドリンク' }),
+        expect.anything(),
+      )
+    })
+  })
 })

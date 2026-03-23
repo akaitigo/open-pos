@@ -226,4 +226,57 @@ describe('StoresPage', () => {
       )
     })
   })
+
+  it('編集ダイアログでフォーム送信すると更新APIを呼ぶ', async () => {
+    setupMocks()
+    mockApi.put.mockResolvedValue(mockStore)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('渋谷店')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('編集'))
+    await waitFor(() => {
+      expect(screen.getByText('店舗を編集')).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('店舗名 *'), { target: { value: '新宿店' } })
+    fireEvent.click(screen.getByRole('button', { name: '更新' }))
+    await waitFor(() => {
+      expect(mockApi.put).toHaveBeenCalledWith(
+        '/api/stores/store-1',
+        expect.objectContaining({ name: '新宿店' }),
+        expect.anything(),
+      )
+    })
+  })
+
+  it('ページネーションが2ページ以上の場合にボタンを表示する', async () => {
+    setupMocks([mockStore], 3)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('渋谷店')).toBeInTheDocument()
+    })
+    expect(screen.getByText('前へ')).toBeInTheDocument()
+    expect(screen.getByText('次へ')).toBeInTheDocument()
+    expect(screen.getByText('1 / 3')).toBeInTheDocument()
+  })
+
+  it('キャンセルボタンでダイアログを閉じる', async () => {
+    setupMocks()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('渋谷店')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: '店舗を追加' }))
+    await waitFor(() => {
+      expect(
+        screen.getByText('店舗を追加', { selector: '[class*="DialogTitle"], h2' }),
+      ).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('キャンセル'))
+    await waitFor(() => {
+      expect(
+        screen.queryByText('店舗を追加', { selector: '[class*="DialogTitle"], h2' }),
+      ).not.toBeInTheDocument()
+    })
+  })
 })

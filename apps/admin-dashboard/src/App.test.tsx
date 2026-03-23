@@ -44,4 +44,17 @@ describe('App', () => {
 
     expect(screen.getByText('商品数')).toBeInTheDocument()
   })
+
+  it('KPIカードが表示される', () => {
+    render(<App />)
+
+    expect(screen.getByText('本日の売上')).toBeInTheDocument()
+    expect(screen.getByText('本日の取引数')).toBeInTheDocument()
+  })
+
+  it('売上推移セクションが表示される', () => {
+    render(<App />)
+
+    expect(screen.getByText('過去7日間の売上推移')).toBeInTheDocument()
+  })
 })

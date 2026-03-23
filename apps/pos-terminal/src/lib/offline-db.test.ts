@@ -14,7 +14,7 @@ interface MockChain {
   filter: MockFn
 }
 
-const db = vi.hoisted(() => {
+const { mockProducts, mockOfflineTransactions } = vi.hoisted(() => {
   function makeChain(): MockChain {
     const chain = {} as MockChain
     chain.bulkPut = vi.fn().mockResolvedValue(undefined)
@@ -28,69 +28,28 @@ const db = vi.hoisted(() => {
     chain.filter = vi.fn().mockImplementation(() => chain)
     return chain
   }
-  return {
-    products: makeChain(),
-    offlineTransactions: makeChain(),
-  }
+  return { mockProducts: makeChain(), mockOfflineTransactions: makeChain() }
 })
 
-// Mock the entire offline-db module's offlineDb export
-vi.mock('./offline-db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./offline-db')>()
-
-  // Create a fake offlineDb that uses our mocked chains
-  const fakeDb = {
-    products: db.products,
-    offlineTransactions: db.offlineTransactions,
-  }
-
-  // Re-implement the functions using the fake db
-  const { products, offlineTransactions } = fakeDb
+vi.mock('dexie', () => {
   return {
-    ...actual,
-    offlineDb: fakeDb,
-    async cacheProducts(ps: unknown[]) {
-      await products.bulkPut(ps)
-    },
-    async getCachedProducts() {
-      return products.toArray()
-    },
-    async getCachedProductByBarcode(barcode: string) {
-      return products.where('barcode').equals(barcode).first()
-    },
-    async saveOfflineTransaction(tx: Record<string, unknown>) {
-      const id = await offlineTransactions.add({ ...tx })
-      return (id as number | undefined) ?? 0
-    },
-    async getPendingTransactions() {
-      return offlineTransactions.where('syncStatus').equals('pending').toArray()
-    },
-    async updateTransactionSyncStatus(
-      localId: number,
-      status: string,
-      serverTransactionId?: string,
-      syncError?: string,
-    ) {
-      await offlineTransactions.update(localId, {
-        syncStatus: status,
-        serverTransactionId,
-        syncError,
-      })
-    },
-    async cleanupSyncedTransactions(olderThanDays = 7) {
-      const cutoff = new Date()
-      cutoff.setDate(cutoff.getDate() - olderThanDays)
-      const cutoffStr = cutoff.toISOString()
-      const old = await offlineTransactions
-        .where('syncStatus')
-        .equals('synced')
-        .filter((tx: { createdAt: string }) => tx.createdAt < cutoffStr)
-        .toArray()
-      const ids = (old as { localId?: number }[])
-        .map((tx) => tx.localId)
-        .filter((id): id is number => id !== undefined)
-      await offlineTransactions.bulkDelete(ids)
-      return ids.length
+    default: class FakeDexie {
+      constructor() {}
+
+      version() {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        const self = this
+        return {
+          stores() {
+            // OpenPosOfflineDB declares fields with `!:` which under ES2022
+            // useDefineForClassFields=true compiles to `this.x = undefined`,
+            // overwriting class-field initialisers from the parent.  Re-assign
+            // the mocks inside stores() which is called *after* the field init.
+            ;(self as Record<string, unknown>).products = mockProducts
+            ;(self as Record<string, unknown>).offlineTransactions = mockOfflineTransactions
+          },
+        }
+      }
     },
   }
 })
@@ -103,6 +62,7 @@ import {
   getPendingTransactions,
   updateTransactionSyncStatus,
   cleanupSyncedTransactions,
+  offlineDb,
 } from './offline-db'
 import type { CachedProduct } from './offline-db'
 
@@ -123,7 +83,7 @@ const mockProduct: CachedProduct = {
 
 describe('offline-db', () => {
   beforeEach(() => {
-    for (const table of [db.products, db.offlineTransactions]) {
+    for (const table of [mockProducts, mockOfflineTransactions]) {
       table.bulkPut.mockClear()
       table.toArray.mockReset().mockResolvedValue([])
       table.first.mockReset().mockResolvedValue(undefined)
@@ -139,18 +99,18 @@ describe('offline-db', () => {
   describe('cacheProducts', () => {
     it('bulkPut で商品をキャッシュする', async () => {
       await cacheProducts([mockProduct])
-      expect(db.products.bulkPut).toHaveBeenCalledWith([mockProduct])
+      expect(offlineDb.products.bulkPut).toHaveBeenCalledWith([mockProduct])
     })
 
     it('空配列でも呼び出せる', async () => {
       await cacheProducts([])
-      expect(db.products.bulkPut).toHaveBeenCalledWith([])
+      expect(offlineDb.products.bulkPut).toHaveBeenCalledWith([])
     })
   })
 
   describe('getCachedProducts', () => {
     it('toArray で全商品を取得する', async () => {
-      db.products.toArray.mockResolvedValueOnce([mockProduct])
+      mockProducts.toArray.mockResolvedValueOnce([mockProduct])
       const products = await getCachedProducts()
       expect(products).toEqual([mockProduct])
     })
@@ -158,7 +118,7 @@ describe('offline-db', () => {
 
   describe('getCachedProductByBarcode', () => {
     it('バーコードで商品を検索する', async () => {
-      db.products.first.mockResolvedValueOnce(mockProduct)
+      mockProducts.first.mockResolvedValueOnce(mockProduct)
       const found = await getCachedProductByBarcode('4901234567890')
       expect(found).toEqual(mockProduct)
     })
@@ -171,7 +131,7 @@ describe('offline-db', () => {
 
   describe('saveOfflineTransaction', () => {
     it('取引を保存して localId を返す', async () => {
-      db.offlineTransactions.add.mockResolvedValueOnce(42)
+      mockOfflineTransactions.add.mockResolvedValueOnce(42)
       const tx = {
         clientId: 'tx-1',
         storeId: 'store-1',
@@ -187,7 +147,7 @@ describe('offline-db', () => {
     })
 
     it('localId が undefined の場合は 0 を返す', async () => {
-      db.offlineTransactions.add.mockResolvedValueOnce(undefined)
+      mockOfflineTransactions.add.mockResolvedValueOnce(undefined)
       const tx = {
         clientId: 'tx-2',
         storeId: 'store-1',
@@ -206,7 +166,7 @@ describe('offline-db', () => {
   describe('getPendingTransactions', () => {
     it('pending の取引を取得する', async () => {
       const pendingTx = { localId: 1, clientId: 'tx-1', syncStatus: 'pending' }
-      db.offlineTransactions.toArray.mockResolvedValueOnce([pendingTx])
+      mockOfflineTransactions.toArray.mockResolvedValueOnce([pendingTx])
       const result = await getPendingTransactions()
       expect(result).toEqual([pendingTx])
     })
@@ -215,7 +175,7 @@ describe('offline-db', () => {
   describe('updateTransactionSyncStatus', () => {
     it('synced に更新する', async () => {
       await updateTransactionSyncStatus(1, 'synced', 'server-tx-123')
-      expect(db.offlineTransactions.update).toHaveBeenCalledWith(1, {
+      expect(offlineDb.offlineTransactions.update).toHaveBeenCalledWith(1, {
         syncStatus: 'synced',
         serverTransactionId: 'server-tx-123',
         syncError: undefined,
@@ -224,7 +184,7 @@ describe('offline-db', () => {
 
     it('failed に更新する', async () => {
       await updateTransactionSyncStatus(1, 'failed', undefined, 'Server error')
-      expect(db.offlineTransactions.update).toHaveBeenCalledWith(1, {
+      expect(offlineDb.offlineTransactions.update).toHaveBeenCalledWith(1, {
         syncStatus: 'failed',
         serverTransactionId: undefined,
         syncError: 'Server error',
@@ -235,22 +195,30 @@ describe('offline-db', () => {
   describe('cleanupSyncedTransactions', () => {
     it('古い synced 取引を削除する', async () => {
       const oldTx = { localId: 1, syncStatus: 'synced', createdAt: '2020-01-01T00:00:00Z' }
-      db.offlineTransactions.filter.mockImplementationOnce(() => ({
+      mockOfflineTransactions.filter.mockImplementationOnce(() => ({
         toArray: vi.fn().mockResolvedValueOnce([oldTx]),
       }))
       const deleted = await cleanupSyncedTransactions(7)
       expect(deleted).toBe(1)
-      expect(db.offlineTransactions.bulkDelete).toHaveBeenCalledWith([1])
+      expect(offlineDb.offlineTransactions.bulkDelete).toHaveBeenCalledWith([1])
     })
 
     it('localId が undefined の取引は除外する', async () => {
       const oldTx = { syncStatus: 'synced', createdAt: '2020-01-01T00:00:00Z' }
-      db.offlineTransactions.filter.mockImplementationOnce(() => ({
+      mockOfflineTransactions.filter.mockImplementationOnce(() => ({
         toArray: vi.fn().mockResolvedValueOnce([oldTx]),
       }))
       const deleted = await cleanupSyncedTransactions(7)
       expect(deleted).toBe(0)
-      expect(db.offlineTransactions.bulkDelete).toHaveBeenCalledWith([])
+      expect(offlineDb.offlineTransactions.bulkDelete).toHaveBeenCalledWith([])
+    })
+
+    it('デフォルトの日数パラメータで動作する', async () => {
+      mockOfflineTransactions.filter.mockImplementationOnce(() => ({
+        toArray: vi.fn().mockResolvedValueOnce([]),
+      }))
+      const deleted = await cleanupSyncedTransactions()
+      expect(deleted).toBe(0)
     })
   })
 })

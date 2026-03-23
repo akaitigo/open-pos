@@ -210,4 +210,64 @@ describe('StaffPage', () => {
     const dashCells = cells.filter((c) => c.textContent === '—')
     expect(dashCells.length).toBeGreaterThanOrEqual(1)
   })
+
+  it('新規スタッフのフォーム送信でAPIを呼ぶ', async () => {
+    setupMocks()
+    mockApi.post.mockResolvedValue(mockStaff[0])
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('田中太郎')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'スタッフを追加' }))
+    await waitFor(() => {
+      expect(
+        screen.getByText('スタッフを追加', { selector: '[class*="DialogTitle"], h2' }),
+      ).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('名前 *'), { target: { value: '山田太郎' } })
+    fireEvent.change(screen.getByLabelText('メールアドレス'), {
+      target: { value: 'yamada@example.com' },
+    })
+    fireEvent.change(screen.getByLabelText(/PIN/), { target: { value: '1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '追加' }))
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith(
+        '/api/staff',
+        expect.objectContaining({ name: '山田太郎', email: 'yamada@example.com', pin: '1234' }),
+        expect.anything(),
+      )
+    })
+  })
+
+  it('編集時にフォーム送信で更新APIを呼ぶ', async () => {
+    setupMocks()
+    mockApi.put.mockResolvedValue(mockStaff[0])
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('田中太郎')).toBeInTheDocument()
+    })
+    const editButtons = screen.getAllByText('編集')
+    fireEvent.click(editButtons[0]!)
+    await waitFor(() => {
+      expect(screen.getByText('スタッフを編集')).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('名前 *'), { target: { value: '田中次郎' } })
+    fireEvent.click(screen.getByRole('button', { name: '更新' }))
+    await waitFor(() => {
+      expect(mockApi.put).toHaveBeenCalledWith(
+        `/api/staff/${mockStaff[0]!.id}`,
+        expect.objectContaining({ name: '田中次郎' }),
+        expect.anything(),
+      )
+    })
+  })
+
+  it('有効なスタッフには有効バッジを表示する', async () => {
+    setupMocks()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('田中太郎')).toBeInTheDocument()
+    })
+    expect(screen.getByText('有効')).toBeInTheDocument()
+  })
 })
