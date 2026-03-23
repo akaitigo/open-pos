@@ -2,6 +2,7 @@ package com.openpos.store.cache
 
 import io.quarkus.redis.datasource.RedisDataSource
 import io.quarkus.redis.datasource.keys.KeyCommands
+import io.quarkus.redis.datasource.keys.KeyScanCursor
 import io.quarkus.redis.datasource.value.ValueCommands
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -98,6 +99,44 @@ class StoreCacheServiceTest {
         fun `空のキーではdelが呼ばれない`() {
             cacheService.invalidate()
             verify(keyCommands, never()).del(any<String>())
+        }
+
+        @Test
+        fun `Redis例外時は例外をスローせずログ出力する`() {
+            whenever(keyCommands.del(any<String>())).thenThrow(RuntimeException("Connection lost"))
+            cacheService.invalidate("openpos:store-service:store:123")
+        }
+    }
+
+    @Nested
+    inner class InvalidatePattern {
+        @Test
+        fun `SCANでキーを取得して削除する`() {
+            val cursor: KeyScanCursor<String> = mock()
+            whenever(keyCommands.scan(any())).thenReturn(cursor)
+            whenever(cursor.hasNext()).thenReturn(true, false)
+            whenever(cursor.next()).thenReturn(setOf("key1", "key2"))
+
+            cacheService.invalidatePattern("openpos:store-service:store:*")
+
+            verify(keyCommands).del("key1", "key2")
+        }
+
+        @Test
+        fun `SCANでキーが空の場合はdelが呼ばれない`() {
+            val cursor: KeyScanCursor<String> = mock()
+            whenever(keyCommands.scan(any())).thenReturn(cursor)
+            whenever(cursor.hasNext()).thenReturn(false)
+
+            cacheService.invalidatePattern("openpos:store-service:store:*")
+
+            verify(keyCommands, never()).del(any<String>())
+        }
+
+        @Test
+        fun `Redis例外時はスローせずログ出力する`() {
+            whenever(keyCommands.scan(any())).thenThrow(RuntimeException("Connection lost"))
+            cacheService.invalidatePattern("openpos:store-service:store:*")
         }
     }
 

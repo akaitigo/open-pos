@@ -1,11 +1,13 @@
 package com.openpos.gateway.webhook
 
+import com.sun.net.httpserver.HttpServer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.net.InetSocketAddress
 import java.time.Instant
 import java.util.UUID
 
@@ -234,6 +236,55 @@ class WebhookDeliveryServiceTest {
             // Assert
             assertEquals(false, deleted)
         }
+
+        @Test
+        fun `update replaces registration in store`() {
+            // Arrange
+            val registration =
+                WebhookRegistration(
+                    organizationId = orgId,
+                    url = "https://example.com/old",
+                    events = listOf("sale.completed"),
+                    secret = "secret",
+                )
+            webhookStore.register(registration)
+
+            // Act
+            val updated = registration.copy(url = "https://example.com/new")
+            webhookStore.update(updated)
+
+            // Assert
+            val found = webhookStore.findById(registration.id)
+            assertNotNull(found)
+            assertEquals("https://example.com/new", found?.url)
+        }
+
+        @Test
+        fun `clear removes all data`() {
+            // Arrange
+            webhookStore.register(
+                WebhookRegistration(
+                    organizationId = orgId,
+                    url = "https://example.com",
+                    events = listOf("sale.completed"),
+                    secret = "secret",
+                ),
+            )
+            webhookStore.recordDelivery(
+                WebhookDelivery(
+                    webhookId = UUID.randomUUID(),
+                    eventType = "sale.completed",
+                    payload = "{}",
+                    status = DeliveryStatus.PENDING,
+                ),
+            )
+
+            // Act
+            webhookStore.clear()
+
+            // Assert
+            assertEquals(0, webhookStore.findByOrganization(orgId).size)
+        }
     }
 
     @Nested
@@ -321,6 +372,92 @@ class WebhookDeliveryServiceTest {
             // Assert
             assertEquals(1, pending.size)
             assertEquals(pastRetry.id, pending[0].id)
+        }
+    }
+
+    @Nested
+    inner class AttemptDeliveryHttpSuccess {
+        @Test
+        fun `marks delivery as SUCCESS when HTTP 200`() {
+            // Arrange: start a simple HTTP server that returns 200
+            val server = HttpServer.create(InetSocketAddress(0), 0)
+            val port = server.address.port
+            server.createContext("/webhook") { exchange ->
+                exchange.sendResponseHeaders(200, 0)
+                exchange.responseBody.close()
+            }
+            server.start()
+
+            try {
+                val webhook =
+                    WebhookRegistration(
+                        organizationId = orgId,
+                        url = "http://localhost:$port/webhook",
+                        events = listOf("sale.completed"),
+                        secret = "test-secret",
+                    )
+                webhookStore.register(webhook)
+
+                val delivery =
+                    WebhookDelivery(
+                        webhookId = webhook.id,
+                        eventType = "sale.completed",
+                        payload = """{"test":true}""",
+                        status = DeliveryStatus.PENDING,
+                    )
+                webhookStore.recordDelivery(delivery)
+
+                // Act
+                val result = deliveryService.attemptDelivery(webhook, delivery)
+
+                // Assert
+                assertEquals(DeliveryStatus.SUCCESS, result.status)
+                assertEquals(200, result.httpStatusCode)
+                assertEquals(1, result.attemptCount)
+                assertNotNull(result.completedAt)
+            } finally {
+                server.stop(0)
+            }
+        }
+
+        @Test
+        fun `marks delivery as RETRYING when HTTP 500`() {
+            val server = HttpServer.create(InetSocketAddress(0), 0)
+            val port = server.address.port
+            server.createContext("/webhook") { exchange ->
+                exchange.sendResponseHeaders(500, 0)
+                exchange.responseBody.close()
+            }
+            server.start()
+
+            try {
+                val webhook =
+                    WebhookRegistration(
+                        organizationId = orgId,
+                        url = "http://localhost:$port/webhook",
+                        events = listOf("sale.completed"),
+                        secret = "test-secret",
+                    )
+                webhookStore.register(webhook)
+
+                val delivery =
+                    WebhookDelivery(
+                        webhookId = webhook.id,
+                        eventType = "sale.completed",
+                        payload = """{"test":true}""",
+                        status = DeliveryStatus.PENDING,
+                        maxRetries = 5,
+                    )
+                webhookStore.recordDelivery(delivery)
+
+                val result = deliveryService.attemptDelivery(webhook, delivery)
+
+                assertEquals(DeliveryStatus.RETRYING, result.status)
+                assertEquals(500, result.httpStatusCode)
+                assertEquals(1, result.attemptCount)
+            } finally {
+                server.stop(0)
+            }
         }
     }
 

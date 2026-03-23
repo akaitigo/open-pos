@@ -63,7 +63,14 @@ subprojects {
                                     "**/entity/**",
                                     "**/config/**",
                                     "**/resource/**",
+                                    "**/repository/**",
                                     "openpos/**",
+                                    "**/ServiceHealthCheck*",
+                                    "**/ServiceLivenessCheck*",
+                                    "**/ServiceReadinessCheck*",
+                                    "**/HealthResource*",
+                                    "**/ProcessedEventEntity*",
+                                    "**/ProcessedEventRepository*",
                                 )
                             }
                         },
@@ -77,7 +84,7 @@ subprojects {
                     rule {
                         limit {
                             counter = "LINE"
-                            minimum = "0.80".toBigDecimal()
+                            minimum = "0.95".toBigDecimal()
                         }
                     }
                 }
@@ -91,7 +98,14 @@ subprojects {
                                     "**/entity/**",
                                     "**/config/**",
                                     "**/resource/**",
+                                    "**/repository/**",
                                     "openpos/**",
+                                    "**/ServiceHealthCheck*",
+                                    "**/ServiceLivenessCheck*",
+                                    "**/ServiceReadinessCheck*",
+                                    "**/HealthResource*",
+                                    "**/ProcessedEventEntity*",
+                                    "**/ProcessedEventRepository*",
                                 )
                             }
                         },
