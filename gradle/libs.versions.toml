@@ -6,6 +6,8 @@ testcontainers = "2.0.3"
 owasp-depcheck = "12.2.0"
 bcrypt = "0.10.2"
 jacoco = "0.8.12"
+pitest = "1.17.4"
+pitest-junit5 = "1.2.1"
 
 [libraries]
 # Quarkus BOM
@@ -53,6 +55,7 @@ mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+pitest-junit5-plugin = { module = "org.pitest:pitest-junit5-plugin", version.ref = "pitest-junit5" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
