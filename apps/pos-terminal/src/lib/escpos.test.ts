@@ -77,4 +77,42 @@ describe('EscPosBuilder', () => {
     // Should contain multiple GS ( k sequences
     expect(result.length).toBeGreaterThan(20)
   })
+
+  it('generates CODE39 barcode', () => {
+    const result = new EscPosBuilder().barcode('12345', 'CODE39').build()
+    expect(result.length).toBeGreaterThan(10)
+    // CODE39 type code is 0x04
+    expect(result).toContain(0x04)
+  })
+
+  it('generates CODE128 barcode', () => {
+    const result = new EscPosBuilder().barcode('ABC123', 'CODE128').build()
+    expect(result.length).toBeGreaterThan(10)
+  })
+
+  it('feedAndCut generates newlines then cut', () => {
+    const result = new EscPosBuilder().feedAndCut(2).build()
+    // 2 LFs then GS V 0x00
+    expect(result[0]).toBe(0x0a)
+    expect(result[1]).toBe(0x0a)
+    expect(result[2]).toBe(0x1d)
+    expect(result[3]).toBe(0x56)
+  })
+
+  it('align left generates correct value', () => {
+    const result = new EscPosBuilder().align('left').build()
+    expect(result[2]).toBe(0)
+  })
+
+  it('qrcode with custom size', () => {
+    const result = new EscPosBuilder().qrcode('test', 3).build()
+    expect(result.length).toBeGreaterThan(10)
+  })
+})
+
+describe('connectPrinter', () => {
+  it('throws when Web Serial API is not available', async () => {
+    const { connectPrinter } = await import('./escpos')
+    await expect(connectPrinter()).rejects.toThrow('Web Serial API')
+  })
 })

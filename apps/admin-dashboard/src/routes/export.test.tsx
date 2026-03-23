@@ -1,19 +1,22 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { ExportPage } from './export'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { resetRuntimeConfigForTests } from '@/lib/runtime-config'
 
+const mockApi = vi.hoisted(() => ({
+  get: vi.fn().mockResolvedValue({ data: [] }),
+  post: vi.fn(),
+  put: vi.fn(),
+  delete: vi.fn(),
+  setOrganizationId: vi.fn(),
+  setBaseUrl: vi.fn(),
+}))
+
 vi.mock('@/lib/api', () => ({
-  api: {
-    get: vi.fn().mockResolvedValue([]),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-    setOrganizationId: vi.fn(),
-    setBaseUrl: vi.fn(),
-  },
+  api: mockApi,
   configureApi: vi.fn(),
   getDefaultApiConfig: () => ({
     apiUrl: 'http://localhost:8080',
@@ -53,5 +56,51 @@ describe('ExportPage', () => {
   it('プレビューボタンを表示する', () => {
     renderPage()
     expect(screen.getByText('プレビュー')).toBeInTheDocument()
+  })
+
+  it('プレビューボタンクリックで API を呼び出してデータを表示する', async () => {
+    const user = userEvent.setup()
+    const mockData = {
+      data: [
+        { date: '2026-03-01', grossAmount: 100000, taxAmount: 10000, transactionCount: 5 },
+        { date: '2026-03-02', grossAmount: 200000, taxAmount: 20000, transactionCount: 10 },
+      ],
+    }
+    mockApi.get.mockResolvedValueOnce(mockData)
+
+    renderPage()
+    await user.click(screen.getByText('プレビュー'))
+
+    await waitFor(() => {
+      expect(screen.getByText('2026-03-01')).toBeInTheDocument()
+    })
+    expect(screen.getByText('2026-03-02')).toBeInTheDocument()
+  })
+
+  it('データがある場合 CSV ダウンロードボタンが表示される', async () => {
+    const user = userEvent.setup()
+    const mockData = {
+      data: [{ date: '2026-03-01', grossAmount: 100000, taxAmount: 10000, transactionCount: 5 }],
+    }
+    mockApi.get.mockResolvedValueOnce(mockData)
+
+    renderPage()
+    await user.click(screen.getByText('プレビュー'))
+
+    await waitFor(() => {
+      expect(screen.getByText('CSV ダウンロード')).toBeInTheDocument()
+    })
+  })
+
+  it('空のプレビューでは「データがありません」を表示する', async () => {
+    const user = userEvent.setup()
+    mockApi.get.mockResolvedValueOnce({ data: [] })
+
+    renderPage()
+    await user.click(screen.getByText('プレビュー'))
+
+    await waitFor(() => {
+      expect(screen.getByText('データがありません')).toBeInTheDocument()
+    })
   })
 })

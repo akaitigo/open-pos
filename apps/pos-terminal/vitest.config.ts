@@ -18,7 +18,7 @@ export default defineConfig({
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',
       thresholds: {
-        lines: 65, // TODO: 段階的に 80% へ引き上げ（50→65→80）
+        lines: 80,
       },
       exclude: [
         'node_modules/**',
