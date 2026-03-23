@@ -88,4 +88,60 @@ describe('OrganizationPage', () => {
       expect(screen.getByText(/インボイス制度に対応する場合/)).toBeInTheDocument()
     })
   })
+
+  it('フォームの各フィールドを編集できる', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('テスト組織')).toBeInTheDocument()
+    })
+    const nameInput = screen.getByLabelText('組織名 *')
+    await user.clear(nameInput)
+    await user.type(nameInput, '新組織名')
+    expect(nameInput).toHaveValue('新組織名')
+
+    const businessInput = screen.getByLabelText('業種')
+    await user.clear(businessInput)
+    await user.type(businessInput, '飲食')
+    expect(businessInput).toHaveValue('飲食')
+
+    const invoiceInput = screen.getByLabelText(/インボイス番号/)
+    await user.clear(invoiceInput)
+    await user.type(invoiceInput, 'T9999999999999')
+    expect(invoiceInput).toHaveValue('T9999999999999')
+  })
+
+  it('保存成功でメッセージを表示する', async () => {
+    const user = userEvent.setup()
+    mockApi.put.mockResolvedValue({ ...mockOrg, name: 'テスト組織' })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('テスト組織')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('設定を保存'))
+    await waitFor(() => {
+      expect(screen.getByText('設定を保存しました')).toBeInTheDocument()
+    })
+  })
+
+  it('保存失敗でエラーメッセージを表示する', async () => {
+    const user = userEvent.setup()
+    mockApi.put.mockRejectedValue(new Error('保存エラー'))
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('テスト組織')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('設定を保存'))
+    await waitFor(() => {
+      expect(screen.getByText('保存に失敗しました')).toBeInTheDocument()
+    })
+  })
+
+  it('組織IDカードを表示する', async () => {
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('組織ID')).toBeInTheDocument()
+    })
+    expect(screen.getByText(mockOrg.id)).toBeInTheDocument()
+  })
 })

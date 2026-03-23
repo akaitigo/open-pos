@@ -88,6 +88,19 @@ describe('ReportsPage', () => {
     expect(screen.getByText('2026-03-01')).toBeInTheDocument()
   })
 
+  it('日付入力フィールドを変更できる', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    const startInput = screen.getByLabelText('開始日')
+    const endInput = screen.getByLabelText('終了日')
+    await user.clear(startInput)
+    await user.type(startInput, '2026-01-01')
+    await user.clear(endInput)
+    await user.type(endInput, '2026-01-31')
+    expect(startInput).toHaveValue('2026-01-01')
+    expect(endInput).toHaveValue('2026-01-31')
+  })
+
   it('データ表示後に印刷ボタンが表示される', async () => {
     const user = userEvent.setup()
     mockApi.get.mockImplementation((path: string) => {

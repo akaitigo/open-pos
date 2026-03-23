@@ -423,4 +423,252 @@ describe('ProductsPage', () => {
       expect(screen.getByText('network error')).toBeInTheDocument()
     })
   })
+
+  it('エラー表示から再試行ボタンで再読込できる', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('network error'))
+
+    render(<ProductsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('商品カタログを読み込めませんでした')).toBeInTheDocument()
+    })
+
+    // 次はデータを返す
+    fetchSpy.mockImplementation((input) => {
+      const rawUrl = typeof input === 'string' ? input : (input as Request).url || input.toString()
+      const url = new URL(rawUrl)
+      if (url.pathname === '/api/categories') return jsonResponse([])
+      if (url.pathname === '/api/products')
+        return jsonResponse({
+          data: [],
+          pagination: { page: 1, pageSize: 100, totalCount: 0, totalPages: 0 },
+        })
+      if (url.pathname === '/api/inventory/stocks')
+        return jsonResponse({
+          data: [],
+          pagination: { page: 1, pageSize: 100, totalCount: 0, totalPages: 0 },
+        })
+      return Promise.reject(new Error('Unhandled'))
+    })
+
+    fireEvent.click(screen.getByText('再試行'))
+
+    await waitFor(() => {
+      expect(screen.getByText('商品が見つかりません')).toBeInTheDocument()
+    })
+  })
+
+  it('再読込ボタンでカタログが再読み込みされる', async () => {
+    const fetchSpy = mockFetchWith()
+
+    render(<ProductsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+
+    const callCountBefore = fetchSpy.mock.calls.length
+
+    fireEvent.click(screen.getByText('再読込'))
+
+    await waitFor(() => {
+      expect(fetchSpy.mock.calls.length).toBeGreaterThan(callCountBefore)
+    })
+  })
+
+  it('在庫残り少ない商品にバッジが表示される', async () => {
+    mockFetchWith({
+      stocks: mockStocks.map((stock) =>
+        stock.productId === mockProducts[1]!.id
+          ? { ...stock, quantity: 2, lowStockThreshold: 3 }
+          : stock,
+      ),
+    })
+
+    render(<ProductsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('残り 2')).toBeInTheDocument()
+    })
+  })
+
+  it('子カテゴリ選択で商品が絞り込まれる', async () => {
+    mockFetchWith()
+    const user = userEvent.setup()
+
+    render(<ProductsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'ドリンク' })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('tab', { name: 'ドリンク' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'ホットドリンク' })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('tab', { name: 'ホットドリンク' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+      expect(screen.queryByText('サンドイッチ')).not.toBeInTheDocument()
+    })
+  })
+
+  it('フィルタ解除ボタンが表示され、クリックで全商品が表示される', async () => {
+    mockFetchWith()
+
+    render(<ProductsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+
+    // 検索でフィルタ
+    fireEvent.change(screen.getByPlaceholderText('商品名・バーコードで検索...'), {
+      target: { value: 'コーヒー' },
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByText('サンドイッチ')).not.toBeInTheDocument()
+      expect(screen.getByText('フィルタ解除')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('フィルタ解除'))
+
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+      expect(screen.getByText('サンドイッチ')).toBeInTheDocument()
+    })
+  })
+
+  it('オープンプライス商品（price=0）は価格入力ダイアログを表示する', async () => {
+    const openPriceId = 'a0a0a0a0-0000-4000-a000-000000000099'
+    const openPriceProduct = {
+      ...mockProducts[0]!,
+      id: openPriceId,
+      name: 'オープン商品',
+      price: 0,
+    }
+    mockFetchWith({
+      products: [openPriceProduct],
+      stocks: [
+        {
+          id: 'b0b0b0b0-0000-4000-a000-000000000099',
+          organizationId: '00000000-0000-0000-0000-000000000000',
+          storeId: mockStoreId,
+          productId: openPriceId,
+          quantity: 10,
+          lowStockThreshold: 3,
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ],
+    })
+
+    render(<ProductsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('オープン商品')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('オープン商品'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/価格入力/)).toBeInTheDocument()
+      expect(
+        screen.getByText('オープンプライス商品です。販売価格を入力してください。'),
+      ).toBeInTheDocument()
+    })
+
+    // 価格を入力して送信
+    fireEvent.change(screen.getByPlaceholderText('0'), { target: { value: '500' } })
+    fireEvent.click(screen.getByText('カートに追加'))
+
+    const items = useCartStore.getState().items
+    expect(items).toHaveLength(1)
+    expect(items[0]!.product.price).toBe(50000) // 500円 = 50000銭
+  })
+
+  it('ページネーションの前へボタンで前ページに戻る', async () => {
+    mockFetchWith({
+      products: Array.from({ length: 30 }, (_, index) => createProduct(index)),
+      stocks: Array.from({ length: 30 }, (_, index) => ({
+        id: `99999999-0000-4000-a000-${String(index + 1).padStart(12, '0')}`,
+        organizationId: '00000000-0000-0000-0000-000000000000',
+        storeId: mockStoreId,
+        productId: createProduct(index).id,
+        quantity: 10,
+        lowStockThreshold: 3,
+        updatedAt: '2026-01-01T00:00:00Z',
+      })),
+    })
+
+    render(<ProductsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('1 / 2')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('次へ'))
+    await waitFor(() => {
+      expect(screen.getByText('2 / 2')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('前へ'))
+    await waitFor(() => {
+      expect(screen.getByText('1 / 2')).toBeInTheDocument()
+    })
+  })
+
+  it('Enter/Spaceキーで商品をカートに追加できる', async () => {
+    mockFetchWith()
+
+    render(<ProductsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+
+    const card = screen.getByTestId(`product-card-${mockProducts[0]!.id}`)
+    fireEvent.keyDown(card, { key: 'Enter' })
+
+    expect(useCartStore.getState().items).toHaveLength(1)
+  })
+
+  it('storeIdがnullの場合は在庫なしで商品が表示される', async () => {
+    useAuthStore.setState({ storeId: null })
+    mockFetchWith()
+
+    render(<ProductsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+    // 在庫切れバッジが表示されない（在庫データなし）
+    expect(screen.queryByText('在庫切れ')).not.toBeInTheDocument()
+  })
+
+  it('Errorインスタンスでないエラーの場合はデフォルトメッセージを表示する', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue('string error')
+
+    render(<ProductsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('商品カタログを読み込めませんでした')).toBeInTheDocument()
+      expect(
+        screen.getByText('ネットワークまたは API の状態を確認してください。'),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('商品がない場合は「商品が見つかりません」が表示される', async () => {
+    mockFetchWith({ products: [], stocks: [] })
+
+    render(<ProductsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('商品が見つかりません')).toBeInTheDocument()
+    })
+  })
 })

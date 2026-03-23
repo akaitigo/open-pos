@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router'
 import { Layout } from './layout'
@@ -276,5 +276,68 @@ describe('Layout', () => {
     expect(
       screen.getByText('organization、store、terminal のデモ設定が未構成です。'),
     ).toBeInTheDocument()
+  })
+
+  it('/cart パスではサイドバーが表示されない', () => {
+    useAuthStore.setState({
+      isAuthenticated: true,
+      staff: {
+        id: '00000000-0000-0000-0000-000000000001',
+        organizationId: '00000000-0000-0000-0000-000000000000',
+        storeId: '00000000-0000-0000-0000-000000000001',
+        name: 'テストスタッフ',
+        email: null,
+        role: 'CASHIER',
+        isActive: true,
+        failedPinAttempts: 0,
+        isLocked: false,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      storeId: '00000000-0000-0000-0000-000000000001',
+      storeName: 'テスト店舗',
+      terminalId: '00000000-0000-0000-0000-000000000001',
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/cart']}>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText('カートは空です')).not.toBeInTheDocument()
+  })
+
+  it('トレーニングモード切替ボタンでバナーが表示される', () => {
+    useAuthStore.setState({
+      isAuthenticated: true,
+      staff: {
+        id: '00000000-0000-0000-0000-000000000001',
+        organizationId: '00000000-0000-0000-0000-000000000000',
+        storeId: '00000000-0000-0000-0000-000000000001',
+        name: 'テストスタッフ',
+        email: null,
+        role: 'CASHIER',
+        isActive: true,
+        failedPinAttempts: 0,
+        isLocked: false,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      storeId: '00000000-0000-0000-0000-000000000001',
+      storeName: 'テスト店舗',
+      terminalId: '00000000-0000-0000-0000-000000000001',
+    })
+
+    render(
+      <MemoryRouter>
+        <Layout />
+      </MemoryRouter>,
+    )
+
+    // トレーニングボタンをクリック
+    fireEvent.click(screen.getByLabelText('トレーニングモード切替'))
+
+    expect(screen.getAllByText('TRAINING').length).toBeGreaterThanOrEqual(1)
   })
 })

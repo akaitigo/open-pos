@@ -260,6 +260,124 @@ describe('StoresPage', () => {
     expect(screen.getByText('1 / 3')).toBeInTheDocument()
   })
 
+  it('店舗取得エラー時にクラッシュしない', async () => {
+    mockApi.get.mockRejectedValue(new Error('取得エラー'))
+    renderPage()
+    expect(screen.getByText('店舗管理')).toBeInTheDocument()
+  })
+
+  it('店舗保存エラー時にクラッシュしない', async () => {
+    setupMocks()
+    mockApi.post.mockRejectedValue(new Error('保存エラー'))
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('渋谷店')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: '店舗を追加' }))
+    await waitFor(() => {
+      expect(screen.getByLabelText('店舗名 *')).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('店舗名 *'), { target: { value: '新宿店' } })
+    fireEvent.click(screen.getByRole('button', { name: '追加' }))
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalled()
+    })
+    expect(screen.getByText('店舗管理')).toBeInTheDocument()
+  })
+
+  it('端末取得エラー時にクラッシュしない', async () => {
+    mockApi.get.mockImplementation((path: string) => {
+      if (path === '/api/stores') {
+        return Promise.resolve({
+          data: [mockStore],
+          pagination: { page: 1, pageSize: 20, totalCount: 1, totalPages: 1 },
+        })
+      }
+      if (path.includes('/terminals')) return Promise.reject(new Error('端末取得エラー'))
+      return Promise.resolve([])
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('渋谷店')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('端末'))
+    await waitFor(() => {
+      expect(screen.getByText('渋谷店 — 端末管理')).toBeInTheDocument()
+    })
+  })
+
+  it('端末登録エラー時にクラッシュしない', async () => {
+    setupMocks()
+    mockApi.post.mockRejectedValue(new Error('端末登録エラー'))
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('渋谷店')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('端末'))
+    await waitFor(() => {
+      expect(screen.getByText('渋谷店 — 端末管理')).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('端末コード'), { target: { value: 'POS-X' } })
+    fireEvent.change(screen.getByLabelText('端末名'), { target: { value: 'テスト端末' } })
+    fireEvent.click(screen.getByRole('button', { name: '登録' }))
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalled()
+    })
+  })
+
+  it('前へボタンでページが戻る', async () => {
+    let callCount = 0
+    mockApi.get.mockImplementation((path: string) => {
+      if (path === '/api/stores') {
+        callCount++
+        return Promise.resolve({
+          data: [mockStore],
+          pagination: { page: callCount <= 1 ? 1 : 2, pageSize: 20, totalCount: 40, totalPages: 2 },
+        })
+      }
+      if (path.includes('/terminals')) return Promise.resolve(mockTerminals)
+      return Promise.resolve([])
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('次へ')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('次へ'))
+    await waitFor(() => {
+      expect(mockApi.get).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('店舗フォームの全フィールドを入力して送信する', async () => {
+    setupMocks()
+    mockApi.post.mockResolvedValue(mockStore)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('渋谷店')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: '店舗を追加' }))
+    await waitFor(() => {
+      expect(screen.getByLabelText('店舗名 *')).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('店舗名 *'), { target: { value: '新宿店' } })
+    fireEvent.change(screen.getByLabelText('住所'), { target: { value: '東京都新宿区' } })
+    fireEvent.change(screen.getByLabelText('電話番号'), { target: { value: '03-9999-9999' } })
+    fireEvent.change(screen.getByLabelText('タイムゾーン'), { target: { value: 'Asia/Tokyo' } })
+    fireEvent.click(screen.getByRole('button', { name: '追加' }))
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith(
+        '/api/stores',
+        expect.objectContaining({
+          name: '新宿店',
+          address: '東京都新宿区',
+          phone: '03-9999-9999',
+          timezone: 'Asia/Tokyo',
+        }),
+        expect.anything(),
+      )
+    })
+  })
+
   it('キャンセルボタンでダイアログを閉じる', async () => {
     setupMocks()
     renderPage()

@@ -237,4 +237,90 @@ describe('OnboardingPage', () => {
     // Assert
     expect(screen.getByTestId('input-product-1')).toBeInTheDocument()
   })
+
+  it('STORE_SETUP ステップで住所・電話番号を入力できる', async () => {
+    const user = userEvent.setup()
+    render(<OnboardingPage />)
+    await user.type(screen.getByTestId('input-org-name'), 'テスト組織')
+    await user.click(screen.getByTestId('step-next'))
+    await waitFor(() => expect(screen.getByTestId('input-store-name')).toBeInTheDocument())
+
+    await user.type(screen.getByTestId('input-store-name'), 'テスト店舗')
+    await user.type(screen.getByTestId('input-store-address'), '東京都渋谷区')
+    await user.type(screen.getByTestId('input-store-phone'), '03-1234-5678')
+
+    expect(screen.getByTestId('input-store-address')).toHaveValue('東京都渋谷区')
+    expect(screen.getByTestId('input-store-phone')).toHaveValue('03-1234-5678')
+  })
+
+  it('PRODUCTS ステップで商品名を入力して変更できる', async () => {
+    const user = userEvent.setup()
+    render(<OnboardingPage />)
+    await user.type(screen.getByTestId('input-org-name'), 'テスト組織')
+    await user.click(screen.getByTestId('step-next'))
+    await waitFor(() => expect(screen.getByTestId('input-store-name')).toBeInTheDocument())
+    await user.type(screen.getByTestId('input-store-name'), 'テスト店舗')
+    await user.click(screen.getByTestId('step-next'))
+    await waitFor(() => expect(screen.getByTestId('input-product-0')).toBeInTheDocument())
+
+    await user.type(screen.getByTestId('input-product-0'), 'コーヒー')
+    expect(screen.getByTestId('input-product-0')).toHaveValue('コーヒー')
+  })
+
+  it('プロビジョニング完了後にダッシュボードへボタンが表示される', async () => {
+    const user = userEvent.setup()
+    mockPost
+      .mockResolvedValueOnce({
+        id: 'org-001',
+        name: 'テスト',
+        businessType: 'RETAIL',
+        invoiceNumber: null,
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      })
+      .mockResolvedValueOnce({
+        id: 'store-001',
+        organizationId: 'org-001',
+        name: 'テスト店舗',
+        address: null,
+        phone: null,
+        timezone: 'Asia/Tokyo',
+        settings: '{}',
+        isActive: true,
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      })
+      .mockResolvedValueOnce({
+        id: 'staff-001',
+        organizationId: 'org-001',
+        storeId: 'store-001',
+        name: '山田太郎',
+        email: 'test@example.com',
+        role: 'OWNER',
+        isActive: true,
+        failedPinAttempts: 0,
+        isLocked: false,
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      })
+
+    render(<OnboardingPage />)
+    await user.type(screen.getByTestId('input-org-name'), 'テスト組織')
+    await user.click(screen.getByTestId('step-next'))
+    await waitFor(() => expect(screen.getByTestId('input-store-name')).toBeInTheDocument())
+    await user.type(screen.getByTestId('input-store-name'), 'テスト店舗')
+    await user.click(screen.getByTestId('step-next'))
+    await waitFor(() => expect(screen.getByTestId('input-product-0')).toBeInTheDocument())
+    await user.click(screen.getByTestId('step-next'))
+    await waitFor(() => expect(screen.getByTestId('input-staff-name')).toBeInTheDocument())
+    await user.type(screen.getByTestId('input-staff-name'), '山田太郎')
+    await user.type(screen.getByTestId('input-staff-email'), 'test@example.com')
+    await user.type(screen.getByTestId('input-staff-pin'), '1234')
+    await user.click(screen.getByTestId('step-next'))
+    await waitFor(() => expect(screen.getByTestId('review-summary')).toBeInTheDocument())
+    await user.click(screen.getByTestId('complete-setup'))
+
+    await waitFor(() => expect(screen.getByTestId('onboarding-complete')).toBeInTheDocument())
+    expect(screen.getByTestId('go-to-dashboard')).toBeInTheDocument()
+  })
 })

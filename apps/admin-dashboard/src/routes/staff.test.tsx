@@ -270,4 +270,99 @@ describe('StaffPage', () => {
     })
     expect(screen.getByText('有効')).toBeInTheDocument()
   })
+
+  it('ページネーションが2ページ以上の場合にボタンを表示する', async () => {
+    mockApi.get.mockImplementation((path: string) => {
+      if (path === '/api/stores') return Promise.resolve(mockStores)
+      if (path === '/api/staff') {
+        return Promise.resolve({
+          data: mockStaff,
+          pagination: { page: 1, pageSize: 20, totalCount: 40, totalPages: 2 },
+        })
+      }
+      return Promise.resolve([])
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('田中太郎')).toBeInTheDocument()
+    })
+    expect(screen.getByText('前へ')).toBeInTheDocument()
+    expect(screen.getByText('次へ')).toBeInTheDocument()
+    expect(screen.getByText('1 / 2')).toBeInTheDocument()
+  })
+
+  it('次へボタンでページ遷移する', async () => {
+    mockApi.get.mockImplementation((path: string) => {
+      if (path === '/api/stores') return Promise.resolve(mockStores)
+      if (path === '/api/staff') {
+        return Promise.resolve({
+          data: mockStaff,
+          pagination: { page: 1, pageSize: 20, totalCount: 40, totalPages: 2 },
+        })
+      }
+      return Promise.resolve([])
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('次へ')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('次へ'))
+    await waitFor(() => {
+      // stores + staff page 1 + staff page 2
+      expect(mockApi.get).toHaveBeenCalledTimes(3)
+    })
+  })
+
+  it('キャンセルボタンでダイアログを閉じる', async () => {
+    setupMocks()
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('田中太郎')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'スタッフを追加' }))
+    await waitFor(() => {
+      expect(
+        screen.getByText('スタッフを追加', { selector: '[class*="DialogTitle"], h2' }),
+      ).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('キャンセル'))
+    await waitFor(() => {
+      expect(
+        screen.queryByText('スタッフを追加', { selector: '[class*="DialogTitle"], h2' }),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it('スタッフ保存エラー時にクラッシュしない', async () => {
+    setupMocks()
+    mockApi.post.mockRejectedValue(new Error('保存失敗'))
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('田中太郎')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'スタッフを追加' }))
+    await waitFor(() => {
+      expect(
+        screen.getByText('スタッフを追加', { selector: '[class*="DialogTitle"], h2' }),
+      ).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('名前 *'), { target: { value: '山田太郎' } })
+    fireEvent.change(screen.getByLabelText(/PIN/), { target: { value: '1234' } })
+    fireEvent.click(screen.getByRole('button', { name: '追加' }))
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalled()
+    })
+    // ページがクラッシュしていないことを確認
+    expect(screen.getByText('スタッフ管理')).toBeInTheDocument()
+  })
+
+  it('スタッフ取得エラー時にクラッシュしない', async () => {
+    mockApi.get.mockImplementation((path: string) => {
+      if (path === '/api/stores') return Promise.resolve(mockStores)
+      if (path === '/api/staff') return Promise.reject(new Error('取得失敗'))
+      return Promise.resolve([])
+    })
+    renderPage()
+    expect(screen.getByText('スタッフ管理')).toBeInTheDocument()
+  })
 })

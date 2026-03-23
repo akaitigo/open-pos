@@ -158,4 +158,121 @@ describe('HistoryPage', () => {
     render(<HistoryPage />)
     expect(mockApiGet).not.toHaveBeenCalled()
   })
+
+  it('VOIDED ステータスが「取消」と表示される', async () => {
+    const voidedTx = {
+      ...mockTransaction,
+      id: 'tx-v',
+      transactionNumber: 'TX-VOID',
+      status: 'VOIDED',
+    }
+    mockApiGet.mockResolvedValue({
+      data: [voidedTx],
+      pagination: { page: 1, pageSize: 20, totalCount: 1, totalPages: 1 },
+    })
+    render(<HistoryPage />)
+    await waitFor(() => {
+      expect(screen.getAllByText('取消').length).toBeGreaterThanOrEqual(1)
+    })
+    // VOIDED 取引にはレシートボタンが表示されない
+    expect(screen.queryByTestId('receipt-btn-tx-v')).not.toBeInTheDocument()
+  })
+
+  it('完了取引に領収書発行ボタンが表示される', async () => {
+    mockApiGet.mockResolvedValue({
+      data: [mockTransaction],
+      pagination: { page: 1, pageSize: 20, totalCount: 1, totalPages: 1 },
+    })
+    render(<HistoryPage />)
+    await waitFor(() => {
+      expect(screen.getAllByText('領収書発行').length).toBeGreaterThanOrEqual(1)
+    })
+  })
+
+  it('レシート取得に失敗した場合はダイアログが表示されない', async () => {
+    mockApiGet
+      .mockResolvedValueOnce({
+        data: [mockTransaction],
+        pagination: { page: 1, pageSize: 20, totalCount: 1, totalPages: 1 },
+      })
+      .mockRejectedValueOnce(new Error('receipt error'))
+
+    render(<HistoryPage />)
+    await waitFor(() => {
+      expect(screen.getAllByText('レシート').length).toBeGreaterThanOrEqual(1)
+    })
+    await userEvent.click(screen.getAllByText('レシート')[0]!)
+    // ダイアログが表示されない（エラーはキャッチされるだけ）
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledTimes(2)
+    })
+    expect(screen.queryByText('テストレシートデータ')).not.toBeInTheDocument()
+  })
+
+  it('領収書発行ボタンでレシートダイアログが開く', async () => {
+    mockApiGet
+      .mockResolvedValueOnce({
+        data: [mockTransaction],
+        pagination: { page: 1, pageSize: 20, totalCount: 1, totalPages: 1 },
+      })
+      .mockResolvedValueOnce({
+        id: 'r-2',
+        transactionId: 'tx-1',
+        receiptData: '領収書データ',
+      })
+
+    render(<HistoryPage />)
+    await waitFor(() => {
+      expect(screen.getAllByText('領収書発行').length).toBeGreaterThanOrEqual(1)
+    })
+    await userEvent.click(screen.getAllByText('領収書発行')[0]!)
+    await waitFor(() => {
+      expect(screen.getByText('領収書データ')).toBeInTheDocument()
+    })
+  })
+
+  it('前へボタンで前のページに戻る', async () => {
+    mockApiGet.mockResolvedValue({
+      data: [mockTransaction],
+      pagination: { page: 1, pageSize: 20, totalCount: 40, totalPages: 2 },
+    })
+    render(<HistoryPage />)
+    await waitFor(() => {
+      expect(screen.getByText('次へ')).toBeInTheDocument()
+    })
+    await userEvent.click(screen.getByText('次へ'))
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledTimes(2)
+    })
+    await userEvent.click(screen.getByText('前へ'))
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledTimes(3)
+    })
+  })
+
+  it('レシートダイアログを閉じるとレシートデータがクリアされる', async () => {
+    mockApiGet
+      .mockResolvedValueOnce({
+        data: [mockTransaction],
+        pagination: { page: 1, pageSize: 20, totalCount: 1, totalPages: 1 },
+      })
+      .mockResolvedValueOnce({
+        id: 'r-1',
+        transactionId: 'tx-1',
+        receiptData: 'テストレシートデータ',
+      })
+    render(<HistoryPage />)
+    await waitFor(() => {
+      expect(screen.getAllByText('レシート').length).toBeGreaterThanOrEqual(1)
+    })
+    await userEvent.click(screen.getAllByText('レシート')[0]!)
+    await waitFor(() => {
+      expect(screen.getByText('テストレシートデータ')).toBeInTheDocument()
+    })
+    // 閉じるボタンをクリック
+    await userEvent.click(screen.getByText('閉じる'))
+    await waitFor(() => {
+      expect(screen.queryByText('テストレシートデータ')).not.toBeInTheDocument()
+    })
+  })
 })
