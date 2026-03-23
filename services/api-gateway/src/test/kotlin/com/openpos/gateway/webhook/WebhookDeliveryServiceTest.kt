@@ -430,4 +430,135 @@ class WebhookDeliveryServiceTest {
             assertEquals(1, results.size)
         }
     }
+
+    @Nested
+    inner class RetryPendingDeliveries {
+        @Test
+        fun `retries deliveries with past nextRetryAt`() {
+            // Arrange
+            val webhook =
+                WebhookRegistration(
+                    organizationId = orgId,
+                    url = "https://invalid.example.com/webhook",
+                    events = listOf("sale.completed"),
+                    secret = "secret",
+                    isActive = true,
+                )
+            webhookStore.register(webhook)
+
+            val delivery =
+                WebhookDelivery(
+                    webhookId = webhook.id,
+                    eventType = "sale.completed",
+                    payload = """{"test":true}""",
+                    status = DeliveryStatus.RETRYING,
+                    attemptCount = 1,
+                    maxRetries = 5,
+                    nextRetryAt = Instant.now().minusSeconds(60),
+                )
+            webhookStore.recordDelivery(delivery)
+
+            // Act
+            val retried = deliveryService.retryPendingDeliveries()
+
+            // Assert
+            assertEquals(1, retried)
+        }
+
+        @Test
+        fun `skips retries for inactive webhooks`() {
+            // Arrange
+            val webhook =
+                WebhookRegistration(
+                    organizationId = orgId,
+                    url = "https://invalid.example.com/webhook",
+                    events = listOf("sale.completed"),
+                    secret = "secret",
+                    isActive = false,
+                )
+            webhookStore.register(webhook)
+
+            val delivery =
+                WebhookDelivery(
+                    webhookId = webhook.id,
+                    eventType = "sale.completed",
+                    payload = """{"test":true}""",
+                    status = DeliveryStatus.RETRYING,
+                    attemptCount = 1,
+                    maxRetries = 5,
+                    nextRetryAt = Instant.now().minusSeconds(60),
+                )
+            webhookStore.recordDelivery(delivery)
+
+            // Act
+            val retried = deliveryService.retryPendingDeliveries()
+
+            // Assert — skipped because webhook is inactive
+            assertEquals(0, retried)
+        }
+
+        @Test
+        fun `filters by organizationId when provided`() {
+            // Arrange
+            val otherOrgId = UUID.randomUUID()
+            val webhook =
+                WebhookRegistration(
+                    organizationId = orgId,
+                    url = "https://invalid.example.com/webhook",
+                    events = listOf("sale.completed"),
+                    secret = "secret",
+                    isActive = true,
+                )
+            webhookStore.register(webhook)
+
+            val delivery =
+                WebhookDelivery(
+                    webhookId = webhook.id,
+                    eventType = "sale.completed",
+                    payload = """{"test":true}""",
+                    status = DeliveryStatus.RETRYING,
+                    attemptCount = 1,
+                    maxRetries = 5,
+                    nextRetryAt = Instant.now().minusSeconds(60),
+                )
+            webhookStore.recordDelivery(delivery)
+
+            // Act — filter by a different org
+            val retried = deliveryService.retryPendingDeliveries(otherOrgId)
+
+            // Assert — skipped because org doesn't match
+            assertEquals(0, retried)
+        }
+
+        @Test
+        fun `returns zero when no pending retries`() {
+            // Act
+            val retried = deliveryService.retryPendingDeliveries()
+
+            // Assert
+            assertEquals(0, retried)
+        }
+
+        @Test
+        fun `skips delivery when webhook not found`() {
+            // Arrange
+            val delivery =
+                WebhookDelivery(
+                    webhookId = UUID.randomUUID(),
+                    eventType = "sale.completed",
+                    payload = """{"test":true}""",
+                    status = DeliveryStatus.RETRYING,
+                    attemptCount = 1,
+                    maxRetries = 5,
+                    nextRetryAt = Instant.now().minusSeconds(60),
+                )
+            webhookStore.recordDelivery(delivery)
+
+            // Act
+            val retried = deliveryService.retryPendingDeliveries()
+
+            // Assert
+            assertEquals(0, retried)
+        }
+    }
 }
