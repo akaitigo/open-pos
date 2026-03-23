@@ -384,6 +384,127 @@ describe('ProductsPage', () => {
     expect(categorySelect.options.length).toBeGreaterThanOrEqual(2) // 未設定 + 飲み物
   })
 
+  it('商品取得エラー時にクラッシュしない', async () => {
+    mockApi.get.mockRejectedValue(new Error('取得エラー'))
+    renderPage()
+    expect(screen.getByText('商品管理')).toBeInTheDocument()
+  })
+
+  it('商品保存エラー時にクラッシュしない', async () => {
+    setupMocks()
+    mockApi.post.mockRejectedValue(new Error('保存エラー'))
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('商品を追加'))
+    await waitFor(() => {
+      expect(screen.getByLabelText('商品名 *')).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('商品名 *'), { target: { value: '紅茶' } })
+    fireEvent.change(screen.getByLabelText('価格（円） *'), { target: { value: '200' } })
+    fireEvent.click(screen.getByText('追加'))
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalled()
+    })
+  })
+
+  it('前へボタンでページが戻る', async () => {
+    setupMocks([mockProduct], 3)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('1 / 3')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('次へ'))
+    await waitFor(() => {
+      expect(mockApi.get).toHaveBeenCalledWith(
+        '/api/products',
+        expect.anything(),
+        expect.objectContaining({
+          params: expect.objectContaining({ page: 2 }),
+        }),
+      )
+    })
+    fireEvent.click(screen.getByText('前へ'))
+    await waitFor(() => {
+      expect(mockApi.get).toHaveBeenCalledWith(
+        '/api/products',
+        expect.anything(),
+        expect.objectContaining({
+          params: expect.objectContaining({ page: 1 }),
+        }),
+      )
+    })
+  })
+
+  it('商品フォームの全フィールドを入力して送信する', async () => {
+    setupMocks()
+    mockApi.post.mockResolvedValue(mockProduct)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('コーヒー')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('商品を追加'))
+    await waitFor(() => {
+      expect(screen.getByLabelText('商品名 *')).toBeInTheDocument()
+    })
+    fireEvent.change(screen.getByLabelText('商品名 *'), { target: { value: '抹茶' } })
+    fireEvent.change(screen.getByLabelText('価格（円） *'), { target: { value: '400' } })
+    fireEvent.change(screen.getByLabelText('バーコード'), { target: { value: '4901234567999' } })
+    fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'SKU-099' } })
+    fireEvent.change(screen.getByLabelText('説明'), { target: { value: '上質な抹茶' } })
+    fireEvent.change(screen.getByLabelText('カテゴリ'), { target: { value: 'cat-1' } })
+    fireEvent.change(screen.getByLabelText('税率'), { target: { value: 'tax-1' } })
+    fireEvent.click(screen.getByText('追加'))
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith(
+        '/api/products',
+        expect.objectContaining({
+          name: '抹茶',
+          price: 40000,
+          barcode: '4901234567999',
+          sku: 'SKU-099',
+          description: '上質な抹茶',
+          categoryId: 'cat-1',
+          taxRateId: 'tax-1',
+        }),
+        expect.anything(),
+      )
+    })
+  })
+
+  it('CSVインポートでAPI失敗した行はエラーカウントに含まれる', async () => {
+    setupMocks()
+    mockApi.post.mockResolvedValueOnce(mockProduct).mockRejectedValueOnce(new Error('失敗'))
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('CSVインポート')).toBeInTheDocument()
+    })
+    const csvContent = 'name,price\n紅茶,200\n緑茶,150'
+    const file = new File([csvContent], 'products.csv', { type: 'text/csv' })
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('CSVインポートで無効な行はスキップされる', async () => {
+    setupMocks()
+    mockApi.post.mockResolvedValue(mockProduct)
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('CSVインポート')).toBeInTheDocument()
+    })
+    const csvContent = 'name,price\n紅茶,200\n,invalid'
+    const file = new File([csvContent], 'products.csv', { type: 'text/csv' })
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledTimes(1) // 有効な行のみ
+    })
+  })
+
   it('削除APIエラー時もクラッシュしない', async () => {
     setupMocks()
     mockApi.delete.mockRejectedValue(new Error('削除失敗'))

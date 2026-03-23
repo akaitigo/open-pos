@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { EscPosBuilder } from './escpos'
 
 describe('EscPosBuilder', () => {
@@ -114,5 +114,76 @@ describe('connectPrinter', () => {
   it('throws when Web Serial API is not available', async () => {
     const { connectPrinter } = await import('./escpos')
     await expect(connectPrinter()).rejects.toThrow('Web Serial API')
+  })
+
+  it('connects and returns writer when Web Serial API is available', async () => {
+    const mockWriter = { write: vi.fn(), releaseLock: vi.fn() }
+    const mockPort = {
+      open: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+      writable: { getWriter: () => mockWriter },
+    }
+    Object.defineProperty(navigator, 'serial', {
+      value: { requestPort: vi.fn().mockResolvedValue(mockPort) },
+      configurable: true,
+      writable: true,
+    })
+
+    const { connectPrinter } = await import('./escpos')
+    const connection = await connectPrinter(9600)
+    expect(connection.port).toBe(mockPort)
+    expect(connection.writer).toBe(mockWriter)
+    expect(mockPort.open).toHaveBeenCalledWith({ baudRate: 9600 })
+
+    // Cleanup
+    delete (navigator as unknown as Record<string, unknown>).serial
+  })
+
+  it('throws when writable is null', async () => {
+    const mockPort = {
+      open: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+      writable: null,
+    }
+    Object.defineProperty(navigator, 'serial', {
+      value: { requestPort: vi.fn().mockResolvedValue(mockPort) },
+      configurable: true,
+      writable: true,
+    })
+
+    const { connectPrinter } = await import('./escpos')
+    await expect(connectPrinter()).rejects.toThrow('書き込みストリーム')
+
+    delete (navigator as unknown as Record<string, unknown>).serial
+  })
+})
+
+describe('sendToPrinter', () => {
+  it('writes data to the printer connection', async () => {
+    const { sendToPrinter } = await import('./escpos')
+    const mockWriter = { write: vi.fn().mockResolvedValue(undefined), releaseLock: vi.fn() }
+    const mockPort = { close: vi.fn() }
+    const connection = {
+      port: mockPort,
+      writer: mockWriter,
+    } as unknown as import('./escpos').PrinterConnection
+    const data = new Uint8Array([0x1b, 0x40])
+    await sendToPrinter(connection, data)
+    expect(mockWriter.write).toHaveBeenCalledWith(data)
+  })
+})
+
+describe('disconnectPrinter', () => {
+  it('releases writer lock and closes port', async () => {
+    const { disconnectPrinter } = await import('./escpos')
+    const mockWriter = { write: vi.fn(), releaseLock: vi.fn() }
+    const mockPort = { close: vi.fn().mockResolvedValue(undefined) }
+    const connection = {
+      port: mockPort,
+      writer: mockWriter,
+    } as unknown as import('./escpos').PrinterConnection
+    await disconnectPrinter(connection)
+    expect(mockWriter.releaseLock).toHaveBeenCalled()
+    expect(mockPort.close).toHaveBeenCalled()
   })
 })

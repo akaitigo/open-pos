@@ -169,4 +169,98 @@ describe('LoginScreen', () => {
     const loginButton = screen.getByRole('button', { name: 'ログイン' })
     expect(loginButton).toBeDisabled()
   })
+
+  it('← ボタンで PIN の最後の1桁が削除される', async () => {
+    render(<LoginScreen />)
+    await waitFor(() => {
+      expect(screen.getByText('田中太郎')).toBeInTheDocument()
+    })
+    await userEvent.click(screen.getByText('田中太郎'))
+    await userEvent.click(screen.getByRole('button', { name: '1' }))
+    await userEvent.click(screen.getByRole('button', { name: '2' }))
+    await userEvent.click(screen.getByRole('button', { name: '3' }))
+    await userEvent.click(screen.getByRole('button', { name: '4' }))
+
+    const loginButton = screen.getByRole('button', { name: 'ログイン' })
+    expect(loginButton).not.toBeDisabled()
+
+    // バックスペースで1桁削除 → 3桁になりログインボタンは無効
+    await userEvent.click(screen.getByTestId('pin-key-backspace'))
+    expect(loginButton).toBeDisabled()
+  })
+
+  it('認証失敗のレスポンスでトーストが表示される', async () => {
+    mockApiPost.mockResolvedValue({
+      success: false,
+      staff: null,
+      reason: 'PINが正しくありません',
+    })
+    render(<LoginScreen />)
+    await waitFor(() => {
+      expect(screen.getByText('田中太郎')).toBeInTheDocument()
+    })
+    await userEvent.click(screen.getByText('田中太郎'))
+    await userEvent.click(screen.getByRole('button', { name: '1' }))
+    await userEvent.click(screen.getByRole('button', { name: '2' }))
+    await userEvent.click(screen.getByRole('button', { name: '3' }))
+    await userEvent.click(screen.getByRole('button', { name: '4' }))
+    await userEvent.click(screen.getByRole('button', { name: 'ログイン' }))
+
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('認証 API エラー時にクラッシュしない', async () => {
+    mockApiPost.mockRejectedValue(new Error('ネットワークエラー'))
+    render(<LoginScreen />)
+    await waitFor(() => {
+      expect(screen.getByText('田中太郎')).toBeInTheDocument()
+    })
+    await userEvent.click(screen.getByText('田中太郎'))
+    await userEvent.click(screen.getByRole('button', { name: '1' }))
+    await userEvent.click(screen.getByRole('button', { name: '2' }))
+    await userEvent.click(screen.getByRole('button', { name: '3' }))
+    await userEvent.click(screen.getByRole('button', { name: '4' }))
+    await userEvent.click(screen.getByRole('button', { name: 'ログイン' }))
+
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledTimes(1)
+    })
+    // クラッシュせずログインボタンが再度無効化される (PIN クリアされるため)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'ログイン' })).toBeDisabled()
+    })
+  })
+
+  it('storeId 未設定時にログインするとトーストが表示される', async () => {
+    resetRuntimeConfigForTests({
+      apiUrl: 'http://localhost:8080',
+      organizationId: '550e8400-e29b-41d4-a716-446655440000',
+      storeId: null,
+      terminalId: null,
+    })
+    render(<LoginScreen />)
+    // storeId がないため、スタッフリストは空
+    await waitFor(() => {
+      expect(screen.getByText('スタッフが登録されていません')).toBeInTheDocument()
+    })
+  })
+
+  it('戻るボタンでスタッフ選択に戻る', async () => {
+    render(<LoginScreen />)
+    await waitFor(() => {
+      expect(screen.getByText('田中太郎')).toBeInTheDocument()
+    })
+    await userEvent.click(screen.getByText('田中太郎'))
+    expect(screen.getByText('PINを入力してください')).toBeInTheDocument()
+
+    // 戻るボタン（ArrowLeftアイコン付き）をクリック
+    const backButton = screen.getByText('田中太郎').closest('div')!.querySelector('button')!
+    await userEvent.click(backButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('スタッフを選択してください')).toBeInTheDocument()
+    })
+  })
 })

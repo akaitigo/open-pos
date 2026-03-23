@@ -74,4 +74,44 @@ describe('ReceiptDialog', () => {
     render(<ReceiptDialog open={true} receiptData={null} onClose={vi.fn()} />)
     expect(screen.getByText('レシート')).toBeInTheDocument()
   })
+
+  it('お預かり・お釣り情報を表示する', () => {
+    const receiptData = [
+      '渋谷本店',
+      '取引番号: TX-002',
+      '日時: 2026-03-15 14:30',
+      '',
+      'ドリップコーヒー 1 x 300 300',
+      '',
+      '小計: 300',
+      '税額: 30',
+      '合計: 330',
+      '',
+      '現金: 330',
+      'お預かり: 500',
+      'お釣り: 170',
+    ].join('\n')
+
+    render(<ReceiptDialog open={true} receiptData={receiptData} onClose={vi.fn()} />)
+
+    expect(screen.getByText('お預かり')).toBeInTheDocument()
+    expect(screen.getByText('お釣り')).toBeInTheDocument()
+  })
+
+  it('取引番号なし・日時なしのレシートを表示する', () => {
+    const receiptData = [
+      '店舗A',
+      '',
+      'コーヒー 1 x 200 200',
+      '',
+      '小計: 200',
+      '税額: 20',
+      '合計: 220',
+    ].join('\n')
+
+    render(<ReceiptDialog open={true} receiptData={receiptData} onClose={vi.fn()} />)
+
+    expect(screen.getByText('店舗A')).toBeInTheDocument()
+    expect(screen.getByText('コーヒー')).toBeInTheDocument()
+  })
 })
