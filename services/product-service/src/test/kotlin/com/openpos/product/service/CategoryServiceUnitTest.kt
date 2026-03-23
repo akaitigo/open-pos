@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -130,6 +131,30 @@ class CategoryServiceUnitTest {
             assertEquals("From DB", result[0].name)
             verify(cacheService).set(eq(cacheKey), any(), eq(3600L))
         }
+
+        @Test
+        fun `handles cache write failure gracefully for listByParentId`() {
+            val cacheKey = "openpos:product-service:$orgId:category:list:null"
+            whenever(cacheService.categoryListKey(eq(null))).thenReturn(cacheKey)
+            whenever(cacheService.get(cacheKey)).thenReturn(null)
+            doThrow(RuntimeException("Redis down")).whenever(cacheService).set(any(), any(), any())
+
+            val dbCategories =
+                listOf(
+                    CategoryEntity().apply {
+                        this.id = UUID.randomUUID()
+                        this.organizationId = orgId
+                        this.name = "Fallback"
+                        this.displayOrder = 1
+                    },
+                )
+            whenever(categoryRepository.findByParentId(null)).thenReturn(dbCategories)
+
+            val result = service.listByParentId(null)
+
+            assertEquals(1, result.size)
+            assertEquals("Fallback", result[0].name)
+        }
     }
 
     @Nested
@@ -205,6 +230,29 @@ class CategoryServiceUnitTest {
         }
 
         @Test
+        fun `handles cache write failure gracefully for findById`() {
+            val categoryId = UUID.randomUUID()
+            val cacheKey = "openpos:product-service:$orgId:category:$categoryId"
+            whenever(cacheService.categoryKey(eq(categoryId.toString()))).thenReturn(cacheKey)
+            whenever(cacheService.get(cacheKey)).thenReturn(null)
+            doThrow(RuntimeException("Redis down")).whenever(cacheService).set(any(), any(), any())
+
+            val entity =
+                CategoryEntity().apply {
+                    this.id = categoryId
+                    this.organizationId = orgId
+                    this.name = "Fallback Entity"
+                    this.displayOrder = 1
+                }
+            whenever(categoryRepository.findById(categoryId)).thenReturn(entity)
+
+            val result = service.findById(categoryId)
+
+            assertNotNull(result)
+            assertEquals("Fallback Entity", result?.name)
+        }
+
+        @Test
         fun `returns null when not found in DB on cache miss`() {
             val categoryId = UUID.randomUUID()
             val cacheKey = "openpos:product-service:$orgId:category:$categoryId"
@@ -261,6 +309,19 @@ class CategoryServiceUnitTest {
     }
 
     @Nested
+    inner class UpdateNotFound {
+        @Test
+        fun `returns null when category not found`() {
+            val categoryId = UUID.randomUUID()
+            whenever(categoryRepository.findById(categoryId)).thenReturn(null)
+
+            val result = service.update(categoryId, "New", null, null, null, null)
+
+            assertNull(result)
+        }
+    }
+
+    @Nested
     inner class DeleteTest {
         @Test
         fun `deletes category and invalidates cache`() {
@@ -279,6 +340,16 @@ class CategoryServiceUnitTest {
 
             assertEquals(true, result)
             verify(cacheService).invalidateCategory(categoryId.toString())
+        }
+
+        @Test
+        fun `returns false when category not found`() {
+            val categoryId = UUID.randomUUID()
+            whenever(categoryRepository.findById(categoryId)).thenReturn(null)
+
+            val result = service.delete(categoryId)
+
+            assertEquals(false, result)
         }
     }
 }

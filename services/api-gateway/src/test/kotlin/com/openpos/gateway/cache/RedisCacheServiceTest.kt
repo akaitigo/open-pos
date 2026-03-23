@@ -2,6 +2,7 @@ package com.openpos.gateway.cache
 
 import io.quarkus.redis.datasource.RedisDataSource
 import io.quarkus.redis.datasource.keys.KeyCommands
+import io.quarkus.redis.datasource.keys.KeyScanCursor
 import io.quarkus.redis.datasource.value.ValueCommands
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -98,16 +99,42 @@ class RedisCacheServiceTest {
             redisCacheService.invalidate()
             verify(keyCommands, never()).del(any<String>())
         }
+
+        @Test
+        fun `Redis例外時は例外をスローせずログ出力する`() {
+            whenever(keyCommands.del(any<String>())).thenThrow(RuntimeException("Connection refused"))
+            redisCacheService.invalidate("openpos:product:123")
+        }
     }
 
     @Nested
     inner class InvalidatePattern {
         @Test
-        fun `Redis例外時はスローせずログ出力する`() {
-            // Arrange: scan が例外を投げる場合
-            whenever(keyCommands.scan(any())).thenThrow(RuntimeException("Connection refused"))
+        fun `SCANでキーを取得して削除する`() {
+            val cursor: KeyScanCursor<String> = mock()
+            whenever(keyCommands.scan(any())).thenReturn(cursor)
+            whenever(cursor.hasNext()).thenReturn(true, false)
+            whenever(cursor.next()).thenReturn(setOf("key1", "key2"))
 
-            // Act (should not throw)
+            redisCacheService.invalidatePattern("openpos:product:*")
+
+            verify(keyCommands).del("key1", "key2")
+        }
+
+        @Test
+        fun `SCANでキーが空の場合はdelが呼ばれない`() {
+            val cursor: KeyScanCursor<String> = mock()
+            whenever(keyCommands.scan(any())).thenReturn(cursor)
+            whenever(cursor.hasNext()).thenReturn(false)
+
+            redisCacheService.invalidatePattern("openpos:product:*")
+
+            verify(keyCommands, never()).del(any<String>())
+        }
+
+        @Test
+        fun `Redis例外時はスローせずログ出力する`() {
+            whenever(keyCommands.scan(any())).thenThrow(RuntimeException("Connection refused"))
             redisCacheService.invalidatePattern("openpos:product:*")
         }
     }
