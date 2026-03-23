@@ -236,7 +236,7 @@ describe('CartPanel', () => {
           id: 'parked-1',
           items: [{ product: mockProduct, quantity: 3 }],
           label: '保留取引 #1',
-          parkedAt: Date.now(),
+          parkedAt: new Date().toISOString(),
         },
       ],
     })
@@ -259,7 +259,7 @@ describe('CartPanel', () => {
         id: `parked-${i}`,
         items: [{ product: mockProduct, quantity: 1 }],
         label: `保留取引 #${i + 1}`,
-        parkedAt: Date.now(),
+        parkedAt: new Date().toISOString(),
       })),
     })
     useCartStore.setState({

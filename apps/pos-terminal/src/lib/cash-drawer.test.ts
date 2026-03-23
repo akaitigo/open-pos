@@ -78,7 +78,7 @@ describe('CashDrawer', () => {
       expect(result2).toBe(true)
 
       // Cleanup
-      delete (navigator as Record<string, unknown>).serial
+      delete (navigator as unknown as Record<string, unknown>).serial
     })
 
     it('should return false when writable is null', async () => {
@@ -96,7 +96,7 @@ describe('CashDrawer', () => {
       const result = await drawer.open()
       expect(result).toBe(false)
 
-      delete (navigator as Record<string, unknown>).serial
+      delete (navigator as unknown as Record<string, unknown>).serial
     })
 
     it('should return false on error', async () => {
@@ -109,7 +109,7 @@ describe('CashDrawer', () => {
       const result = await drawer.open()
       expect(result).toBe(false)
 
-      delete (navigator as Record<string, unknown>).serial
+      delete (navigator as unknown as Record<string, unknown>).serial
     })
   })
 
@@ -133,7 +133,7 @@ describe('CashDrawer', () => {
       const drawer = createCashDrawer(true)
       expect(drawer.isConnected()).toBe(false) // SerialCashDrawer starts unconnected
 
-      delete (navigator as Record<string, unknown>).serial
+      delete (navigator as unknown as Record<string, unknown>).serial
     })
   })
 })
