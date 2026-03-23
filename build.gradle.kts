@@ -116,6 +116,57 @@ subprojects {
             tasks.matching { it.name == "check" }.configureEach {
                 dependsOn(tasks.withType<JacocoCoverageVerification>())
             }
+
+            // Mutation Testing (PIT) — local use only, not in CI
+            // Gradle 9 is not supported by the pitest Gradle plugin, so we use a JavaExec task instead.
+            val catalog = rootProject.extensions.getByType<VersionCatalogsExtension>().named("libs")
+            val pitestVersion = catalog.findVersion("pitest").orElseThrow().requiredVersion
+            val pitestJunit5Version = catalog.findVersion("pitest-junit5").orElseThrow().requiredVersion
+            val pitestConf = configurations.create("pitest")
+            dependencies {
+                pitestConf("org.pitest:pitest-command-line:$pitestVersion")
+                pitestConf("org.pitest:pitest-junit5-plugin:$pitestJunit5Version")
+            }
+
+            tasks.register<JavaExec>("pitest") {
+                group = "verification"
+                description = "Run PIT mutation testing (local use only)"
+                dependsOn(tasks.named("testClasses"))
+                mainClass.set("org.pitest.mutationtest.commandline.MutationCoverageReport")
+                classpath = pitestConf
+
+                val mainOutput = project.layout.buildDirectory.dir("classes/kotlin/main")
+                val testOutput = project.layout.buildDirectory.dir("classes/kotlin/test")
+                val reportDir = project.layout.buildDirectory.dir("reports/pitest")
+                val runtimeCp = configurations.getByName("testRuntimeClasspath")
+
+                doFirst {
+                    val cpEntries =
+                        (runtimeCp.files + mainOutput.get().asFile + testOutput.get().asFile)
+                            .joinToString(File.pathSeparator) { it.absolutePath }
+
+                    args =
+                        listOf(
+                            "--targetClasses",
+                            "com.openpos.*",
+                            "--targetTests",
+                            "com.openpos.*",
+                            "--sourceDirs",
+                            "src/main/kotlin",
+                            "--reportDir",
+                            reportDir.get().asFile.absolutePath,
+                            "--classPath",
+                            cpEntries,
+                            "--threads",
+                            Runtime.getRuntime().availableProcessors().toString(),
+                            "--outputFormats",
+                            "HTML,XML",
+                            "--timestampedReports=false",
+                            "--mutators",
+                            "DEFAULTS",
+                        )
+                }
+            }
         }
     }
 }
