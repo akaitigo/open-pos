@@ -154,4 +154,76 @@ describe('CartPanel', () => {
     render(<CartPanel fullScreen={true} />)
     expect(screen.getByText('テスト商品')).toBeInTheDocument()
   })
+
+  it('+ボタンで数量が増える', async () => {
+    useCartStore.setState({
+      items: [{ product: mockProduct, quantity: 1 }],
+    })
+    render(<CartPanel />)
+
+    await userEvent.click(screen.getByLabelText('テスト商品 の数量を増やす'))
+    expect(useCartStore.getState().items[0]!.quantity).toBe(2)
+  })
+
+  it('-ボタンで数量が減る', async () => {
+    useCartStore.setState({
+      items: [{ product: mockProduct, quantity: 3 }],
+    })
+    render(<CartPanel />)
+
+    await userEvent.click(screen.getByLabelText('テスト商品 の数量を減らす'))
+    expect(useCartStore.getState().items[0]!.quantity).toBe(2)
+  })
+
+  it('数量入力欄に直接入力できる', async () => {
+    useCartStore.setState({
+      items: [{ product: mockProduct, quantity: 1 }],
+    })
+    render(<CartPanel />)
+
+    const input = screen.getByLabelText('テスト商品 の数量')
+    await userEvent.clear(input)
+    await userEvent.type(input, '5')
+    expect(useCartStore.getState().items[0]!.quantity).toBe(5)
+  })
+
+  it('数量入力欄からフォーカスを外すと不正値なら商品が削除される', async () => {
+    useCartStore.setState({
+      items: [{ product: mockProduct, quantity: 2 }],
+    })
+    render(<CartPanel />)
+
+    const input = screen.getByLabelText('テスト商品 の数量')
+    await userEvent.clear(input)
+    await userEvent.type(input, '0')
+    await userEvent.tab()
+    expect(useCartStore.getState().items).toHaveLength(0)
+  })
+
+  it('保留ボタンでカートを保留し、保留中の取引を表示する', async () => {
+    useCartStore.setState({
+      items: [{ product: mockProduct, quantity: 1 }],
+    })
+    render(<CartPanel />)
+
+    await userEvent.click(screen.getByText('保留'))
+    expect(useCartStore.getState().items).toHaveLength(0)
+    expect(screen.getByText(/保留中/)).toBeInTheDocument()
+  })
+
+  it('単価を表示する', () => {
+    useCartStore.setState({
+      items: [{ product: mockProduct, quantity: 1 }],
+    })
+    render(<CartPanel />)
+    expect(screen.getByText(/単価/)).toBeInTheDocument()
+  })
+
+  it('小計を表示する', () => {
+    useCartStore.setState({
+      items: [{ product: mockProduct, quantity: 2 }],
+    })
+    render(<CartPanel />)
+    expect(screen.getAllByText('小計').length).toBeGreaterThanOrEqual(1)
+  })
 })

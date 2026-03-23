@@ -3,6 +3,7 @@ import {
   getRuntimeConfig,
   hasOrganizationContext,
   resetRuntimeConfigForTests,
+  initializeRuntimeConfig,
 } from './runtime-config'
 
 vi.mock('@/lib/api', () => ({
@@ -55,5 +56,69 @@ describe('runtime-config', () => {
     const config = getRuntimeConfig()
     expect(config.apiUrl).toBe('http://custom:9999')
     expect(config.organizationId).toBe('custom-org-id')
+  })
+
+  describe('initializeRuntimeConfig', () => {
+    it('fetch 失敗時はデフォルト設定を使う', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('network'))
+      resetRuntimeConfigForTests()
+
+      const config = await initializeRuntimeConfig()
+      expect(config.apiUrl).toBe('http://localhost:8080')
+    })
+
+    it('fetch が non-ok を返した場合はデフォルト設定を使う', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+      } as Response)
+      resetRuntimeConfigForTests()
+
+      const config = await initializeRuntimeConfig()
+      expect(config.apiUrl).toBe('http://localhost:8080')
+    })
+
+    it('正常な demo-config.json を読み込む', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            apiUrl: 'http://demo:9999',
+            organizationId: 'demo-org',
+          }),
+      } as Response)
+      resetRuntimeConfigForTests()
+
+      const config = await initializeRuntimeConfig()
+      expect(config.apiUrl).toBe('http://demo:9999')
+      expect(config.organizationId).toBe('demo-org')
+    })
+
+    it('null の demo config ではデフォルトを使う', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(null),
+      } as Response)
+      resetRuntimeConfigForTests()
+
+      const config = await initializeRuntimeConfig()
+      expect(config.apiUrl).toBe('http://localhost:8080')
+    })
+
+    it('空文字の apiUrl はデフォルトにフォールバックする', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            apiUrl: '   ',
+            organizationId: '',
+          }),
+      } as Response)
+      resetRuntimeConfigForTests()
+
+      const config = await initializeRuntimeConfig()
+      expect(config.apiUrl).toBe('http://localhost:8080')
+      // empty string falls back to getDefaultApiConfig().organizationId
+      expect(config.organizationId).toBe('00000000-0000-0000-0000-000000000000')
+    })
   })
 })
