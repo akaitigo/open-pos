@@ -96,4 +96,83 @@ describe('TerminalsPage', () => {
     renderPage()
     expect(screen.getByText('端末を登録')).toBeInTheDocument()
   })
+
+  it('端末が空の場合に空メッセージを表示する', async () => {
+    mockApi.get.mockImplementation((path: string) => {
+      if (path.includes('/terminals')) return Promise.resolve([])
+      return Promise.resolve(mockStores)
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('端末が登録されていません')).toBeInTheDocument()
+    })
+  })
+
+  it('端末登録ダイアログを表示してフォーム送信する', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    mockApi.post.mockResolvedValue(mockTerminals[0])
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('POS-001')).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('端末を登録'))
+    await waitFor(() => {
+      expect(screen.getByText('端末を登録', { selector: 'h2' })).toBeInTheDocument()
+    })
+    await user.type(screen.getByLabelText('端末コード *'), 'POS-002')
+    await user.type(screen.getByLabelText('端末名 *'), 'レジ2')
+    await user.click(screen.getByRole('button', { name: '登録' }))
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith(
+        expect.stringContaining('/terminals'),
+        expect.objectContaining({ terminalCode: 'POS-002', name: 'レジ2' }),
+        expect.anything(),
+      )
+    })
+  })
+
+  it('キャンセルボタンで登録ダイアログを閉じる', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    renderPage()
+    await user.click(screen.getByText('端末を登録'))
+    await waitFor(() => {
+      expect(screen.getByText('端末を登録', { selector: 'h2' })).toBeInTheDocument()
+    })
+    await user.click(screen.getByText('キャンセル'))
+    await waitFor(() => {
+      expect(screen.queryByText('端末を登録', { selector: 'h2' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('オフラインの端末にオフラインバッジを表示する', async () => {
+    const offlineTerminal = {
+      ...mockTerminals[0]!,
+      id: '44444444-4444-4444-4444-444444444444',
+      isActive: false,
+    }
+    mockApi.get.mockImplementation((path: string) => {
+      if (path.includes('/terminals')) return Promise.resolve([offlineTerminal])
+      return Promise.resolve(mockStores)
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('オフライン')).toBeInTheDocument()
+    })
+  })
+
+  it('lastSyncAtがnullの端末に未同期を表示する', async () => {
+    const noSyncTerminal = {
+      ...mockTerminals[0]!,
+      id: '55555555-5555-5555-5555-555555555555',
+      lastSyncAt: null,
+    }
+    mockApi.get.mockImplementation((path: string) => {
+      if (path.includes('/terminals')) return Promise.resolve([noSyncTerminal])
+      return Promise.resolve(mockStores)
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText('未同期')).toBeInTheDocument()
+    })
+  })
 })

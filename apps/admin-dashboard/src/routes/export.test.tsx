@@ -103,4 +103,73 @@ describe('ExportPage', () => {
       expect(screen.getByText('データがありません')).toBeInTheDocument()
     })
   })
+
+  it('CSVダウンロードボタンクリックでファイルをダウンロードする', async () => {
+    const user = userEvent.setup()
+    const mockData = {
+      data: [{ date: '2026-03-01', grossAmount: 100000, taxAmount: 10000, transactionCount: 5 }],
+    }
+    mockApi.get.mockResolvedValueOnce(mockData)
+
+    const createObjectURL = vi.fn().mockReturnValue('blob:test')
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL })
+
+    renderPage()
+    await user.click(screen.getByText('プレビュー'))
+
+    await waitFor(() => {
+      expect(screen.getByText('CSV ダウンロード')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('CSV ダウンロード'))
+    expect(createObjectURL).toHaveBeenCalled()
+    expect(revokeObjectURL).toHaveBeenCalled()
+  })
+
+  it('プレビューデータに取引件数0の行がある場合客単価を0で表示する', async () => {
+    const user = userEvent.setup()
+    const mockData = {
+      data: [{ date: '2026-03-01', grossAmount: 0, taxAmount: 0, transactionCount: 0 }],
+    }
+    mockApi.get.mockResolvedValueOnce(mockData)
+
+    renderPage()
+    await user.click(screen.getByText('プレビュー'))
+
+    await waitFor(() => {
+      expect(screen.getByText('2026-03-01')).toBeInTheDocument()
+    })
+    expect(screen.getByText('プレビュー（1件）')).toBeInTheDocument()
+  })
+
+  it('読み込み中はボタンテキストが変わる', async () => {
+    const user = userEvent.setup()
+    let resolveGet: ((value: unknown) => void) | undefined
+    mockApi.get.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveGet = resolve
+        }),
+    )
+
+    renderPage()
+    await user.click(screen.getByText('プレビュー'))
+
+    expect(screen.getByText('読み込み中...')).toBeInTheDocument()
+
+    resolveGet?.({ data: [] })
+    await waitFor(() => {
+      expect(screen.getByText('プレビュー')).toBeInTheDocument()
+    })
+  })
+
+  it('日付を変更できる', async () => {
+    renderPage()
+
+    const startInput = screen.getByLabelText('開始日')
+    const endInput = screen.getByLabelText('終了日')
+    expect(startInput).toBeInTheDocument()
+    expect(endInput).toBeInTheDocument()
+  })
 })
