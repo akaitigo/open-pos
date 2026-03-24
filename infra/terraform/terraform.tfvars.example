@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars and fill in values
+project_id           = "your-gcp-project-id"
+environment          = "production"
+primary_region       = "asia-northeast1"
+secondary_region     = "asia-northeast2"
+primary_node_count   = 3
+secondary_node_count = 1
+db_tier              = "db-custom-2-8192"
+redis_tier           = "STANDARD_HA"
