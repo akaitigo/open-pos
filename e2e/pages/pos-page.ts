@@ -95,4 +95,26 @@ export class PosPage {
     await this.page.getByRole('link', { name: '履歴' }).click()
     await expect(this.page.getByTestId('history-table')).toBeVisible({ timeout: 15_000 })
   }
+
+  async increaseItemQuantity(productName: string): Promise<void> {
+    await this.cart.getByRole('button', { name: `${productName} の数量を増やす` }).click()
+  }
+
+  async decreaseItemQuantity(productName: string): Promise<void> {
+    await this.cart.getByRole('button', { name: `${productName} の数量を減らす` }).click()
+  }
+
+  async removeItemFromCart(productName: string): Promise<void> {
+    await this.cart.getByRole('button', { name: `${productName} を削除` }).click()
+  }
+
+  async enterCouponCode(code: string): Promise<void> {
+    await this.page.getByPlaceholder('クーポンコードを入力').fill(code)
+    await this.page.getByRole('button', { name: '適用' }).click()
+  }
+
+  async getCartTotal(): Promise<string> {
+    const totalRow = this.cart.locator('text=合計（税込）').locator('..')
+    return (await totalRow.locator('span').last().textContent()) ?? ''
+  }
 }
