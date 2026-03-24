@@ -191,4 +191,21 @@ class ProductRepositoryIntegrationTest {
         // Assert
         assertEquals(5L, count)
     }
+
+    @Test
+    fun `Flyway migrations executed successfully`() {
+        // Verify that Flyway migrations ran by checking for expected tables
+        val tables =
+            entityManager
+                .createNativeQuery(
+                    """SELECT table_name FROM information_schema.tables
+               WHERE table_schema = 'product_schema'
+               ORDER BY table_name""",
+                ).resultList
+
+        // Assert core tables exist
+        val tableNames = tables.map { it.toString() }
+        assertTrue(tableNames.contains("products"), "products table should exist")
+        assertTrue(tableNames.contains("categories"), "categories table should exist")
+    }
 }
