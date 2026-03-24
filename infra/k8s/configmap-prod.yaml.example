@@ -1,0 +1,139 @@
+# ============================================================================
+# OpenPOS Production ConfigMaps — Example Template
+# ============================================================================
+# 使い方:
+#   1. このファイルをコピーして configmap-prod.yaml を作成
+#   2. CHANGE_ME の値を本番環境に合わせて設定
+#   3. kubectl apply -f infra/k8s/configmap-prod.yaml
+#
+# WARNING: 実際の本番値を Git にコミットしないこと
+# ============================================================================
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: openpos
+  labels:
+    app.kubernetes.io/part-of: openpos
+    app.kubernetes.io/component: api-gateway
+    environment: production
+data:
+  QUARKUS_HTTP_PORT: '8080'
+  QUARKUS_LOG_LEVEL: 'INFO'
+  QUARKUS_LOG_CONSOLE_JSON: 'true'
+  # gRPC service endpoints
+  PRODUCT_SERVICE_HOST: 'product-service'
+  PRODUCT_SERVICE_PORT: '9000'
+  STORE_SERVICE_HOST: 'store-service'
+  STORE_SERVICE_PORT: '9000'
+  POS_SERVICE_HOST: 'pos-service'
+  POS_SERVICE_PORT: '9000'
+  INVENTORY_SERVICE_HOST: 'inventory-service'
+  INVENTORY_SERVICE_PORT: '9000'
+  ANALYTICS_SERVICE_HOST: 'analytics-service'
+  ANALYTICS_SERVICE_PORT: '9000'
+  # Session JWT
+  OPENPOS_SESSION_JWT_ISSUER: 'CHANGE_ME'  # e.g., https://pos.example.com
+  OPENPOS_SESSION_JWT_DURATION: '3600'
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: product-service-config
+  namespace: openpos
+  labels:
+    app.kubernetes.io/part-of: openpos
+    app.kubernetes.io/component: product-service
+    environment: production
+data:
+  QUARKUS_HTTP_PORT: '8080'
+  QUARKUS_GRPC_SERVER_PORT: '9000'
+  QUARKUS_LOG_LEVEL: 'INFO'
+  QUARKUS_LOG_CONSOLE_JSON: 'true'
+  QUARKUS_DATASOURCE_DB_KIND: 'postgresql'
+  QUARKUS_HIBERNATE_ORM_DATABASE_DEFAULT_SCHEMA: 'product_schema'
+  QUARKUS_FLYWAY_DEFAULT_SCHEMA: 'product_schema'
+  QUARKUS_FLYWAY_SCHEMAS: 'product_schema'
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: store-service-config
+  namespace: openpos
+  labels:
+    app.kubernetes.io/part-of: openpos
+    app.kubernetes.io/component: store-service
+    environment: production
+data:
+  QUARKUS_HTTP_PORT: '8080'
+  QUARKUS_GRPC_SERVER_PORT: '9000'
+  QUARKUS_LOG_LEVEL: 'INFO'
+  QUARKUS_LOG_CONSOLE_JSON: 'true'
+  QUARKUS_DATASOURCE_DB_KIND: 'postgresql'
+  QUARKUS_HIBERNATE_ORM_DATABASE_DEFAULT_SCHEMA: 'store_schema'
+  QUARKUS_FLYWAY_DEFAULT_SCHEMA: 'store_schema'
+  QUARKUS_FLYWAY_SCHEMAS: 'store_schema'
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pos-service-config
+  namespace: openpos
+  labels:
+    app.kubernetes.io/part-of: openpos
+    app.kubernetes.io/component: pos-service
+    environment: production
+data:
+  QUARKUS_HTTP_PORT: '8080'
+  QUARKUS_GRPC_SERVER_PORT: '9000'
+  QUARKUS_LOG_LEVEL: 'INFO'
+  QUARKUS_LOG_CONSOLE_JSON: 'true'
+  QUARKUS_DATASOURCE_DB_KIND: 'postgresql'
+  QUARKUS_HIBERNATE_ORM_DATABASE_DEFAULT_SCHEMA: 'pos_schema'
+  QUARKUS_FLYWAY_DEFAULT_SCHEMA: 'pos_schema'
+  QUARKUS_FLYWAY_SCHEMAS: 'pos_schema'
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inventory-service-config
+  namespace: openpos
+  labels:
+    app.kubernetes.io/part-of: openpos
+    app.kubernetes.io/component: inventory-service
+    environment: production
+data:
+  QUARKUS_HTTP_PORT: '8080'
+  QUARKUS_GRPC_SERVER_PORT: '9000'
+  QUARKUS_LOG_LEVEL: 'INFO'
+  QUARKUS_LOG_CONSOLE_JSON: 'true'
+  QUARKUS_DATASOURCE_DB_KIND: 'postgresql'
+  QUARKUS_HIBERNATE_ORM_DATABASE_DEFAULT_SCHEMA: 'inventory_schema'
+  QUARKUS_FLYWAY_DEFAULT_SCHEMA: 'inventory_schema'
+  QUARKUS_FLYWAY_SCHEMAS: 'inventory_schema'
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: analytics-service-config
+  namespace: openpos
+  labels:
+    app.kubernetes.io/part-of: openpos
+    app.kubernetes.io/component: analytics-service
+    environment: production
+data:
+  QUARKUS_HTTP_PORT: '8080'
+  QUARKUS_GRPC_SERVER_PORT: '9000'
+  QUARKUS_LOG_LEVEL: 'INFO'
+  QUARKUS_LOG_CONSOLE_JSON: 'true'
+  QUARKUS_DATASOURCE_DB_KIND: 'postgresql'
+  QUARKUS_HIBERNATE_ORM_DATABASE_DEFAULT_SCHEMA: 'analytics_schema'
+  QUARKUS_FLYWAY_DEFAULT_SCHEMA: 'analytics_schema'
+  QUARKUS_FLYWAY_SCHEMAS: 'analytics_schema'

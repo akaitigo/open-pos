@@ -152,3 +152,72 @@ jobs:
           echo "Commit SHA: ${{ github.sha }}"
           kubectl get deployments -n openpos
           kubectl get pods -n openpos
+
+  deploy-prod:
+    needs: [version, build-and-push, deploy-staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production # Requires manual approval via GitHub Environments
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@3e0aec4d80787158d308d7b364cb1b702e7feb7f # v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Pre-deploy health check
+        run: |
+          echo "Running pre-deploy health checks..."
+          kubectl get nodes -o wide
+          kubectl get ns openpos || kubectl create ns openpos
+
+      - name: Apply ExternalSecret for GCP Secret Manager
+        run: |
+          kubectl apply -f infra/k8s/external-secret.yaml
+          echo "Waiting for ExternalSecret to sync..."
+          kubectl wait --for=condition=Ready externalsecret/openpos-secrets -n openpos --timeout=120s || true
+
+      - name: Apply production ConfigMaps
+        run: |
+          kubectl apply -f infra/k8s/configmap-prod.yaml
+
+      - name: Update image tags in manifests
+        run: |
+          IMAGE_TAG="${{ needs.version.outputs.semver }}"
+          SERVICES=(api-gateway product-service store-service pos-service inventory-service analytics-service)
+          for SERVICE in "${SERVICES[@]}"; do
+            sed -i "s|image: ${{ env.IMAGE_PREFIX }}/${SERVICE}:.*|image: ${{ env.IMAGE_PREFIX }}/${SERVICE}:${IMAGE_TAG}|" \
+              "infra/k8s/${SERVICE}.yaml"
+          done
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f infra/k8s/namespace.yaml
+          kubectl apply -f infra/k8s/network-policy.yaml
+          kubectl apply -f infra/k8s/ingress.yaml
+          kubectl apply -f infra/k8s/
+
+      - name: Wait for rollout completion
+        run: |
+          SERVICES=(api-gateway product-service store-service pos-service inventory-service analytics-service)
+          for SERVICE in "${SERVICES[@]}"; do
+            echo "Waiting for ${SERVICE} rollout..."
+            kubectl rollout status deployment/"${SERVICE}" -n openpos --timeout=600s
+          done
+
+      - name: Post-deploy verification
+        run: |
+          echo "=== Production Deploy Complete ==="
+          echo "Version: ${{ needs.version.outputs.semver }}"
+          echo "Commit:  ${{ github.sha }}"
+          echo ""
+          kubectl get deployments -n openpos
+          kubectl get pods -n openpos
+          echo ""
+          echo "Checking pod health..."
+          kubectl get pods -n openpos -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}'
