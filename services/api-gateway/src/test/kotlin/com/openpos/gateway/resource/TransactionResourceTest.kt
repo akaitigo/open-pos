@@ -92,9 +92,10 @@ class TransactionResourceTest {
             val body = CreateTransactionBody(storeId = storeId, terminalId = terminalId, staffId = staffId)
 
             // Act
-            resource.create(body)
+            val response = resource.create(body)
 
             // Assert
+            assertEquals(201, response.status)
             verify(grpc).withTenant(stub)
         }
     }

@@ -209,8 +209,10 @@ class TransactionServiceUnitTest {
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
 
-            service.addItem(tx.id, productId, 1, standardProduct)
+            val result = service.addItem(tx.id, productId, 1, standardProduct)
 
+            assertNotNull(result)
+            assertEquals("DRAFT", result.status)
             verify(itemRepository).persist(any<TransactionItemEntity>())
         }
     }
@@ -274,8 +276,10 @@ class TransactionServiceUnitTest {
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             doNothing().whenever(itemRepository).delete(any<TransactionItemEntity>())
 
-            service.removeItem(tx.id, item.id)
+            val result = service.removeItem(tx.id, item.id)
 
+            assertEquals("DRAFT", result.status)
+            assertEquals(0, result.subtotal)
             verify(itemRepository).delete(item)
         }
 
@@ -301,8 +305,9 @@ class TransactionServiceUnitTest {
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
 
-            service.applyDiscount(tx.id, null, "10% Off", "PERCENTAGE", "10", 1000, null)
+            val result = service.applyDiscount(tx.id, null, "10% Off", "PERCENTAGE", "10", 1000, null)
 
+            assertEquals("DRAFT", result.status)
             verify(discountRepository).persist(any<TransactionDiscountEntity>())
         }
 
@@ -358,8 +363,9 @@ class TransactionServiceUnitTest {
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
 
-            service.applyDiscount(tx.id, null, "500 Off", "FIXED_AMOUNT", "5000", 5000, null)
+            val result = service.applyDiscount(tx.id, null, "500 Off", "FIXED_AMOUNT", "5000", 5000, null)
 
+            assertEquals("DRAFT", result.status)
             verify(discountRepository).persist(any<TransactionDiscountEntity>())
         }
 
@@ -385,8 +391,9 @@ class TransactionServiceUnitTest {
             whenever(itemRepository.findById(item.id)).thenReturn(item)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
 
-            service.applyDiscount(tx.id, null, "Item Off", "FIXED_AMOUNT", "1000", 1000, item.id)
+            val result = service.applyDiscount(tx.id, null, "Item Off", "FIXED_AMOUNT", "1000", 1000, item.id)
 
+            assertEquals("DRAFT", result.status)
             verify(discountRepository).persist(any<TransactionDiscountEntity>())
         }
 
