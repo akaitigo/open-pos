@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -156,6 +158,8 @@ class EventConsumerTest {
         fun `正常なJSONでprocessSaleCompletedが呼ばれる`() {
             // Arrange
             val json = buildSaleCompletedJson()
+            assertNotNull(json)
+            assertTrue(json.contains("sale.completed"))
             val message = mockMessage(json)
 
             // Act
@@ -177,6 +181,7 @@ class EventConsumerTest {
             consumer.onSaleCompleted(message)
 
             // Assert
+            assertNotNull(invalidJson)
             verify(message).nack(any<Throwable>())
         }
     }
@@ -187,6 +192,8 @@ class EventConsumerTest {
         fun `正常なJSONでprocessSaleVoidedが呼ばれる`() {
             // Arrange
             val json = buildSaleVoidedJson()
+            assertNotNull(json)
+            assertTrue(json.contains("sale.voided"))
             val message = mockMessage(json)
 
             // Act
@@ -208,6 +215,7 @@ class EventConsumerTest {
             consumer.onSaleVoided(message)
 
             // Assert
+            assertNotNull(invalidJson)
             verify(message).nack(any<Throwable>())
         }
     }

@@ -193,8 +193,9 @@ class StockServiceUnitTest {
             doNothing().whenever(stockRepository).persist(any<StockEntity>())
             doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
-            stockService.adjustStock(storeId, productId, -6, "SALE", "txn-low", null)
+            val result = stockService.adjustStock(storeId, productId, -6, "SALE", "txn-low", null)
 
+            assertEquals(9, result.quantity)
             verify(stockLowEventPublisher).publish(
                 organizationId = eq(orgId),
                 productId = eq(productId),
@@ -211,8 +212,9 @@ class StockServiceUnitTest {
             doNothing().whenever(stockRepository).persist(any<StockEntity>())
             doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
-            stockService.adjustStock(storeId, productId, -5, "SALE", "txn-ok", null)
+            val result = stockService.adjustStock(storeId, productId, -5, "SALE", "txn-ok", null)
 
+            assertEquals(15, result.quantity)
             verify(stockLowEventPublisher, never()).publish(any(), any(), any(), any(), any())
         }
 
@@ -223,8 +225,9 @@ class StockServiceUnitTest {
             doNothing().whenever(stockRepository).persist(any<StockEntity>())
             doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
-            stockService.adjustStock(storeId, productId, -2, "SALE", null, null)
+            val result = stockService.adjustStock(storeId, productId, -2, "SALE", null, null)
 
+            assertEquals(3, result.quantity)
             verify(stockLowEventPublisher, never()).publish(any(), any(), any(), any(), any())
         }
     }

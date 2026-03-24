@@ -312,16 +312,18 @@ class StockServiceTest {
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
         // Act
-        stockService.adjustStock(
-            storeId = storeId,
-            productId = productId,
-            quantityChange = -6,
-            movementType = "SALE",
-            referenceId = "txn-low",
-            note = null,
-        )
+        val result =
+            stockService.adjustStock(
+                storeId = storeId,
+                productId = productId,
+                quantityChange = -6,
+                movementType = "SALE",
+                referenceId = "txn-low",
+                note = null,
+            )
 
         // Assert
+        assertEquals(9, result.quantity)
         verify(stockLowEventPublisher).publish(
             organizationId = eq(orgId),
             productId = eq(productId),
@@ -340,16 +342,18 @@ class StockServiceTest {
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
         // Act
-        stockService.adjustStock(
-            storeId = storeId,
-            productId = productId,
-            quantityChange = -5,
-            movementType = "SALE",
-            referenceId = "txn-ok",
-            note = null,
-        )
+        val result =
+            stockService.adjustStock(
+                storeId = storeId,
+                productId = productId,
+                quantityChange = -5,
+                movementType = "SALE",
+                referenceId = "txn-ok",
+                note = null,
+            )
 
         // Assert
+        assertEquals(15, result.quantity)
         verify(stockLowEventPublisher, never()).publish(any(), any(), any(), any(), any())
     }
 
@@ -362,16 +366,18 @@ class StockServiceTest {
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
         // Act
-        stockService.adjustStock(
-            storeId = storeId,
-            productId = productId,
-            quantityChange = -2,
-            movementType = "SALE",
-            referenceId = "txn-already-low",
-            note = null,
-        )
+        val result =
+            stockService.adjustStock(
+                storeId = storeId,
+                productId = productId,
+                quantityChange = -2,
+                movementType = "SALE",
+                referenceId = "txn-already-low",
+                note = null,
+            )
 
         // Assert
+        assertEquals(3, result.quantity)
         verify(stockLowEventPublisher, never()).publish(any(), any(), any(), any(), any())
     }
 
@@ -384,16 +390,18 @@ class StockServiceTest {
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
         // Act
-        stockService.adjustStock(
-            storeId = storeId,
-            productId = productId,
-            quantityChange = -5,
-            movementType = "SALE",
-            referenceId = "txn-exact",
-            note = null,
-        )
+        val result =
+            stockService.adjustStock(
+                storeId = storeId,
+                productId = productId,
+                quantityChange = -5,
+                movementType = "SALE",
+                referenceId = "txn-exact",
+                note = null,
+            )
 
         // Assert
+        assertEquals(10, result.quantity)
         verify(stockLowEventPublisher).publish(
             organizationId = eq(orgId),
             productId = eq(productId),
@@ -412,16 +420,18 @@ class StockServiceTest {
         doNothing().whenever(movementRepository).persist(any<StockMovementEntity>())
 
         // Act
-        stockService.adjustStock(
-            storeId = storeId,
-            productId = productId,
-            quantityChange = 20,
-            movementType = "RECEIPT",
-            referenceId = "rcpt-001",
-            note = null,
-        )
+        val result =
+            stockService.adjustStock(
+                storeId = storeId,
+                productId = productId,
+                quantityChange = 20,
+                movementType = "RECEIPT",
+                referenceId = "rcpt-001",
+                note = null,
+            )
 
         // Assert
+        assertEquals(25, result.quantity)
         verify(stockLowEventPublisher, never()).publish(any(), any(), any(), any(), any())
     }
 

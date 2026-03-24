@@ -5,9 +5,12 @@ import com.openpos.inventory.service.StockService
 import io.quarkus.test.InjectMock
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
@@ -47,6 +50,8 @@ class StockEventProcessorTest {
         stockEventProcessor.processSaleCompleted(orgId, payload)
 
         // Assert
+        assertEquals(2, payload.items.size)
+        verify(stockService, times(2)).adjustStock(any(), any(), any(), any(), any(), anyOrNull())
         verify(stockService).adjustStock(
             storeId = eq(storeId),
             productId = eq(productId1),
@@ -85,6 +90,8 @@ class StockEventProcessorTest {
         stockEventProcessor.processSaleVoided(orgId, payload)
 
         // Assert
+        assertEquals(2, payload.items.size)
+        verify(stockService, times(2)).adjustStock(any(), any(), any(), any(), any(), anyOrNull())
         verify(stockService).adjustStock(
             storeId = eq(storeId),
             productId = eq(productId1),

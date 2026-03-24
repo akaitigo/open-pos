@@ -5,6 +5,7 @@ import jakarta.ws.rs.core.MultivaluedHashMap
 import jakarta.ws.rs.core.UriInfo
 import org.eclipse.microprofile.jwt.JsonWebToken
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -59,6 +60,7 @@ class AuthFilterTest {
             filter.filter(requestContext)
 
             // Assert
+            assertNull(headers.getFirst("X-Staff-Id"))
             verify(requestContext, never()).abortWith(any())
         }
 
@@ -71,6 +73,7 @@ class AuthFilterTest {
             filter.filter(requestContext)
 
             // Assert
+            assertNull(headers.getFirst("X-Staff-Id"))
             verify(requestContext, never()).abortWith(any())
         }
 
@@ -83,6 +86,7 @@ class AuthFilterTest {
             filter.filter(requestContext)
 
             // Assert
+            assertNull(headers.getFirst("X-Staff-Id"))
             verify(requestContext, never()).abortWith(any())
         }
     }
@@ -112,6 +116,7 @@ class AuthFilterTest {
             disabledFilter.filter(requestContext)
 
             // Assert
+            assertNull(headers.getFirst("X-Staff-Id"))
             verify(requestContext, never()).abortWith(any())
         }
     }

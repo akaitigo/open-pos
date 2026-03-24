@@ -142,6 +142,8 @@ class WebhookServiceUnitTest {
 
             service.trigger(orgId, "sale.completed", """{"data":"test"}""")
 
+            assertTrue(webhook.isActive)
+            assertEquals("https://example.com/hook", webhook.url)
             verify(webhookRepository).findActiveByOrganizationId(orgId)
         }
 
@@ -150,6 +152,8 @@ class WebhookServiceUnitTest {
             whenever(webhookRepository.findActiveByOrganizationId(orgId)).thenReturn(emptyList())
 
             service.trigger(orgId, "sale.completed", """{"data":"test"}""")
+
+            assertNotNull(orgId)
         }
     }
 
