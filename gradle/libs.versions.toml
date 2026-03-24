@@ -1,13 +1,13 @@
 [versions]
 kotlin = "2.3.20"
-quarkus = "3.32.1"
-mockito-kotlin = "6.2.3"
-testcontainers = "2.0.3"
+quarkus = "3.32.4"
+mockito-kotlin = "6.3.0"
+testcontainers = "2.0.4"
 owasp-depcheck = "12.2.0"
 bcrypt = "0.10.2"
 jacoco = "0.8.12"
 pitest = "1.17.4"
-pitest-junit5 = "1.2.1"
+pitest-junit5 = "1.2.3"
 jqwik = "1.9.3"
 
 [libraries]
