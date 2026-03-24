@@ -47,6 +47,48 @@ export class AdminPage {
     await expect(this.productTable).toBeVisible({ timeout: 15_000 })
   }
 
+  async navigateToCategories(): Promise<void> {
+    await this.page.getByRole('link', { name: 'カテゴリ管理' }).click()
+    await expect(this.page.getByRole('heading', { name: 'カテゴリ管理' })).toBeVisible({
+      timeout: 15_000,
+    })
+  }
+
+  async navigateToStores(): Promise<void> {
+    await this.page.getByRole('link', { name: '店舗管理' }).click()
+    await expect(this.page.getByRole('heading', { name: '店舗管理' })).toBeVisible({
+      timeout: 15_000,
+    })
+  }
+
+  async navigateToStaff(): Promise<void> {
+    await this.page.getByRole('link', { name: 'スタッフ管理' }).click()
+    await expect(this.page.getByRole('heading', { name: 'スタッフ管理' })).toBeVisible({
+      timeout: 15_000,
+    })
+  }
+
+  async navigateToInventory(): Promise<void> {
+    await this.page.getByRole('link', { name: '在庫管理' }).click()
+    await expect(this.page.getByRole('heading', { name: '在庫管理' })).toBeVisible({
+      timeout: 15_000,
+    })
+  }
+
+  async navigateToActivityLogs(): Promise<void> {
+    await this.page.getByRole('link', { name: '操作履歴' }).click()
+    await expect(this.page.getByRole('heading', { name: '操作履歴' })).toBeVisible({
+      timeout: 15_000,
+    })
+  }
+
+  async navigateToSettings(): Promise<void> {
+    await this.page.getByRole('link', { name: '設定' }).click()
+    await expect(this.page.getByRole('heading', { name: '設定' })).toBeVisible({
+      timeout: 15_000,
+    })
+  }
+
   async clickAddProduct(): Promise<void> {
     await this.addProductButton.click()
   }
