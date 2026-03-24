@@ -34,7 +34,31 @@ export const smokeStages = [
   { duration: '5s', target: 0 },
 ]
 
+/** High-load profile: 500+ RPS target (adjust VUs based on API response time) */
+export const highLoadStages = [
+  { duration: '30s', target: 50 }, // Warm-up
+  { duration: '1m', target: 200 }, // Ramp to moderate load
+  { duration: '2m', target: 500 }, // Sustain peak load (500+ RPS)
+  { duration: '1m', target: 500 }, // Hold peak
+  { duration: '30s', target: 0 }, // Ramp down
+]
+
+/** Stress test profile: find breaking point */
+export const stressStages = [
+  { duration: '30s', target: 100 },
+  { duration: '1m', target: 300 },
+  { duration: '1m', target: 600 },
+  { duration: '1m', target: 1000 },
+  { duration: '30s', target: 0 },
+]
+
 export const defaultThresholds = {
   http_req_duration: ['p(95)<2000'],
   http_req_failed: ['rate<0.05'],
+}
+
+/** SLO thresholds: P95 < 200ms, error rate < 1% */
+export const sloThresholds = {
+  http_req_duration: ['p(95)<200', 'p(99)<500'],
+  http_req_failed: ['rate<0.01'],
 }
