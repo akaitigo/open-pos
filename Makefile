@@ -5,7 +5,8 @@
        demo-up demo-down \
        build build-apps build-services \
        test test-apps test-backend test-frontend test-e2e test-all grpc-test load-test \
-       lint proto proto-lint proto-breaking seed db-backup db-restore clean
+       lint proto proto-lint proto-breaking seed db-backup db-restore clean \
+       prune-branches
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -193,6 +194,11 @@ db-backup: ## Write a PostgreSQL SQL backup to FILE=.local/backups/openpos-YYYYm
 
 db-restore: ## Restore a PostgreSQL SQL backup from FILE=path and restart the detected backend mode
 	bash scripts/db-restore.sh "$(FILE)"
+
+# === Git Maintenance ===
+prune-branches: ## Delete local branches whose remote tracking branch is gone
+	git fetch --prune origin
+	git branch -vv | grep ': gone]' | awk '{print $$1}' | xargs -r git branch -d
 
 # === Clean ===
 clean: ## Clean all build artifacts
