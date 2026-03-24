@@ -32,7 +32,7 @@
     "dexie": "^4.0.0",
     "dexie-react-hooks": "^4.0.0",
     "html5-qrcode": "^2.3.0",
-    "lucide-react": "^0.577.0",
+    "lucide-react": "^1.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router": "^7.13.1",
