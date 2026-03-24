@@ -17,15 +17,15 @@ test.describe('Checkout and Receipt Flow', () => {
     await posPage.startPayment()
 
     // Verify checkout dialog content
-    await expect(posPage.page.getByText('お会計')).toBeVisible()
-    await expect(posPage.page.getByText('合計金額')).toBeVisible()
+    await expect(posPage.page.getByRole('dialog')).toContainText('お会計')
+    await expect(posPage.page.getByRole('dialog')).toContainText('合計金額')
 
     await posPage.selectExactCashPayment()
     await posPage.confirmPayment()
 
     // Receipt dialog should appear with receipt content
     await expect(posPage.receiptDialog).toBeVisible({ timeout: 30_000 })
-    await expect(posPage.receiptDialog.getByText('レシート')).toBeVisible()
+    await expect(posPage.receiptDialog).toContainText('レシート')
 
     await posPage.closeReceipt()
     await expect(posPage.cart).toContainText('カートは空です')
@@ -35,10 +35,11 @@ test.describe('Checkout and Receipt Flow', () => {
     await posPage.addProductToCart('ドリップコーヒー')
     await posPage.startPayment()
 
-    // Verify coupon section exists
-    await expect(posPage.page.getByText('割引・クーポン')).toBeVisible()
-    await expect(posPage.page.getByPlaceholder('クーポンコードを入力')).toBeVisible()
-    await expect(posPage.page.getByRole('button', { name: '適用' })).toBeVisible()
+    // Verify coupon section exists in dialog
+    const dialog = posPage.page.getByRole('dialog')
+    await expect(dialog).toContainText('割引・クーポン')
+    await expect(dialog.getByPlaceholder('クーポンコードを入力')).toBeVisible()
+    await expect(dialog.getByRole('button', { name: '適用' })).toBeVisible()
   })
 
   test('checkout dialog shows payment summary with subtotal and tax', async () => {
@@ -46,10 +47,11 @@ test.describe('Checkout and Receipt Flow', () => {
     await posPage.startPayment()
 
     // Verify payment summary section
-    await expect(posPage.page.getByText('合計金額')).toBeVisible()
-    await expect(posPage.page.getByText('小計')).toBeVisible()
-    await expect(posPage.page.getByText('支払済')).toBeVisible()
-    await expect(posPage.page.getByText('残額')).toBeVisible()
+    const dialog = posPage.page.getByRole('dialog')
+    await expect(dialog).toContainText('合計金額')
+    await expect(dialog).toContainText('小計')
+    await expect(dialog).toContainText('支払済')
+    await expect(dialog).toContainText('残額')
   })
 
   test('receipt dialog has print button', async () => {
@@ -71,7 +73,7 @@ test.describe('Checkout and Receipt Flow', () => {
     await expect(posPage.cart).toContainText('ドリップコーヒー')
 
     // Cart should show item count
-    await expect(posPage.cart.getByText('2 点')).toBeVisible()
+    await expect(posPage.cart).toContainText('2 点')
 
     await posPage.startPayment()
     await posPage.selectExactCashPayment()

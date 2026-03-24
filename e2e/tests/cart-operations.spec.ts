@@ -13,7 +13,7 @@ test.describe('Cart Operations', () => {
   test('adding a product shows it in cart with quantity 1', async () => {
     await posPage.addProductToCart('ドリップコーヒー')
     await expect(posPage.cart).toContainText('ドリップコーヒー')
-    await expect(posPage.cart.getByText('1 点')).toBeVisible()
+    await expect(posPage.cart).toContainText('1 点')
   })
 
   test('increasing item quantity updates the cart', async () => {
@@ -21,7 +21,7 @@ test.describe('Cart Operations', () => {
     await posPage.increaseItemQuantity('ドリップコーヒー')
 
     // After increment, cart should show 2 items
-    await expect(posPage.cart.getByText('2 点')).toBeVisible()
+    await expect(posPage.cart).toContainText('2 点')
   })
 
   test('decreasing item quantity to zero removes it from cart', async () => {
@@ -51,9 +51,9 @@ test.describe('Cart Operations', () => {
   test('cart shows subtotal and tax breakdown', async () => {
     await posPage.addProductToCart('ドリップコーヒー')
 
-    await expect(posPage.cart.getByText('小計')).toBeVisible()
-    await expect(posPage.cart.getByText('合計（税込）')).toBeVisible()
-    await expect(posPage.cart.getByText('税率別内訳')).toBeVisible()
+    await expect(posPage.cart).toContainText('小計')
+    await expect(posPage.cart).toContainText('合計（税込）')
+    await expect(posPage.cart).toContainText('税率別内訳')
   })
 
   test('checkout button is disabled when cart is empty', async () => {
@@ -77,13 +77,13 @@ test.describe('Cart Operations', () => {
 
     await expect(posPage.cart).toContainText('ドリップコーヒー')
     await expect(posPage.cart).toContainText('北海道おにぎり鮭')
-    await expect(posPage.cart.getByText('2 点')).toBeVisible()
+    await expect(posPage.cart).toContainText('2 点')
   })
 
   test('cart shows per-item unit price and subtotal', async () => {
     await posPage.addProductToCart('ドリップコーヒー')
 
     // Each item should display unit price
-    await expect(posPage.cart.getByText('単価')).toBeVisible()
+    await expect(posPage.cart).toContainText('単価')
   })
 })

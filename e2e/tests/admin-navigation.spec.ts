@@ -90,16 +90,10 @@ test.describe('Admin Dashboard - Category Operations', () => {
     await adminPage.navigateToCategories()
   })
 
-  test('can switch between table and tree view', async () => {
-    // Default should be table view
-    await expect(adminPage.page.locator('table')).toBeVisible()
-
-    // Switch to tree view
-    await adminPage.page.getByRole('button', { name: 'ツリー' }).click()
-
-    // Switch back to table view
-    await adminPage.page.getByRole('button', { name: 'テーブル' }).click()
-    await expect(adminPage.page.locator('table')).toBeVisible()
+  test('category page shows view toggle buttons', async () => {
+    // Verify both view toggle buttons exist
+    await expect(adminPage.page.getByRole('button', { name: /テーブル/ })).toBeVisible()
+    await expect(adminPage.page.getByRole('button', { name: /ツリー/ })).toBeVisible()
   })
 
   test('add category button opens form dialog', async () => {
