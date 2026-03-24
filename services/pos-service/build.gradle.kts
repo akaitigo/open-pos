@@ -27,6 +27,8 @@ dependencies {
     testImplementation(libs.quarkus.jdbc.h2)
     testImplementation(libs.rest.assured)
     testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.jqwik)
+    testImplementation(libs.jqwik.kotlin)
 }
 
 allOpen {
