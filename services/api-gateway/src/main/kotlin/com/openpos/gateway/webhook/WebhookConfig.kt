@@ -58,6 +58,9 @@ enum class DeliveryStatus {
     FAILED,
 }
 
+// TODO(#889): DB 永続化（Flyway + JPA Entity + テナント分離）に移行予定。
+// TODO(#908): Webhook 配信を RabbitMQ 非同期化し、スレッドブロッキングを解消予定。
+
 /**
  * Webhook 登録のインメモリストア。
  * テナント分離された Webhook 登録を管理する。

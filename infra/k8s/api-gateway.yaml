@@ -17,9 +17,16 @@ spec:
         app: api-gateway
         app.kubernetes.io/part-of: openpos
     spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65534
       containers:
         - name: api-gateway
           image: ghcr.io/akaitigo/open-pos/api-gateway:latest
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
           ports:
             - containerPort: 8080
               name: http

@@ -13,6 +13,9 @@ import java.util.UUID
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
+// TODO(#908): RabbitMQ 非同期配信に移行予定。
+// HttpClient.send() の同期配信をキュー publish + Consumer 非同期配信に置き換える。
+
 /**
  * Webhook 配信サービス (#410)。
  * 指数バックオフによるリトライと配信トラッキングを提供する。

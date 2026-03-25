@@ -17,9 +17,16 @@ spec:
         app: inventory-service
         app.kubernetes.io/part-of: openpos
     spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65534
       containers:
         - name: inventory-service
           image: ghcr.io/akaitigo/open-pos/inventory-service:latest
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
           ports:
             - containerPort: 8080
               name: http
