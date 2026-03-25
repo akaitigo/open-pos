@@ -1,5 +1,6 @@
 package com.openpos.gateway.resource
 
+import com.openpos.gateway.config.ForbiddenException
 import com.openpos.gateway.config.GrpcClientHelper
 import com.openpos.gateway.config.SessionTokenService
 import openpos.common.v1.PaginationResponse
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -142,6 +144,56 @@ class StaffResourceTest {
 
             // Assert
             assertEquals("田中太郎", result["name"])
+        }
+    }
+
+    @Nested
+    inner class RoleEscalationPrevention {
+        @Test
+        fun `MANAGERがOWNERロールを付与しようとするとForbiddenException`() {
+            // Arrange
+            tenantContext.staffRole = "MANAGER"
+
+            // Act & Assert
+            assertThrows<ForbiddenException> {
+                resource.update(staffId, UpdateStaffBody(role = "OWNER"))
+            }
+
+            // Cleanup
+            tenantContext.staffRole = "OWNER"
+        }
+
+        @Test
+        fun `OWNERはOWNERロールを付与できる`() {
+            // Arrange
+            tenantContext.staffRole = "OWNER"
+            whenever(stub.updateStaff(any())).thenReturn(
+                UpdateStaffResponse.newBuilder().setStaff(buildStaff()).build(),
+            )
+
+            // Act
+            val result = resource.update(staffId, UpdateStaffBody(role = "OWNER"))
+
+            // Assert — no exception thrown
+            assertEquals("田中太郎", result["name"])
+        }
+
+        @Test
+        fun `MANAGERはCASHIERロールを付与できる`() {
+            // Arrange
+            tenantContext.staffRole = "MANAGER"
+            whenever(stub.updateStaff(any())).thenReturn(
+                UpdateStaffResponse.newBuilder().setStaff(buildStaff()).build(),
+            )
+
+            // Act
+            val result = resource.update(staffId, UpdateStaffBody(role = "CASHIER"))
+
+            // Assert — no exception thrown
+            assertEquals("田中太郎", result["name"])
+
+            // Cleanup
+            tenantContext.staffRole = "OWNER"
         }
     }
 
