@@ -15,9 +15,16 @@ spec:
       labels:
         app: pos-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65534
       containers:
         - name: pos-service
           image: ghcr.io/akaitigo/open-pos/pos-service:latest
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
           ports:
             - containerPort: 8080
               name: http

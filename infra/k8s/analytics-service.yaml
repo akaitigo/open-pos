@@ -15,9 +15,16 @@ spec:
       labels:
         app: analytics-service
     spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65534
       containers:
         - name: analytics-service
           image: ghcr.io/akaitigo/open-pos/analytics-service:latest
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
           ports:
             - containerPort: 8080
               name: http
