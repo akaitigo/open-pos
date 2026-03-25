@@ -54,7 +54,7 @@ class DrawerService {
     ): DrawerEntity {
         tenantFilterService.enableFilter()
         val drawer =
-            drawerRepository.findByTerminal(storeId, terminalId)
+            drawerRepository.findByTerminalForUpdate(storeId, terminalId)
                 ?: throw IllegalArgumentException("No open drawer found for this terminal")
 
         drawer.isOpen = false
