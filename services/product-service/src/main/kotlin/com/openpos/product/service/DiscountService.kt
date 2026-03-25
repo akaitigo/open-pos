@@ -126,6 +126,20 @@ class DiscountService {
     }
 
     /**
+     * 割引を削除する（論理削除: isActive = false）。キャッシュを無効化する。
+     */
+    @Transactional
+    fun delete(id: UUID): Boolean {
+        tenantFilterService.enableFilter()
+        val entity = discountRepository.findById(id) ?: return false
+        entity.isActive = false
+        discountRepository.persist(entity)
+        cacheService.invalidate(discountKey(id.toString()))
+        invalidateDiscountListCaches()
+        return true
+    }
+
+    /**
      * 割引を更新する。更新後にキャッシュを無効化する。
      */
     @Transactional
