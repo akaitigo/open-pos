@@ -5,6 +5,7 @@ import com.google.protobuf.Int32Value
 import com.google.protobuf.Int64Value
 import com.openpos.gateway.cache.RedisCacheService
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.paginatedResponse
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
@@ -27,9 +28,9 @@ import openpos.product.v1.GetProductRequest
 import openpos.product.v1.ListProductsRequest
 import openpos.product.v1.ProductServiceGrpc
 import openpos.product.v1.UpdateProductRequest
+import org.eclipse.microprofile.faulttolerance.Timeout
 import org.eclipse.microprofile.openapi.annotations.Operation
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
-import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/products")
 @Blocking
@@ -46,9 +47,13 @@ class ProductResource {
     @Inject
     lateinit var cache: RedisCacheService
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @POST
     @Operation(summary = "商品を作成する")
     fun create(body: CreateProductBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             CreateProductRequest
                 .newBuilder()
@@ -119,6 +124,7 @@ class ProductResource {
         @PathParam("id") id: String,
         body: UpdateProductBody,
     ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             UpdateProductRequest
                 .newBuilder()
@@ -146,6 +152,7 @@ class ProductResource {
     fun delete(
         @PathParam("id") id: String,
     ): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         grpc.withTenant(stub).deleteProduct(DeleteProductRequest.newBuilder().setId(id).build())
         cache.invalidatePattern("openpos:gateway:product:list:*")
         return Response.noContent().build()
