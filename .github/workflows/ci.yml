@@ -15,7 +15,7 @@ env:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
@@ -98,7 +98,7 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
       # TODO: detekt CI統合（Gradle plugin方式でConfiguration Cache競合のため保留 #638）
-      - name: Build
+      - name: Build, Test & Coverage Verification
         run: >-
           ./gradlew --parallel
           :services:api-gateway:build
@@ -107,22 +107,11 @@ jobs:
           :services:pos-service:build
           :services:inventory-service:build
           :services:analytics-service:build
-          -x test
-      - name: Unit & Functional Test
-        run: >-
-          ./gradlew --parallel
-          :services:api-gateway:test
-          :services:product-service:test
-          :services:store-service:test
-          :services:pos-service:test
-          :services:inventory-service:test
-          :services:analytics-service:test
           :services:api-gateway:jacocoTestCoverageVerification
           :services:product-service:jacocoTestCoverageVerification
           :services:store-service:jacocoTestCoverageVerification
           :services:pos-service:jacocoTestCoverageVerification
           :services:inventory-service:jacocoTestCoverageVerification
-          # analytics-service は jacocoTestCoverageVerification タスク未定義のため除外
       - name: Upload Coverage Reports
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
