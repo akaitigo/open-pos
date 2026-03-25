@@ -2,6 +2,7 @@ package com.openpos.gateway.resource
 
 import com.openpos.gateway.cache.RedisCacheService
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.paginatedResponse
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
@@ -49,6 +50,9 @@ class TransactionResource {
 
     @Inject
     lateinit var cache: RedisCacheService
+
+    @Inject
+    lateinit var tenantContext: TenantContext
 
     @POST
     fun create(body: CreateTransactionBody): Response {
@@ -244,6 +248,7 @@ class TransactionResource {
         @PathParam("id") id: String,
         body: VoidBody?,
     ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             VoidTransactionRequest
                 .newBuilder()
