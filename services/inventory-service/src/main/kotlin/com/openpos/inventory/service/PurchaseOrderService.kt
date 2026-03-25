@@ -6,9 +6,12 @@ import com.openpos.inventory.entity.PurchaseOrderEntity
 import com.openpos.inventory.entity.PurchaseOrderItemEntity
 import com.openpos.inventory.repository.PurchaseOrderItemRepository
 import com.openpos.inventory.repository.PurchaseOrderRepository
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import io.quarkus.panache.common.Page
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import jakarta.persistence.OptimisticLockException
 import jakarta.transaction.Transactional
 import java.time.Instant
 import java.util.UUID
@@ -139,7 +142,14 @@ class PurchaseOrderService {
             }
         }
 
-        purchaseOrderRepository.persist(order)
+        try {
+            purchaseOrderRepository.persist(order)
+            purchaseOrderRepository.flush()
+        } catch (e: OptimisticLockException) {
+            throw StatusRuntimeException(
+                Status.ABORTED.withDescription("Concurrent modification detected for PurchaseOrder: $id"),
+            )
+        }
         return order
     }
 
