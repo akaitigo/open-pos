@@ -28,9 +28,9 @@ class EventConsumer {
     private val log = Logger.getLogger(EventConsumer::class.java)
 
     @Incoming("sale-completed")
-    fun onSaleCompleted(message: IncomingRabbitMQMessage<String>): CompletionStage<Void> =
+    fun onSaleCompleted(message: IncomingRabbitMQMessage<*>): CompletionStage<Void> =
         try {
-            val body = message.payload
+            val body = message.payload.toString()
             val envelope = objectMapper.readValue(body, EventEnvelopeDto::class.java)
             val eventId = UUID.fromString(envelope.eventId)
 
@@ -48,9 +48,9 @@ class EventConsumer {
         }
 
     @Incoming("sale-voided")
-    fun onSaleVoided(message: IncomingRabbitMQMessage<String>): CompletionStage<Void> =
+    fun onSaleVoided(message: IncomingRabbitMQMessage<*>): CompletionStage<Void> =
         try {
-            val body = message.payload
+            val body = message.payload.toString()
             val envelope = objectMapper.readValue(body, EventEnvelopeDto::class.java)
             val eventId = UUID.fromString(envelope.eventId)
 
