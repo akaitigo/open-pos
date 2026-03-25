@@ -29,11 +29,13 @@ class ProductResourceTest {
     private val stub: ProductServiceGrpc.ProductServiceBlockingStub = mock()
     private val grpc: GrpcClientHelper = mock()
     private val cache: RedisCacheService = mock()
+    private val tenantContext: TenantContext = TenantContext()
     private val resource =
         ProductResource().also { r ->
             setField(r, "stub", stub)
             setField(r, "grpc", grpc)
             setField(r, "cache", cache)
+            setField(r, "tenantContext", tenantContext)
         }
 
     private val orgId = UUID.randomUUID().toString()
