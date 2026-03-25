@@ -58,6 +58,7 @@ class SessionTokenService {
     ): String =
         Jwt
             .issuer(issuer)
+            .audience("openpos-session")
             .subject(staffId)
             .claim("role", staffRole)
             .claim("store_id", storeId)
