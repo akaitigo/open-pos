@@ -15,7 +15,7 @@ env:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
@@ -98,7 +98,7 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
       # TODO: detekt CI統合（Gradle plugin方式でConfiguration Cache競合のため保留 #638）
-      - name: Build
+      - name: Build, Test & Coverage Verification
         run: >-
           ./gradlew --parallel
           :services:api-gateway:build
@@ -107,22 +107,11 @@ jobs:
           :services:pos-service:build
           :services:inventory-service:build
           :services:analytics-service:build
-          -x test
-      - name: Unit & Functional Test
-        run: >-
-          ./gradlew --parallel
-          :services:api-gateway:test
-          :services:product-service:test
-          :services:store-service:test
-          :services:pos-service:test
-          :services:inventory-service:test
-          :services:analytics-service:test
           :services:api-gateway:jacocoTestCoverageVerification
           :services:product-service:jacocoTestCoverageVerification
           :services:store-service:jacocoTestCoverageVerification
           :services:pos-service:jacocoTestCoverageVerification
           :services:inventory-service:jacocoTestCoverageVerification
-          # analytics-service は jacocoTestCoverageVerification タスク未定義のため除外
       - name: Upload Coverage Reports
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
@@ -185,20 +174,26 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - name: Start full demo stack
-        run: OPENPOS_AUTH_ENABLED=false make docker-demo
       - name: Cache Playwright Browsers
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package.json') }}
-      - name: Install Playwright Browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter e2e exec playwright install --with-deps chromium
-      - name: Install Playwright system deps
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm --filter e2e exec playwright install-deps chromium
+      - name: Install Playwright & Start demo stack in parallel
+        run: |
+          set -euo pipefail
+          # Install Playwright browsers in background
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            pnpm --filter e2e exec playwright install-deps chromium &
+          else
+            pnpm --filter e2e exec playwright install --with-deps chromium &
+          fi
+          PW_PID=$!
+          # Start demo stack in foreground
+          OPENPOS_AUTH_ENABLED=false make docker-demo
+          # Wait for Playwright install
+          wait $PW_PID
       - name: Run E2E Tests
         run: pnpm --filter e2e test
       - name: Upload E2E Results

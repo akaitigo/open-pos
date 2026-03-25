@@ -108,20 +108,11 @@ demo-down: local-down down ## Alias: stop the local demo (backend + infra)
 reset: ## Reset PostgreSQL data, restart the supported backend mode, and reseed the demo data
 	bash scripts/reset.sh
 
-docker-build: ## Build all backend service container images sequentially
-	docker compose -f infra/compose.yml build product-service
-	docker compose -f infra/compose.yml build store-service
-	docker compose -f infra/compose.yml build pos-service
-	docker compose -f infra/compose.yml build inventory-service
-	docker compose -f infra/compose.yml build analytics-service
-	docker compose -f infra/compose.yml build api-gateway
+docker-build: ## Build all backend service container images in parallel
+	docker compose -f infra/compose.yml build product-service store-service pos-service inventory-service analytics-service api-gateway
 
-docker-build-core: ## Build the supported local backend container images sequentially
-	docker compose -f infra/compose.yml build product-service
-	docker compose -f infra/compose.yml build store-service
-	docker compose -f infra/compose.yml build pos-service
-	docker compose -f infra/compose.yml build inventory-service
-	docker compose -f infra/compose.yml build api-gateway
+docker-build-core: ## Build the supported local backend container images in parallel
+	docker compose -f infra/compose.yml build product-service store-service pos-service inventory-service api-gateway
 
 docker-up-core: up local-down ## Start the supported local backend services in containers
 	docker compose -f infra/compose.yml up -d --wait product-service store-service pos-service inventory-service api-gateway
