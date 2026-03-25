@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
+import io.vertx.core.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -57,8 +58,8 @@ class EventConsumerTest {
     // --- ヘルパー ---
 
     @Suppress("UNCHECKED_CAST")
-    private fun mockMessage(body: String): IncomingRabbitMQMessage<String> {
-        val message = mock<IncomingRabbitMQMessage<String>>()
+    private fun mockMessage(body: Any): IncomingRabbitMQMessage<*> {
+        val message = mock<IncomingRabbitMQMessage<Any>>()
         whenever(message.payload).thenReturn(body)
         whenever(message.ack()).thenReturn(CompletableFuture.completedFuture(null))
         whenever(message.nack(any<Throwable>())).thenReturn(CompletableFuture.completedFuture(null))
@@ -169,6 +170,22 @@ class EventConsumerTest {
         }
 
         @Test
+        fun `JsonObjectペイロードでもprocessSaleCompletedが呼ばれる`() {
+            // Arrange
+            val json = buildSaleCompletedJson()
+            val jsonObject = JsonObject(json)
+            val message = mockMessage(jsonObject)
+
+            // Act
+            consumer.onSaleCompleted(message)
+
+            // Assert
+            verify(idempotentHandler).handleIdempotent(eq(eventId), eq("sale.completed"), any())
+            verify(salesEventProcessor).processSaleCompleted(eq(orgId), any())
+            verify(message).ack()
+        }
+
+        @Test
         fun `不正なJSONではnackが呼ばれる`() {
             // Arrange
             val invalidJson = "{ invalid json }"
@@ -189,6 +206,22 @@ class EventConsumerTest {
             // Arrange
             val json = buildSaleVoidedJson()
             val message = mockMessage(json)
+
+            // Act
+            consumer.onSaleVoided(message)
+
+            // Assert
+            verify(idempotentHandler).handleIdempotent(eq(eventId), eq("sale.voided"), any())
+            verify(salesEventProcessor).processSaleVoided(eq(orgId), any())
+            verify(message).ack()
+        }
+
+        @Test
+        fun `JsonObjectペイロードでもprocessSaleVoidedが呼ばれる`() {
+            // Arrange
+            val json = buildSaleVoidedJson()
+            val jsonObject = JsonObject(json)
+            val message = mockMessage(jsonObject)
 
             // Act
             consumer.onSaleVoided(message)
