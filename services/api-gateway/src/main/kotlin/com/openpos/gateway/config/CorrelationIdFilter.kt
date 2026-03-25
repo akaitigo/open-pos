@@ -23,14 +23,22 @@ class CorrelationIdFilter :
     companion object {
         const val HEADER_NAME = "X-Request-Id"
         const val MDC_KEY = "requestId"
+        private const val MAX_REQUEST_ID_LENGTH = 128
     }
 
     override fun filter(requestContext: ContainerRequestContext) {
         val requestId =
-            requestContext.getHeaderString(HEADER_NAME)
+            requestContext
+                .getHeaderString(HEADER_NAME)
+                ?.let { sanitizeRequestId(it) }
                 ?: UUID.randomUUID().toString()
         requestContext.headers.putSingle(HEADER_NAME, requestId)
         MDC.put(MDC_KEY, requestId)
+    }
+
+    private fun sanitizeRequestId(value: String): String? {
+        val sanitized = value.replace(Regex("[\r\n\u0000]"), "").take(MAX_REQUEST_ID_LENGTH)
+        return sanitized.ifEmpty { null }
     }
 
     override fun filter(
