@@ -44,3 +44,9 @@ variable "redis_tier" {
   type        = string
   default     = "STANDARD_HA"
 }
+
+variable "db_password" {
+  description = "Cloud SQL database password"
+  type        = string
+  sensitive   = true
+}

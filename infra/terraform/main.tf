@@ -80,6 +80,7 @@ module "cloud_sql" {
   secondary_region = var.secondary_region
   environment      = var.environment
   db_tier          = var.db_tier
+  db_password      = var.db_password
   network_id       = module.networking.vpc_id
 
   depends_on = [module.networking]
