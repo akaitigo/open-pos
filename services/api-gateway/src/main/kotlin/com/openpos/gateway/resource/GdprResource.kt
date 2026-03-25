@@ -67,6 +67,7 @@ class GdprResource {
     fun deleteOrganizationData(
         @PathParam("id") id: String,
     ): Response {
+        tenantContext.requireRole("OWNER")
         validateTenantAccess(id)?.let { return it }
         val request =
             DeleteOrganizationDataRequest
@@ -91,6 +92,7 @@ class GdprResource {
     fun anonymizeStaffData(
         @PathParam("id") id: String,
     ): Any {
+        tenantContext.requireRole("OWNER")
         validateTenantAccess(id)?.let { return it }
         val request =
             AnonymizeStaffDataRequest
@@ -109,6 +111,7 @@ class GdprResource {
     fun anonymizeCustomerData(
         @PathParam("id") id: String,
     ): Any {
+        tenantContext.requireRole("OWNER")
         validateTenantAccess(id)?.let { return it }
         val request =
             AnonymizeCustomerDataRequest
@@ -128,6 +131,7 @@ class GdprResource {
         @PathParam("id") id: String,
         body: RecordConsentBody,
     ): Response {
+        tenantContext.requireRole("OWNER")
         validateTenantAccess(id)?.let { return it }
         val request =
             RecordConsentRequest
@@ -166,6 +170,7 @@ class GdprResource {
     fun getConsents(
         @PathParam("id") id: String,
     ): Any {
+        tenantContext.requireRole("OWNER")
         validateTenantAccess(id)?.let { return it }
         val request =
             GetConsentRequest
