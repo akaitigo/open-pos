@@ -98,6 +98,8 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
       # TODO: detekt CI統合（Gradle plugin方式でConfiguration Cache競合のため保留 #638）
+      - name: Clean generated sources to avoid stale cache
+        run: ./gradlew --parallel clean quarkusGenerateCode
       - name: Build, Test & Coverage Verification
         run: >-
           ./gradlew --parallel
