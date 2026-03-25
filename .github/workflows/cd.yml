@@ -176,6 +176,10 @@ jobs:
           kubectl get nodes -o wide
           kubectl get ns openpos || kubectl create ns openpos
 
+      - name: Inject GCP Project ID into ExternalSecret manifest
+        run: |
+          sed -i "s/__GCP_PROJECT_ID__/${{ secrets.GCP_PROJECT_ID }}/" infra/k8s/external-secret.yaml
+
       - name: Apply ExternalSecret for GCP Secret Manager
         run: |
           kubectl apply -f infra/k8s/external-secret.yaml

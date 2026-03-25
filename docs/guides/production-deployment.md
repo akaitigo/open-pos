@@ -42,6 +42,7 @@ helm install external-secrets external-secrets/external-secrets \
 2. Required reviewers に承認者を追加
 3. 以下の Secrets を設定:
    - `KUBE_CONFIG_PRODUCTION`: base64 エンコードされた kubeconfig
+   - `GCP_PROJECT_ID`: GCP プロジェクト ID（Terraform の `var.project_id` と同じ値）
 
 ## Deployment Steps
 
@@ -80,9 +81,20 @@ kubectl apply -f infra/k8s/configmap-prod.yaml
 
 ### 3. ExternalSecret 適用
 
+CD パイプライン経由のデプロイでは、GitHub Secrets の `GCP_PROJECT_ID` が
+`infra/k8s/external-secret.yaml` 内の `__GCP_PROJECT_ID__` プレースホルダーに
+自動で注入される。
+
+**GitHub Secrets に追加が必要:**
+- Repository Settings > Secrets and variables > Actions > Environment secrets (`production`)
+- Name: `GCP_PROJECT_ID`, Value: Terraform の `project_id` と同じ値
+
+手動デプロイの場合:
+
 ```bash
-# SecretStore の projectID を GCP プロジェクトに変更
-vi infra/k8s/external-secret.yaml
+# Terraform output から取得して置換
+GCP_PROJECT_ID=$(terraform -chdir=infra/terraform output -raw project_id)
+sed -i "s/__GCP_PROJECT_ID__/${GCP_PROJECT_ID}/" infra/k8s/external-secret.yaml
 kubectl apply -f infra/k8s/external-secret.yaml
 
 # 同期確認
