@@ -11,10 +11,10 @@ import jakarta.persistence.Table
 @Entity
 @Table(name = "system_settings", schema = "store_schema")
 class SystemSettingEntity : BaseEntity() {
-    @Column(name = "key", nullable = false, length = 100)
+    @Column(name = "\"key\"", nullable = false, length = 100)
     lateinit var key: String
 
-    @Column(name = "value", nullable = false, columnDefinition = "text")
+    @Column(name = "\"value\"", nullable = false, columnDefinition = "text")
     var value: String = ""
 
     @Column(name = "description", length = 500)

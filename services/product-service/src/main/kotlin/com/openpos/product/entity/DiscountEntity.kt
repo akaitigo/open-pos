@@ -20,7 +20,7 @@ class DiscountEntity : BaseEntity() {
     @Column(name = "discount_type", nullable = false, length = 20)
     lateinit var discountType: String
 
-    @Column(name = "value", nullable = false)
+    @Column(name = "\"value\"", nullable = false)
     var value: Long = 0
 
     @Column(name = "applies_to", nullable = false, length = 20)

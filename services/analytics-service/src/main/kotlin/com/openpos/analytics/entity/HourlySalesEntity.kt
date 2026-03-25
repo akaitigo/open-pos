@@ -20,7 +20,7 @@ class HourlySalesEntity : BaseEntity() {
     @Column(name = "sale_date", nullable = false)
     lateinit var saleDate: LocalDate
 
-    @Column(name = "hour", nullable = false)
+    @Column(name = "\"hour\"", nullable = false)
     var hour: Int = 0
 
     @Column(name = "total_sales", nullable = false)
