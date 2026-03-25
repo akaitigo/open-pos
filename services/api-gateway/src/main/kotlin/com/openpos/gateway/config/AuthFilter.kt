@@ -88,6 +88,42 @@ class AuthFilter : ContainerRequestFilter {
             requestContext.headers.putSingle("X-Staff-Role", role)
             tenantContext.staffRole = role
         }
+
+        // テナント境界検証: JWT の organization_id クレームと X-Organization-Id ヘッダーを照合
+        val jwtOrgId = jwt.getClaim<String>("organization_id")
+        if (!jwtOrgId.isNullOrBlank() && tenantContext.organizationId != null) {
+            try {
+                val jwtOrgUuid = java.util.UUID.fromString(jwtOrgId)
+                if (jwtOrgUuid != tenantContext.organizationId) {
+                    logger.warnf(
+                        "Tenant boundary violation: JWT org=%s, request org=%s, staff=%s",
+                        jwtOrgId,
+                        tenantContext.organizationId,
+                        subject,
+                    )
+                    requestContext.abortWith(
+                        Response
+                            .status(Response.Status.FORBIDDEN)
+                            .entity(
+                                mapOf(
+                                    "error" to "Forbidden",
+                                    "message" to "Organization ID mismatch between token and request",
+                                ),
+                            ).build(),
+                    )
+                    return
+                }
+            } catch (_: IllegalArgumentException) {
+                logger.warnf("Invalid organization_id claim in JWT: %s", jwtOrgId)
+                requestContext.abortWith(
+                    Response
+                        .status(Response.Status.FORBIDDEN)
+                        .entity(mapOf("error" to "Forbidden", "message" to "Invalid organization_id in token"))
+                        .build(),
+                )
+                return
+            }
+        }
     }
 
     @Inject
