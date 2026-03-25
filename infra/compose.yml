@@ -120,7 +120,8 @@ services:
       URLS_LOGOUT: http://localhost:3000/logout
       LOG_LEVEL: info
     # WARNING: --dev はローカル開発専用。本番では --dev を削除し、TLS を有効化すること。
-    command: serve all ${HYDRA_SERVE_FLAGS:---dev}
+    # ローカル開発時は HYDRA_SERVE_FLAGS=--dev を .env で設定してください。
+    command: serve all ${HYDRA_SERVE_FLAGS:-}
     depends_on:
       postgres:
         condition: service_healthy
