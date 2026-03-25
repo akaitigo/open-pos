@@ -3,7 +3,9 @@ package com.openpos.store.service
 import com.openpos.store.config.OrganizationIdHolder
 import com.openpos.store.config.TenantFilterService
 import com.openpos.store.entity.StaffEntity
+import com.openpos.store.entity.StoreEntity
 import com.openpos.store.repository.StaffRepository
+import com.openpos.store.repository.StoreRepository
 import io.quarkus.panache.common.Page
 import io.quarkus.test.InjectMock
 import io.quarkus.test.junit.QuarkusTest
@@ -35,6 +37,9 @@ class StaffServiceTest {
     lateinit var staffRepository: StaffRepository
 
     @InjectMock
+    lateinit var storeRepository: StoreRepository
+
+    @InjectMock
     lateinit var tenantFilterService: TenantFilterService
 
     private val orgId = UUID.randomUUID()
@@ -44,6 +49,13 @@ class StaffServiceTest {
     fun setUp() {
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
+        val storeEntity =
+            StoreEntity().apply {
+                this.id = storeId
+                this.organizationId = orgId
+                this.name = "テスト店舗"
+            }
+        whenever(storeRepository.findById(storeId)).thenReturn(storeEntity)
     }
 
     // === create ===
