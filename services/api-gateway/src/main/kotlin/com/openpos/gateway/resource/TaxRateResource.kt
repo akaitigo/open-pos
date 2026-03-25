@@ -6,6 +6,7 @@ import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
+import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.PUT
@@ -13,6 +14,7 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.core.Response
 import openpos.product.v1.CreateTaxRateRequest
+import openpos.product.v1.DeleteTaxRateRequest
 import openpos.product.v1.ListTaxRatesRequest
 import openpos.product.v1.ProductServiceGrpc
 import openpos.product.v1.UpdateTaxRateRequest
@@ -72,6 +74,15 @@ class TaxRateResource {
             .updateTaxRate(request)
             .taxRate
             .toMap()
+    }
+
+    @DELETE
+    @Path("/{id}")
+    fun delete(
+        @PathParam("id") id: String,
+    ): Response {
+        grpc.withTenant(stub).deleteTaxRate(DeleteTaxRateRequest.newBuilder().setId(id).build())
+        return Response.noContent().build()
     }
 }
 

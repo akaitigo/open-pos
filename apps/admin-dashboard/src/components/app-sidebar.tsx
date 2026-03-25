@@ -9,6 +9,9 @@ import {
   Warehouse,
   ClipboardList,
   ScrollText,
+  UserRound,
+  Bell,
+  Receipt,
 } from 'lucide-react'
 
 import {
@@ -32,7 +35,10 @@ const navItems = [
   { title: '発注管理', url: '/purchase-orders', icon: ClipboardList },
   { title: '店舗管理', url: '/stores', icon: Store },
   { title: 'スタッフ管理', url: '/staff', icon: Users },
+  { title: '顧客管理', url: '/customers', icon: UserRound },
+  { title: '税率管理', url: '/tax-rates', icon: Receipt },
   { title: '操作履歴', url: '/activity-logs', icon: ScrollText },
+  { title: '通知', url: '/notifications', icon: Bell },
   { title: '設定', url: '/settings', icon: Settings },
 ]
 

@@ -41,6 +41,8 @@ service ProductService {
   rpc ListTaxRates(ListTaxRatesRequest) returns (ListTaxRatesResponse);
   // 税率を更新する
   rpc UpdateTaxRate(UpdateTaxRateRequest) returns (UpdateTaxRateResponse);
+  // 税率を削除する
+  rpc DeleteTaxRate(DeleteTaxRateRequest) returns (DeleteTaxRateResponse);
 
   // 割引を作成する（パーセント割引・定額割引）
   rpc CreateDiscount(CreateDiscountRequest) returns (CreateDiscountResponse);
@@ -451,6 +453,15 @@ message UpdateTaxRateRequest {
   // デフォルト税率フラグ（presence 付き更新用）
   google.protobuf.BoolValue is_default_value = 7;
 }
+
+// 税率削除リクエスト
+message DeleteTaxRateRequest {
+  // 税率ID（UUID）
+  string id = 1;
+}
+
+// 税率削除レスポンス（空レスポンス）
+message DeleteTaxRateResponse {}
 
 // 割引作成リクエスト
 message CreateDiscountRequest {

@@ -34,6 +34,8 @@ import openpos.product.v1.DeleteCategoryRequest
 import openpos.product.v1.DeleteCategoryResponse
 import openpos.product.v1.DeleteProductRequest
 import openpos.product.v1.DeleteProductResponse
+import openpos.product.v1.DeleteTaxRateRequest
+import openpos.product.v1.DeleteTaxRateResponse
 import openpos.product.v1.Discount
 import openpos.product.v1.DiscountType
 import openpos.product.v1.GetProductByBarcodeRequest
@@ -347,6 +349,19 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         responseObserver.onNext(
             UpdateTaxRateResponse.newBuilder().setTaxRate(entity.toProto()).build(),
         )
+        responseObserver.onCompleted()
+    }
+
+    override fun deleteTaxRate(
+        request: DeleteTaxRateRequest,
+        responseObserver: io.grpc.stub.StreamObserver<DeleteTaxRateResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val deleted = taxRateService.delete(request.id.toUUID())
+        if (!deleted) {
+            throw Status.NOT_FOUND.withDescription("TaxRate not found: ${request.id}").asRuntimeException()
+        }
+        responseObserver.onNext(DeleteTaxRateResponse.getDefaultInstance())
         responseObserver.onCompleted()
     }
 

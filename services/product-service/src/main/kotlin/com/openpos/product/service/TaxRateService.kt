@@ -74,6 +74,18 @@ class TaxRateService {
     }
 
     /**
+     * 税率を削除する（論理削除: isActive = false）。
+     */
+    @Transactional
+    fun delete(id: UUID): Boolean {
+        tenantFilterService.enableFilter()
+        val entity = taxRateRepository.findById(id) ?: return false
+        entity.isActive = false
+        taxRateRepository.persist(entity)
+        return true
+    }
+
+    /**
      * 税率を更新する。
      */
     @Transactional
