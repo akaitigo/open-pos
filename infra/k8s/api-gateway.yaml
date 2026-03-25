@@ -41,6 +41,11 @@ spec:
                 secretKeyRef:
                   name: openpos-secrets
                   key: HYDRA_ISSUER
+            - name: OPENPOS_SESSION_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: openpos-secrets
+                  key: OPENPOS_SESSION_JWT_SECRET
           startupProbe:
             httpGet:
               path: /q/health/live
