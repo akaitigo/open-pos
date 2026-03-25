@@ -49,9 +49,9 @@ class ProductServiceTest {
     fun setUp() {
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
-        doNothing().whenever(cacheService).invalidateProduct(any(), anyOrNull())
-        doNothing().whenever(cacheService).invalidateCategory(any())
-        doNothing().whenever(cacheService).invalidateAllCategoryLists()
+        doNothing().whenever(cacheService).invalidateProduct(any(), any(), anyOrNull())
+        doNothing().whenever(cacheService).invalidateCategory(any(), any())
+        doNothing().whenever(cacheService).invalidateAllCategoryLists(any())
     }
 
     // === create ===

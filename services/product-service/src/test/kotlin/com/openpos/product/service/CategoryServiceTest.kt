@@ -45,8 +45,8 @@ class CategoryServiceTest {
     fun setUp() {
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
-        doNothing().whenever(cacheService).invalidateCategory(any())
-        doNothing().whenever(cacheService).invalidateAllCategoryLists()
+        doNothing().whenever(cacheService).invalidateCategory(any(), any())
+        doNothing().whenever(cacheService).invalidateAllCategoryLists(any())
     }
 
     // === create ===

@@ -44,9 +44,15 @@ class DiscountService {
         private const val PREFIX = "openpos:product-service"
     }
 
-    private fun discountKey(id: String): String = "$PREFIX:discount:$id"
+    private fun discountKey(
+        orgId: String,
+        id: String,
+    ): String = "$PREFIX:$orgId:discount:$id"
 
-    private fun discountListKey(activeOnly: Boolean): String = "$PREFIX:discount:list:$activeOnly"
+    private fun discountListKey(
+        orgId: String,
+        activeOnly: Boolean,
+    ): String = "$PREFIX:$orgId:discount:list:$activeOnly"
 
     /**
      * 割引を作成する。作成後にリストキャッシュを無効化する。
@@ -98,7 +104,11 @@ class DiscountService {
      */
     fun findById(id: UUID): DiscountEntity? {
         tenantFilterService.enableFilter()
-        val cacheKey = discountKey(id.toString())
+        val orgId =
+            requireNotNull(organizationIdHolder.organizationId) {
+                "organizationId is not set"
+            }
+        val cacheKey = discountKey(orgId.toString(), id.toString())
 
         // cache-aside: キャッシュ確認
         val cached = cacheService.get(cacheKey)
@@ -131,10 +141,14 @@ class DiscountService {
     @Transactional
     fun delete(id: UUID): Boolean {
         tenantFilterService.enableFilter()
+        val orgId =
+            requireNotNull(organizationIdHolder.organizationId) {
+                "organizationId is not set"
+            }
         val entity = discountRepository.findById(id) ?: return false
         entity.isActive = false
         discountRepository.persist(entity)
-        cacheService.invalidate(discountKey(id.toString()))
+        cacheService.invalidate(discountKey(orgId.toString(), id.toString()))
         invalidateDiscountListCaches()
         return true
     }
@@ -153,6 +167,10 @@ class DiscountService {
         isActive: Boolean?,
     ): DiscountEntity? {
         tenantFilterService.enableFilter()
+        val orgId =
+            requireNotNull(organizationIdHolder.organizationId) {
+                "organizationId is not set"
+            }
         val entity = discountRepository.findById(id) ?: return null
 
         name?.let { entity.name = it }
@@ -165,13 +183,17 @@ class DiscountService {
         isActive?.let { entity.isActive = it }
 
         discountRepository.persist(entity)
-        cacheService.invalidate(discountKey(id.toString()))
+        cacheService.invalidate(discountKey(orgId.toString(), id.toString()))
         invalidateDiscountListCaches()
         return entity
     }
 
     private fun invalidateDiscountListCaches() {
-        cacheService.invalidatePattern("$PREFIX:discount:list:*")
+        val orgId =
+            requireNotNull(organizationIdHolder.organizationId) {
+                "organizationId is not set"
+            }
+        cacheService.invalidatePattern("$PREFIX:$orgId:discount:list:*")
     }
 }
 
