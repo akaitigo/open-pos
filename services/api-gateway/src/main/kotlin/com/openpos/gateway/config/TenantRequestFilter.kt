@@ -10,7 +10,7 @@ import jakarta.ws.rs.ext.Provider
 import java.util.UUID
 
 @Provider
-@Priority(Priorities.AUTHENTICATION + 10)
+@Priority(Priorities.AUTHENTICATION - 10)
 class TenantRequestFilter : ContainerRequestFilter {
     @Inject
     lateinit var tenantContext: TenantContext
