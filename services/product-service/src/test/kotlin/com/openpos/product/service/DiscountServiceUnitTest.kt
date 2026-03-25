@@ -7,8 +7,10 @@ import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.DiscountEntity
 import com.openpos.product.repository.DiscountRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -275,6 +277,43 @@ class DiscountServiceUnitTest {
     }
 
     @Nested
+    inner class DeleteCache {
+        @Test
+        fun `delete sets isActive to false and invalidates cache`() {
+            val discountId = UUID.randomUUID()
+            val entity =
+                DiscountEntity().apply {
+                    id = discountId
+                    organizationId = orgId
+                    name = "To Delete"
+                    discountType = "PERCENTAGE"
+                    value = 10
+                    isActive = true
+                }
+            whenever(discountRepository.findById(discountId)).thenReturn(entity)
+            doNothing().whenever(cacheService).invalidate(any())
+            doNothing().whenever(cacheService).invalidatePattern(any())
+
+            val result = service.delete(discountId)
+
+            assertTrue(result)
+            assertEquals(false, entity.isActive)
+            verify(cacheService).invalidate(any())
+            verify(cacheService).invalidatePattern(any())
+        }
+
+        @Test
+        fun `delete returns false when entity not found`() {
+            val discountId = UUID.randomUUID()
+            whenever(discountRepository.findById(discountId)).thenReturn(null)
+
+            val result = service.delete(discountId)
+
+            assertFalse(result)
+        }
+    }
+
+    @Nested
     inner class CreateCache {
         @Test
         fun `create invalidates list caches`() {
@@ -284,6 +323,41 @@ class DiscountServiceUnitTest {
 
             assertNotNull(result)
             verify(cacheService).invalidatePattern(any())
+        }
+    }
+
+    @Nested
+    inner class ListCache {
+        @Test
+        fun `list with activeOnly true calls findActiveAndValid`() {
+            val now = Instant.now()
+            val entity =
+                DiscountEntity().apply {
+                    id = UUID.randomUUID()
+                    organizationId = orgId
+                    name = "Active"
+                    discountType = "PERCENTAGE"
+                    value = 10
+                    isActive = true
+                    validFrom = now.minusSeconds(3600)
+                    validUntil = now.plusSeconds(3600)
+                }
+            whenever(discountRepository.findActiveAndValid(any())).thenReturn(listOf(entity))
+
+            val result = service.list(true)
+
+            assertEquals(1, result.size)
+            assertEquals("Active", result[0].name)
+        }
+
+        @Test
+        fun `list with activeOnly false calls findAllOrdered`() {
+            whenever(discountRepository.findAllOrdered()).thenReturn(emptyList())
+
+            val result = service.list(false)
+
+            assertEquals(0, result.size)
+            verify(discountRepository).findAllOrdered()
         }
     }
 }
