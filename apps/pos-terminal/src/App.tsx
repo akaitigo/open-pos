@@ -21,25 +21,34 @@ export function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<ProductsPage />} />
-          <Route
-            path="cart"
-            element={
-              <Suspense fallback={<RouteLoading />}>
-                <CartPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="history"
-            element={
-              <Suspense fallback={<RouteLoading />}>
-                <HistoryPage />
-              </Suspense>
-            }
-          />
-        </Route>
+          <Route element={<Layout />}>
+            <Route index element={<ProductsPage />} />
+            <Route
+              path="cart"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <CartPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="history"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <HistoryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="*"
+              element={
+                <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
+                  <h1 className="text-2xl font-bold">ページが見つかりません</h1>
+                  <p className="text-muted-foreground">指定されたURLは存在しません。</p>
+                </div>
+              }
+            />
+          </Route>
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>

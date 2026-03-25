@@ -28,6 +28,29 @@ const ActivityLogsPage = lazy(() =>
 const OnboardingPage = lazy(() =>
   import('@/routes/onboarding').then((m) => ({ default: m.OnboardingPage })),
 )
+const CustomersPage = lazy(() =>
+  import('@/routes/customers').then((m) => ({ default: m.CustomersPage })),
+)
+const NotificationsPage = lazy(() =>
+  import('@/routes/notifications').then((m) => ({ default: m.NotificationsPage })),
+)
+const TaxRatesPage = lazy(() =>
+  import('@/routes/tax-rates').then((m) => ({ default: m.TaxRatesPage })),
+)
+const OrganizationPage = lazy(() =>
+  import('@/routes/organization').then((m) => ({ default: m.OrganizationPage })),
+)
+const DiscountsPage = lazy(() =>
+  import('@/routes/discounts').then((m) => ({ default: m.DiscountsPage })),
+)
+const ReportsPage = lazy(() => import('@/routes/reports').then((m) => ({ default: m.ReportsPage })))
+const ExportPage = lazy(() => import('@/routes/export').then((m) => ({ default: m.ExportPage })))
+const TerminalsPage = lazy(() =>
+  import('@/routes/terminals').then((m) => ({ default: m.TerminalsPage })),
+)
+const NotFoundPage = lazy(() =>
+  import('@/routes/not-found').then((m) => ({ default: m.NotFoundPage })),
+)
 
 function RouteLoading() {
   return (
@@ -42,81 +65,153 @@ export function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<DashboardPage />} />
-          <Route
-            path="products"
-            element={
-              <Suspense fallback={<RouteLoading />}>
-                <ProductsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="categories"
-            element={
-              <Suspense fallback={<RouteLoading />}>
-                <CategoriesPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="stores"
-            element={
-              <Suspense fallback={<RouteLoading />}>
-                <StoresPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="staff"
-            element={
-              <Suspense fallback={<RouteLoading />}>
-                <StaffPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="settings"
-            element={
-              <Suspense fallback={<RouteLoading />}>
-                <SettingsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="inventory"
-            element={
-              <Suspense fallback={<RouteLoading />}>
-                <InventoryPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="purchase-orders"
-            element={
-              <Suspense fallback={<RouteLoading />}>
-                <PurchaseOrdersPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="activity-logs"
-            element={
-              <Suspense fallback={<RouteLoading />}>
-                <ActivityLogsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="onboarding"
-            element={
-              <Suspense fallback={<RouteLoading />}>
-                <OnboardingPage />
-              </Suspense>
-            }
-          />
-        </Route>
+          <Route element={<Layout />}>
+            <Route index element={<DashboardPage />} />
+            <Route
+              path="products"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <ProductsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="categories"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <CategoriesPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="stores"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <StoresPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="staff"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <StaffPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <SettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="inventory"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <InventoryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="purchase-orders"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <PurchaseOrdersPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="activity-logs"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <ActivityLogsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="onboarding"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <OnboardingPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="customers"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <CustomersPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="notifications"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <NotificationsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="tax-rates"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <TaxRatesPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="organization"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <OrganizationPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="discounts"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <DiscountsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="reports"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <ReportsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="export"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <ExportPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="terminals"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <TerminalsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="*"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <NotFoundPage />
+                </Suspense>
+              }
+            />
+          </Route>
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
