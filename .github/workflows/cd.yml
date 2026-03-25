@@ -184,7 +184,11 @@ jobs:
 
       - name: Apply production ConfigMaps
         run: |
-          kubectl apply -f infra/k8s/configmap-prod.yaml
+          if [ -f infra/k8s/configmap-prod.yaml ]; then
+            kubectl apply -f infra/k8s/configmap-prod.yaml
+          else
+            echo "::warning::configmap-prod.yaml not found — using per-service ConfigMaps from k8s manifests"
+          fi
 
       - name: Update image tags in manifests
         run: |
