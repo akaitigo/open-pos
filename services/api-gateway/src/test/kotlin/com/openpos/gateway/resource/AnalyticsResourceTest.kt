@@ -20,10 +20,15 @@ import java.util.UUID
 class AnalyticsResourceTest {
     private val stub: AnalyticsServiceGrpc.AnalyticsServiceBlockingStub = mock()
     private val grpc: GrpcClientHelper = mock()
+    private val tenantContext =
+        com.openpos.gateway.config
+            .TenantContext()
+            .apply { staffRole = "OWNER" }
     private val resource =
         AnalyticsResource().also { r ->
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
+            ProductResourceTest.setField(r, "tenantContext", tenantContext)
         }
 
     private val storeId = UUID.randomUUID().toString()

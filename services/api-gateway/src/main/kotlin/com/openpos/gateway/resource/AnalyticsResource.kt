@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
@@ -30,6 +31,9 @@ class AnalyticsResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @GET
     @Path("/daily-sales")
     fun getDailySales(
@@ -37,6 +41,7 @@ class AnalyticsResource {
         @QueryParam("startDate") startDate: String,
         @QueryParam("endDate") endDate: String,
     ): Map<String, Any> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             GetDailySalesRequest
                 .newBuilder()
@@ -59,6 +64,7 @@ class AnalyticsResource {
         @QueryParam("startDate") startDate: String,
         @QueryParam("endDate") endDate: String,
     ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             GetSalesSummaryRequest
                 .newBuilder()
@@ -88,6 +94,7 @@ class AnalyticsResource {
         @QueryParam("storeId") storeId: String,
         @QueryParam("date") date: String,
     ): List<Map<String, Any?>> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             GetHourlySalesRequest
                 .newBuilder()
@@ -105,6 +112,7 @@ class AnalyticsResource {
         @QueryParam("startDate") startDate: String,
         @QueryParam("endDate") endDate: String,
     ): Map<String, Any> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             GetAbcAnalysisRequest
                 .newBuilder()
@@ -127,6 +135,7 @@ class AnalyticsResource {
         @QueryParam("startDate") startDate: String,
         @QueryParam("endDate") endDate: String,
     ): Map<String, Any> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             GetGrossProfitReportRequest
                 .newBuilder()
@@ -155,6 +164,7 @@ class AnalyticsResource {
         @QueryParam("endDate") endDate: String,
         @QueryParam("windowDays") @DefaultValue("7") windowDays: Int,
     ): Map<String, Any> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             GetSalesForecastRequest
                 .newBuilder()

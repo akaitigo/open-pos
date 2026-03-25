@@ -17,10 +17,15 @@ import java.util.UUID
 class SettlementResourceTest {
     private val stub: PosServiceGrpc.PosServiceBlockingStub = mock()
     private val grpc: GrpcClientHelper = mock()
+    private val tenantContext =
+        com.openpos.gateway.config
+            .TenantContext()
+            .apply { staffRole = "OWNER" }
     private val resource =
         SettlementResource().also { r ->
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
+            ProductResourceTest.setField(r, "tenantContext", tenantContext)
         }
 
     private val settlementId = UUID.randomUUID().toString()
