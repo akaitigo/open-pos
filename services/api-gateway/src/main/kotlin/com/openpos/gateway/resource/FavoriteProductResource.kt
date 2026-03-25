@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import io.smallrye.common.annotation.Blocking
+import jakarta.annotation.security.DenyAll
 import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
@@ -14,6 +15,7 @@ import jakarta.ws.rs.core.Response
  */
 @Path("/api/staff/{staffId}/favorites")
 @Blocking
+@DenyAll
 class FavoriteProductResource {
     private fun notImplemented(): Response =
         Response
