@@ -4,6 +4,7 @@ import com.openpos.store.config.OrganizationIdHolder
 import com.openpos.store.config.TenantFilterService
 import com.openpos.store.entity.StaffEntity
 import com.openpos.store.repository.StaffRepository
+import com.openpos.store.repository.StoreRepository
 import io.quarkus.panache.common.Page
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -21,6 +22,9 @@ data class PinAuthResult(
 class StaffService {
     @Inject
     lateinit var staffRepository: StaffRepository
+
+    @Inject
+    lateinit var storeRepository: StoreRepository
 
     @Inject
     lateinit var tenantFilterService: TenantFilterService
@@ -45,6 +49,14 @@ class StaffService {
         pinHash: String,
     ): StaffEntity {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
+        // storeId が自組織に属するか検証
+        tenantFilterService.enableFilter()
+        val store =
+            storeRepository.findById(storeId)
+                ?: throw IllegalArgumentException("Store $storeId not found in organization $orgId")
+        require(store.organizationId == orgId) {
+            "Store $storeId does not belong to organization $orgId"
+        }
         val entity =
             StaffEntity().apply {
                 this.organizationId = orgId

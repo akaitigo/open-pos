@@ -4,6 +4,7 @@ import com.openpos.store.cache.StoreCacheService
 import com.openpos.store.config.OrganizationIdHolder
 import com.openpos.store.config.TenantFilterService
 import com.openpos.store.entity.TerminalEntity
+import com.openpos.store.repository.StoreRepository
 import com.openpos.store.repository.TerminalRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -15,6 +16,9 @@ import java.util.UUID
 class TerminalService {
     @Inject
     lateinit var terminalRepository: TerminalRepository
+
+    @Inject
+    lateinit var storeRepository: StoreRepository
 
     @Inject
     lateinit var tenantFilterService: TenantFilterService
@@ -32,6 +36,14 @@ class TerminalService {
         name: String,
     ): TerminalEntity {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
+        // storeId が自組織に属するか検証
+        tenantFilterService.enableFilter()
+        val store =
+            storeRepository.findById(storeId)
+                ?: throw IllegalArgumentException("Store $storeId not found in organization $orgId")
+        require(store.organizationId == orgId) {
+            "Store $storeId does not belong to organization $orgId"
+        }
         val entity =
             TerminalEntity().apply {
                 this.organizationId = orgId
