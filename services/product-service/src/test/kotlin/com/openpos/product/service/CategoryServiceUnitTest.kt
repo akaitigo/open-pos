@@ -51,8 +51,8 @@ class CategoryServiceUnitTest {
 
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
-        doNothing().whenever(cacheService).invalidateCategory(any())
-        doNothing().whenever(cacheService).invalidateAllCategoryLists()
+        doNothing().whenever(cacheService).invalidateCategory(any(), any())
+        doNothing().whenever(cacheService).invalidateAllCategoryLists(any())
     }
 
     @Nested
@@ -61,7 +61,7 @@ class CategoryServiceUnitTest {
         fun `returns from cache when cache hit`() {
             val categoryId = UUID.randomUUID()
             val cacheKey = "openpos:product-service:$orgId:category:list:null"
-            whenever(cacheService.categoryListKey(eq(null))).thenReturn(cacheKey)
+            whenever(cacheService.categoryListKey(eq(orgId.toString()), eq(null))).thenReturn(cacheKey)
 
             val dtos =
                 listOf(
@@ -87,7 +87,7 @@ class CategoryServiceUnitTest {
         @Test
         fun `falls back to DB when cache deserialization fails`() {
             val cacheKey = "openpos:product-service:$orgId:category:list:null"
-            whenever(cacheService.categoryListKey(eq(null))).thenReturn(cacheKey)
+            whenever(cacheService.categoryListKey(eq(orgId.toString()), eq(null))).thenReturn(cacheKey)
             whenever(cacheService.get(cacheKey)).thenReturn("invalid json")
 
             val dbCategories =
@@ -110,7 +110,7 @@ class CategoryServiceUnitTest {
         @Test
         fun `fetches from DB and caches when cache miss`() {
             val cacheKey = "openpos:product-service:$orgId:category:list:null"
-            whenever(cacheService.categoryListKey(eq(null))).thenReturn(cacheKey)
+            whenever(cacheService.categoryListKey(eq(orgId.toString()), eq(null))).thenReturn(cacheKey)
             whenever(cacheService.get(cacheKey)).thenReturn(null)
             doNothing().whenever(cacheService).set(any(), any(), any())
 
@@ -135,7 +135,7 @@ class CategoryServiceUnitTest {
         @Test
         fun `handles cache write failure gracefully for listByParentId`() {
             val cacheKey = "openpos:product-service:$orgId:category:list:null"
-            whenever(cacheService.categoryListKey(eq(null))).thenReturn(cacheKey)
+            whenever(cacheService.categoryListKey(eq(orgId.toString()), eq(null))).thenReturn(cacheKey)
             whenever(cacheService.get(cacheKey)).thenReturn(null)
             doThrow(RuntimeException("Redis down")).whenever(cacheService).set(any(), any(), any())
 
@@ -163,7 +163,7 @@ class CategoryServiceUnitTest {
         fun `returns from cache when cache hit`() {
             val categoryId = UUID.randomUUID()
             val cacheKey = "openpos:product-service:$orgId:category:$categoryId"
-            whenever(cacheService.categoryKey(eq(categoryId.toString()))).thenReturn(cacheKey)
+            whenever(cacheService.categoryKey(eq(orgId.toString()), eq(categoryId.toString()))).thenReturn(cacheKey)
 
             val dto =
                 CategoryCacheDto(
@@ -187,7 +187,7 @@ class CategoryServiceUnitTest {
         fun `falls back to DB when cache deserialization fails`() {
             val categoryId = UUID.randomUUID()
             val cacheKey = "openpos:product-service:$orgId:category:$categoryId"
-            whenever(cacheService.categoryKey(eq(categoryId.toString()))).thenReturn(cacheKey)
+            whenever(cacheService.categoryKey(eq(orgId.toString()), eq(categoryId.toString()))).thenReturn(cacheKey)
             whenever(cacheService.get(cacheKey)).thenReturn("bad json")
 
             val entity =
@@ -209,7 +209,7 @@ class CategoryServiceUnitTest {
         fun `fetches from DB and caches on cache miss`() {
             val categoryId = UUID.randomUUID()
             val cacheKey = "openpos:product-service:$orgId:category:$categoryId"
-            whenever(cacheService.categoryKey(eq(categoryId.toString()))).thenReturn(cacheKey)
+            whenever(cacheService.categoryKey(eq(orgId.toString()), eq(categoryId.toString()))).thenReturn(cacheKey)
             whenever(cacheService.get(cacheKey)).thenReturn(null)
             doNothing().whenever(cacheService).set(any(), any(), any())
 
@@ -233,7 +233,7 @@ class CategoryServiceUnitTest {
         fun `handles cache write failure gracefully for findById`() {
             val categoryId = UUID.randomUUID()
             val cacheKey = "openpos:product-service:$orgId:category:$categoryId"
-            whenever(cacheService.categoryKey(eq(categoryId.toString()))).thenReturn(cacheKey)
+            whenever(cacheService.categoryKey(eq(orgId.toString()), eq(categoryId.toString()))).thenReturn(cacheKey)
             whenever(cacheService.get(cacheKey)).thenReturn(null)
             doThrow(RuntimeException("Redis down")).whenever(cacheService).set(any(), any(), any())
 
@@ -256,7 +256,7 @@ class CategoryServiceUnitTest {
         fun `returns null when not found in DB on cache miss`() {
             val categoryId = UUID.randomUUID()
             val cacheKey = "openpos:product-service:$orgId:category:$categoryId"
-            whenever(cacheService.categoryKey(eq(categoryId.toString()))).thenReturn(cacheKey)
+            whenever(cacheService.categoryKey(eq(orgId.toString()), eq(categoryId.toString()))).thenReturn(cacheKey)
             whenever(cacheService.get(cacheKey)).thenReturn(null)
             whenever(categoryRepository.findById(categoryId)).thenReturn(null)
 
@@ -276,7 +276,7 @@ class CategoryServiceUnitTest {
 
             assertEquals("New Category", result.name)
             assertEquals(orgId, result.organizationId)
-            verify(cacheService).invalidateAllCategoryLists()
+            verify(cacheService).invalidateAllCategoryLists(orgId.toString())
         }
     }
 
@@ -304,7 +304,7 @@ class CategoryServiceUnitTest {
             assertEquals("#00FF00", result?.color)
             assertEquals("new-icon", result?.icon)
             assertEquals(5, result?.displayOrder)
-            verify(cacheService).invalidateCategory(categoryId.toString())
+            verify(cacheService).invalidateCategory(orgId.toString(), categoryId.toString())
         }
     }
 
@@ -339,7 +339,7 @@ class CategoryServiceUnitTest {
             val result = service.delete(categoryId)
 
             assertEquals(true, result)
-            verify(cacheService).invalidateCategory(categoryId.toString())
+            verify(cacheService).invalidateCategory(orgId.toString(), categoryId.toString())
         }
 
         @Test

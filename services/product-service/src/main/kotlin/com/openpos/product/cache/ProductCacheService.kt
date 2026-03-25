@@ -9,8 +9,8 @@ import org.jboss.logging.Logger
 /**
  * product-service の Redis キャッシュサービス。
  * cache-aside パターンで商品・カテゴリの検索結果をキャッシュする。
- * キー形式: openpos:product-service:{entity}:{id}
- * TTL: 300 秒（5 分）
+ * キー形式: openpos:product-service:{orgId}:{entity}:{id}
+ * TTL: 3600 秒（1 時間）
  */
 @ApplicationScoped
 class ProductCacheService {
@@ -77,15 +77,27 @@ class ProductCacheService {
 
     // === Product Keys ===
 
-    fun productKey(id: String): String = "$PREFIX:product:$id"
+    fun productKey(
+        orgId: String,
+        id: String,
+    ): String = "$PREFIX:$orgId:product:$id"
 
-    fun productBarcodeKey(barcode: String): String = "$PREFIX:product:barcode:$barcode"
+    fun productBarcodeKey(
+        orgId: String,
+        barcode: String,
+    ): String = "$PREFIX:$orgId:product:barcode:$barcode"
 
     // === Category Keys ===
 
-    fun categoryKey(id: String): String = "$PREFIX:category:$id"
+    fun categoryKey(
+        orgId: String,
+        id: String,
+    ): String = "$PREFIX:$orgId:category:$id"
 
-    fun categoryListKey(parentId: String?): String = "$PREFIX:category:list:${parentId ?: "root"}"
+    fun categoryListKey(
+        orgId: String,
+        parentId: String?,
+    ): String = "$PREFIX:$orgId:category:list:${parentId ?: "root"}"
 
     // === Invalidation Helpers ===
 
@@ -94,11 +106,12 @@ class ProductCacheService {
      * ID キーに加え、バーコードキーやリスト系のパターンも削除する。
      */
     fun invalidateProduct(
+        orgId: String,
         productId: String,
         barcode: String?,
     ) {
-        val keys = mutableListOf(productKey(productId))
-        barcode?.let { keys.add(productBarcodeKey(it)) }
+        val keys = mutableListOf(productKey(orgId, productId))
+        barcode?.let { keys.add(productBarcodeKey(orgId, it)) }
         invalidate(*keys.toTypedArray())
     }
 
@@ -106,15 +119,18 @@ class ProductCacheService {
      * カテゴリ関連のキャッシュを無効化する。
      * 個別キーに加え、リストキャッシュも削除する。
      */
-    fun invalidateCategory(categoryId: String) {
-        invalidate(categoryKey(categoryId))
-        invalidatePattern("$PREFIX:category:list:*")
+    fun invalidateCategory(
+        orgId: String,
+        categoryId: String,
+    ) {
+        invalidate(categoryKey(orgId, categoryId))
+        invalidatePattern("$PREFIX:$orgId:category:list:*")
     }
 
     /**
      * 全カテゴリリストキャッシュを無効化する。
      */
-    fun invalidateAllCategoryLists() {
-        invalidatePattern("$PREFIX:category:list:*")
+    fun invalidateAllCategoryLists(orgId: String) {
+        invalidatePattern("$PREFIX:$orgId:category:list:*")
     }
 }

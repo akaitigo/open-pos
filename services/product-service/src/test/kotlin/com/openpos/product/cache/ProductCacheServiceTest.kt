@@ -176,28 +176,34 @@ class ProductCacheServiceTest {
     @Nested
     inner class KeyGeneration {
         @Test
-        fun `productKeyは正しい形式のキーを生成する`() {
-            assertEquals("openpos:product-service:product:abc-123", cacheService.productKey("abc-123"))
+        fun `productKeyはorgIdを含む正しい形式のキーを生成する`() {
+            assertEquals("openpos:product-service:org-1:product:abc-123", cacheService.productKey("org-1", "abc-123"))
         }
 
         @Test
-        fun `productBarcodeKeyは正しい形式のキーを生成する`() {
-            assertEquals("openpos:product-service:product:barcode:4901234567890", cacheService.productBarcodeKey("4901234567890"))
+        fun `productBarcodeKeyはorgIdを含む正しい形式のキーを生成する`() {
+            assertEquals(
+                "openpos:product-service:org-1:product:barcode:4901234567890",
+                cacheService.productBarcodeKey("org-1", "4901234567890"),
+            )
         }
 
         @Test
-        fun `categoryKeyは正しい形式のキーを生成する`() {
-            assertEquals("openpos:product-service:category:cat-001", cacheService.categoryKey("cat-001"))
+        fun `categoryKeyはorgIdを含む正しい形式のキーを生成する`() {
+            assertEquals("openpos:product-service:org-1:category:cat-001", cacheService.categoryKey("org-1", "cat-001"))
         }
 
         @Test
-        fun `categoryListKeyはparentIdありの場合の正しいキーを生成する`() {
-            assertEquals("openpos:product-service:category:list:parent-id", cacheService.categoryListKey("parent-id"))
+        fun `categoryListKeyはparentIdありの場合orgIdを含む正しいキーを生成する`() {
+            assertEquals(
+                "openpos:product-service:org-1:category:list:parent-id",
+                cacheService.categoryListKey("org-1", "parent-id"),
+            )
         }
 
         @Test
-        fun `categoryListKeyはparentIdなしの場合rootキーを生成する`() {
-            assertEquals("openpos:product-service:category:list:root", cacheService.categoryListKey(null))
+        fun `categoryListKeyはparentIdなしの場合orgIdを含むrootキーを生成する`() {
+            assertEquals("openpos:product-service:org-1:category:list:root", cacheService.categoryListKey("org-1", null))
         }
     }
 
@@ -206,22 +212,22 @@ class ProductCacheServiceTest {
         @Test
         fun `商品IDとバーコードの両方のキーが削除される`() {
             // Arrange & Act
-            cacheService.invalidateProduct("product-123", "4901234567890")
+            cacheService.invalidateProduct("org-1", "product-123", "4901234567890")
 
             // Assert
             verify(keyCommands).del(
-                "openpos:product-service:product:product-123",
-                "openpos:product-service:product:barcode:4901234567890",
+                "openpos:product-service:org-1:product:product-123",
+                "openpos:product-service:org-1:product:barcode:4901234567890",
             )
         }
 
         @Test
         fun `バーコードがnullの場合は商品IDキーのみ削除される`() {
             // Arrange & Act
-            cacheService.invalidateProduct("product-123", null)
+            cacheService.invalidateProduct("org-1", "product-123", null)
 
             // Assert
-            verify(keyCommands).del("openpos:product-service:product:product-123")
+            verify(keyCommands).del("openpos:product-service:org-1:product:product-123")
         }
     }
 
@@ -233,10 +239,10 @@ class ProductCacheServiceTest {
             whenever(keyCommands.scan(any())).thenThrow(RuntimeException("Connection lost"))
 
             // Act
-            cacheService.invalidateCategory("cat-001")
+            cacheService.invalidateCategory("org-1", "cat-001")
 
             // Assert
-            verify(keyCommands).del("openpos:product-service:category:cat-001")
+            verify(keyCommands).del("openpos:product-service:org-1:category:cat-001")
         }
     }
 }

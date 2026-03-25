@@ -70,7 +70,7 @@ class CategoryService {
                 this.displayOrder = displayOrder
             }
         categoryRepository.persist(entity)
-        cacheService.invalidateAllCategoryLists()
+        cacheService.invalidateAllCategoryLists(orgId.toString())
         return entity
     }
 
@@ -80,8 +80,11 @@ class CategoryService {
      */
     fun listByParentId(parentId: UUID?): List<CategoryEntity> {
         tenantFilterService.enableFilter()
-        val orgId = organizationIdHolder.organizationId
-        val cacheKey = cacheService.categoryListKey(parentId?.toString())
+        val orgId =
+            requireNotNull(organizationIdHolder.organizationId) {
+                "organizationId is not set"
+            }
+        val cacheKey = cacheService.categoryListKey(orgId.toString(), parentId?.toString())
 
         // cache-aside: キャッシュ確認
         val cached = cacheService.get(cacheKey)
@@ -124,7 +127,11 @@ class CategoryService {
      */
     fun findById(id: UUID): CategoryEntity? {
         tenantFilterService.enableFilter()
-        val cacheKey = cacheService.categoryKey(id.toString())
+        val orgId =
+            requireNotNull(organizationIdHolder.organizationId) {
+                "organizationId is not set"
+            }
+        val cacheKey = cacheService.categoryKey(orgId.toString(), id.toString())
 
         // cache-aside: キャッシュ確認
         val cached = cacheService.get(cacheKey)
@@ -172,6 +179,10 @@ class CategoryService {
         displayOrder: Int?,
     ): CategoryEntity? {
         tenantFilterService.enableFilter()
+        val orgId =
+            requireNotNull(organizationIdHolder.organizationId) {
+                "organizationId is not set"
+            }
         val entity = categoryRepository.findById(id) ?: return null
 
         name?.let { entity.name = it }
@@ -184,7 +195,7 @@ class CategoryService {
         displayOrder?.let { entity.displayOrder = it }
 
         categoryRepository.persist(entity)
-        cacheService.invalidateCategory(id.toString())
+        cacheService.invalidateCategory(orgId.toString(), id.toString())
         return entity
     }
 
@@ -194,9 +205,13 @@ class CategoryService {
     @Transactional
     fun delete(id: UUID): Boolean {
         tenantFilterService.enableFilter()
+        val orgId =
+            requireNotNull(organizationIdHolder.organizationId) {
+                "organizationId is not set"
+            }
         val entity = categoryRepository.findById(id) ?: return false
         categoryRepository.delete(entity)
-        cacheService.invalidateCategory(id.toString())
+        cacheService.invalidateCategory(orgId.toString(), id.toString())
         return true
     }
 }
