@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.paginatedResponse
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
@@ -41,6 +42,9 @@ class InventoryResource {
 
     @Inject
     lateinit var grpc: GrpcClientHelper
+
+    @Inject
+    lateinit var tenantContext: TenantContext
 
     // === Stocks ===
 
@@ -91,6 +95,7 @@ class InventoryResource {
     @POST
     @Path("/stocks/adjust")
     fun adjustStock(body: AdjustStockBody): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             AdjustStockRequest
                 .newBuilder()
@@ -156,6 +161,7 @@ class InventoryResource {
     @POST
     @Path("/purchase-orders")
     fun createPurchaseOrder(body: CreatePurchaseOrderBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             CreatePurchaseOrderRequest
                 .newBuilder()
@@ -221,6 +227,7 @@ class InventoryResource {
         @PathParam("id") id: String,
         body: UpdatePurchaseOrderStatusBody,
     ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             UpdatePurchaseOrderStatusRequest
                 .newBuilder()

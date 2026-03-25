@@ -22,7 +22,12 @@ class GrpcExceptionMapper : ExceptionMapper<StatusRuntimeException> {
                 Status.Code.DEADLINE_EXCEEDED -> Response.Status.GATEWAY_TIMEOUT
                 else -> Response.Status.INTERNAL_SERVER_ERROR
             }
-        val message = exception.status.description ?: exception.status.code.name
+        val message =
+            if (httpStatus == Response.Status.INTERNAL_SERVER_ERROR) {
+                "Internal server error"
+            } else {
+                exception.status.description ?: exception.status.code.name
+            }
         return Response
             .status(httpStatus)
             .entity(mapOf("error" to httpStatus.reasonPhrase, "message" to message))

@@ -2,6 +2,7 @@ package com.openpos.gateway.resource
 
 import com.google.protobuf.BoolValue
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.paginatedResponse
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
@@ -37,8 +38,12 @@ class StoreResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @POST
     fun create(body: CreateStoreBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             CreateStoreRequest
                 .newBuilder()
@@ -92,6 +97,7 @@ class StoreResource {
         @PathParam("id") id: String,
         body: UpdateStoreBody,
     ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             UpdateStoreRequest
                 .newBuilder()
@@ -119,6 +125,7 @@ class StoreResource {
         @PathParam("storeId") storeId: String,
         body: RegisterTerminalBody,
     ): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             RegisterTerminalRequest
                 .newBuilder()

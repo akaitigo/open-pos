@@ -119,7 +119,7 @@ services:
       URLS_LOGIN: http://localhost:3000/login
       URLS_LOGOUT: http://localhost:3000/logout
       LOG_LEVEL: info
-    # WARNING: --dev はローカル開発専用。本番では --dev を削除し、TLS を有効化すること。
+    # WARNING: --dev はローカル開発・CI専用。本番 K8s では --dev なしで TLS を有効化すること。
     command: serve all ${HYDRA_SERVE_FLAGS:---dev}
     depends_on:
       postgres:

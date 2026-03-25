@@ -2,6 +2,7 @@ package com.openpos.gateway.resource
 
 import com.openpos.gateway.cache.RedisCacheService
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import openpos.common.v1.PaginationResponse
@@ -35,6 +36,7 @@ class TransactionResourceTest {
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
             ProductResourceTest.setField(r, "cache", cache)
+            ProductResourceTest.setField(r, "tenantContext", TenantContext())
         }
 
     private val orgId = UUID.randomUUID().toString()

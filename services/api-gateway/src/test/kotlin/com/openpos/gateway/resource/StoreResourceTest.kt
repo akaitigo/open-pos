@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import openpos.common.v1.PaginationResponse
 import openpos.store.v1.CreateStoreResponse
 import openpos.store.v1.GetStoreResponse
@@ -28,6 +29,7 @@ class StoreResourceTest {
         StoreResource().also { r ->
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
+            ProductResourceTest.setField(r, "tenantContext", TenantContext())
         }
 
     private val orgId = UUID.randomUUID().toString()
