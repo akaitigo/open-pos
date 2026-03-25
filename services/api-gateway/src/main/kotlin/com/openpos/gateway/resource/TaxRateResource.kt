@@ -2,6 +2,7 @@ package com.openpos.gateway.resource
 
 import com.google.protobuf.BoolValue
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
@@ -31,8 +32,12 @@ class TaxRateResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @POST
     fun create(body: CreateTaxRateBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             CreateTaxRateRequest
                 .newBuilder()
@@ -59,6 +64,7 @@ class TaxRateResource {
         @PathParam("id") id: String,
         body: UpdateTaxRateBody,
     ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             UpdateTaxRateRequest
                 .newBuilder()
@@ -81,6 +87,7 @@ class TaxRateResource {
     fun delete(
         @PathParam("id") id: String,
     ): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         grpc.withTenant(stub).deleteTaxRate(DeleteTaxRateRequest.newBuilder().setId(id).build())
         return Response.noContent().build()
     }

@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
@@ -29,6 +30,9 @@ class SystemSettingResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @GET
     fun list(): List<Map<String, Any?>> {
         val response = grpc.withTenant(stub).listSystemSettings(ListSystemSettingsRequest.getDefaultInstance())
@@ -52,6 +56,7 @@ class SystemSettingResource {
         @PathParam("key") key: String,
         body: UpsertSettingBody,
     ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             UpsertSystemSettingRequest
                 .newBuilder()
@@ -71,6 +76,7 @@ class SystemSettingResource {
     fun delete(
         @PathParam("key") key: String,
     ): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         grpc.withTenant(stub).deleteSystemSetting(DeleteSystemSettingRequest.newBuilder().setKey(key).build())
         return Response.noContent().build()
     }

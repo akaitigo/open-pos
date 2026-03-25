@@ -51,6 +51,7 @@ class CurrentOrganizationResource {
 
     @PUT
     fun updateCurrent(body: UpdateOrganizationBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val orgId =
             tenantContext.organizationId
                 ?: return Response
