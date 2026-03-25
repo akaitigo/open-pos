@@ -12,61 +12,39 @@ import jakarta.ws.rs.core.Response
 
 /**
  * 予約注文 REST リソース（#193）。
- * プレースホルダー実装。
+ * 未実装: gRPC バックエンドが未整備のため全エンドポイントが 501 を返す。
  */
 @Path("/api/reservations")
 @Blocking
 class ReservationResource {
+    private fun notImplemented(): Response =
+        Response
+            .status(501)
+            .entity(mapOf("error" to "NOT_IMPLEMENTED", "message" to "Reservation API is not yet implemented"))
+            .build()
+
     @GET
     fun list(
         @QueryParam("storeId") storeId: String?,
         @QueryParam("status") status: String?,
         @QueryParam("page") @DefaultValue("1") page: Int,
         @QueryParam("pageSize") @DefaultValue("20") pageSize: Int,
-    ): Map<String, Any> =
-        mapOf(
-            "data" to emptyList<Any>(),
-            "pagination" to
-                mapOf(
-                    "page" to page,
-                    "pageSize" to pageSize,
-                    "totalCount" to 0,
-                    "totalPages" to 0,
-                ),
-        )
+    ): Response = notImplemented()
 
     @POST
-    fun create(body: CreateReservationBody): Response =
-        Response
-            .status(Response.Status.CREATED)
-            .entity(
-                mapOf(
-                    "storeId" to body.storeId,
-                    "customerName" to (body.customerName ?: ""),
-                    "status" to "RESERVED",
-                    "message" to "予約を作成しました",
-                ),
-            ).build()
+    fun create(body: CreateReservationBody): Response = notImplemented()
 
     @PUT
     @Path("/{id}/fulfill")
     fun fulfill(
         @PathParam("id") id: String,
-    ): Map<String, Any> =
-        mapOf(
-            "id" to id,
-            "status" to "FULFILLED",
-        )
+    ): Response = notImplemented()
 
     @PUT
     @Path("/{id}/cancel")
     fun cancel(
         @PathParam("id") id: String,
-    ): Map<String, Any> =
-        mapOf(
-            "id" to id,
-            "status" to "CANCELLED",
-        )
+    ): Response = notImplemented()
 }
 
 data class CreateReservationBody(

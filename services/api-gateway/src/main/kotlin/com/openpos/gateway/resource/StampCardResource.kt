@@ -9,47 +9,32 @@ import jakarta.ws.rs.core.Response
 
 /**
  * デジタルスタンプカード REST リソース（#222）。
- * プレースホルダー実装。
+ * 未実装: gRPC バックエンドが未整備のため全エンドポイントが 501 を返す。
  */
 @Path("/api/stamp-cards")
 @Blocking
 class StampCardResource {
+    private fun notImplemented(): Response =
+        Response
+            .status(501)
+            .entity(mapOf("error" to "NOT_IMPLEMENTED", "message" to "Stamp card API is not yet implemented"))
+            .build()
+
     @GET
     @Path("/{customerId}")
     fun get(
         @PathParam("customerId") customerId: String,
-    ): Map<String, Any> =
-        mapOf(
-            "customerId" to customerId,
-            "totalStamps" to 0,
-            "rewardThreshold" to 10,
-            "isRewardAvailable" to false,
-        )
+    ): Response = notImplemented()
 
     @POST
     @Path("/{customerId}/stamp")
     fun addStamp(
         @PathParam("customerId") customerId: String,
-    ): Response =
-        Response
-            .ok(
-                mapOf(
-                    "customerId" to customerId,
-                    "totalStamps" to 1,
-                    "message" to "スタンプを追加しました",
-                ),
-            ).build()
+    ): Response = notImplemented()
 
     @POST
     @Path("/{customerId}/redeem")
     fun redeemReward(
         @PathParam("customerId") customerId: String,
-    ): Response =
-        Response
-            .ok(
-                mapOf(
-                    "customerId" to customerId,
-                    "message" to "特典を利用しました",
-                ),
-            ).build()
+    ): Response = notImplemented()
 }

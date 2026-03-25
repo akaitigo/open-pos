@@ -12,32 +12,30 @@ import jakarta.ws.rs.core.Response
 
 /**
  * 在庫移動 REST リソース (#145)。
- * Phase 9: 在庫移動管理の REST API placeholder。
+ * 未実装: gRPC バックエンドが未整備のため全エンドポイントが 501 を返す。
  */
 @Path("/api/stock-transfers")
 @Blocking
 class StockTransferResource {
+    private fun notImplemented(): Response =
+        Response
+            .status(501)
+            .entity(mapOf("error" to "NOT_IMPLEMENTED", "message" to "Stock transfer API is not yet implemented"))
+            .build()
+
     @GET
     fun list(
         @QueryParam("page") @DefaultValue("1") page: Int,
         @QueryParam("pageSize") @DefaultValue("20") pageSize: Int,
-    ): Map<String, Any> =
-        mapOf(
-            "data" to emptyList<Any>(),
-            "pagination" to mapOf(
-                "page" to page,
-                "pageSize" to pageSize,
-                "totalCount" to 0,
-                "totalPages" to 0,
-            ),
-        )
+    ): Response = notImplemented()
 
     @POST
-    fun create(body: Map<String, Any?>): Response =
-        Response.status(Response.Status.CREATED).entity(body).build()
+    fun create(body: Map<String, Any?>): Response = notImplemented()
 
     @PUT
     @Path("/{id}/status")
-    fun updateStatus(@PathParam("id") id: String, body: Map<String, Any?>): Response =
-        Response.ok(body).build()
+    fun updateStatus(
+        @PathParam("id") id: String,
+        body: Map<String, Any?>,
+    ): Response = notImplemented()
 }

@@ -10,40 +10,29 @@ import jakarta.ws.rs.core.Response
 
 /**
  * 値引き理由コード REST リソース（#216）。
- * プレースホルダー実装。
+ * 未実装: gRPC バックエンドが未整備のため全エンドポイントが 501 を返す。
  */
 @Path("/api/discount-reasons")
 @Blocking
 class DiscountReasonResource {
+    private fun notImplemented(): Response =
+        Response
+            .status(501)
+            .entity(mapOf("error" to "NOT_IMPLEMENTED", "message" to "Discount reason API is not yet implemented"))
+            .build()
+
     @GET
-    fun list(): List<Map<String, Any>> {
-        // プレースホルダー
-        return emptyList()
-    }
+    fun list(): Response = notImplemented()
 
     @POST
-    fun create(body: CreateDiscountReasonBody): Response =
-        Response
-            .status(Response.Status.CREATED)
-            .entity(
-                mapOf(
-                    "code" to body.code,
-                    "description" to body.description,
-                    "isActive" to true,
-                ),
-            ).build()
+    fun create(body: CreateDiscountReasonBody): Response = notImplemented()
 
     @PUT
     @Path("/{id}")
     fun update(
         @PathParam("id") id: String,
         body: UpdateDiscountReasonBody,
-    ): Map<String, Any?> =
-        mapOf(
-            "id" to id,
-            "description" to body.description,
-            "isActive" to body.isActive,
-        )
+    ): Response = notImplemented()
 }
 
 data class CreateDiscountReasonBody(
