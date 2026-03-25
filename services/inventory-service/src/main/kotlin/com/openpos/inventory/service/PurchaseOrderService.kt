@@ -46,6 +46,10 @@ class PurchaseOrderService {
     ): PurchaseOrderEntity {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
         require(items.isNotEmpty()) { "At least one item is required" }
+        // TODO(#924): Validate that storeId belongs to organizationId.
+        // inventory-service has no gRPC client to store-service yet.
+        // Options: (a) add store-service gRPC client, (b) validate at api-gateway layer,
+        // (c) use an event-sourced store cache. Currently relying on api-gateway RBAC + tenant filter.
 
         val order =
             PurchaseOrderEntity().apply {

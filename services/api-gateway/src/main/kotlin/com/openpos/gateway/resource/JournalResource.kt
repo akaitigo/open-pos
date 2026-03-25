@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.paginatedResponse
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
@@ -27,6 +28,9 @@ class JournalResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @GET
     fun list(
         @QueryParam("page") @DefaultValue("1") page: Int,
@@ -35,6 +39,7 @@ class JournalResource {
         @QueryParam("startDate") startDate: String?,
         @QueryParam("endDate") endDate: String?,
     ): Map<String, Any> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             ListJournalEntriesRequest
                 .newBuilder()

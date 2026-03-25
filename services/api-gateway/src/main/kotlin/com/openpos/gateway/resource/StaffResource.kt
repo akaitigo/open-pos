@@ -105,6 +105,12 @@ class StaffResource {
         body: UpdateStaffBody,
     ): Map<String, Any?> {
         tenantContext.requireRole("OWNER", "MANAGER")
+        // Role escalation prevention: only OWNERs can assign the OWNER role
+        if (body.role?.uppercase() == "OWNER" && tenantContext.staffRole != null && tenantContext.staffRole != "OWNER") {
+            throw com.openpos.gateway.config.ForbiddenException(
+                "Only OWNER can assign the OWNER role",
+            )
+        }
         val request =
             UpdateStaffRequest
                 .newBuilder()

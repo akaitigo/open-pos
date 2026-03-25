@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
@@ -26,8 +27,12 @@ class SettlementResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @POST
     fun create(body: CreateSettlementBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             CreateSettlementRequest
                 .newBuilder()
