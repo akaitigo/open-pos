@@ -139,7 +139,7 @@ class GrpcExceptionMapperTest {
         @Test
         fun `descriptionがない場合はステータスコード名が使用される`() {
             // Arrange
-            val ex = StatusRuntimeException(Status.INTERNAL)
+            val ex = StatusRuntimeException(Status.NOT_FOUND)
 
             // Act
             val response = mapper.toResponse(ex)
@@ -147,7 +147,35 @@ class GrpcExceptionMapperTest {
             // Assert
             @Suppress("UNCHECKED_CAST")
             val entity = response.entity as Map<String, String>
-            assertEquals("INTERNAL", entity["message"])
+            assertEquals("NOT_FOUND", entity["message"])
+        }
+
+        @Test
+        fun `INTERNAL_SERVER_ERRORの場合は固定メッセージを返す`() {
+            // Arrange
+            val ex = StatusRuntimeException(Status.INTERNAL.withDescription("sensitive db error details"))
+
+            // Act
+            val response = mapper.toResponse(ex)
+
+            // Assert
+            @Suppress("UNCHECKED_CAST")
+            val entity = response.entity as Map<String, String>
+            assertEquals("Internal server error", entity["message"])
+        }
+
+        @Test
+        fun `UNKNOWNステータスもINTERNAL_SERVER_ERRORとして固定メッセージを返す`() {
+            // Arrange
+            val ex = StatusRuntimeException(Status.UNKNOWN.withDescription("unknown internal details"))
+
+            // Act
+            val response = mapper.toResponse(ex)
+
+            // Assert
+            @Suppress("UNCHECKED_CAST")
+            val entity = response.entity as Map<String, String>
+            assertEquals("Internal server error", entity["message"])
         }
 
         @Test
