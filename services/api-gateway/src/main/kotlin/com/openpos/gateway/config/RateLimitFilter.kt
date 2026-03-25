@@ -20,7 +20,7 @@ import java.time.Instant
  * 1分あたりの最大リクエスト数を制限する。
  * organization_id が未設定のリクエストは "anonymous" としてカウント。
  * Redis INCR + EXPIRE による分散レートリミット。
- * Redis 障害時はリクエストを許可する（fail-open）。
+ * Redis 障害時は 429 を返す（fail-closed）。
  */
 @Provider
 @Priority(Priorities.AUTHENTICATION + 5)
@@ -62,8 +62,19 @@ class RateLimitFilter :
 
         val currentCount = tryIncrement(redisKey)
 
-        // Redis 障害時は -1 が返る → fail-open でリクエスト許可
+        // Redis 障害時は -1 が返る → fail-closed で 429 を返す
         if (currentCount < 0) {
+            requestContext.abortWith(
+                Response
+                    .status(429)
+                    .header("Retry-After", 60)
+                    .entity(
+                        mapOf(
+                            "error" to "Too Many Requests",
+                            "message" to "Rate limiting unavailable. Please retry later.",
+                        ),
+                    ).build(),
+            )
             return
         }
 
@@ -105,7 +116,7 @@ class RateLimitFilter :
 
     /**
      * Redis INCR + EXPIRE でリクエスト数をカウントする。
-     * Redis 障害時は -1 を返す（fail-open）。
+     * Redis 障害時は -1 を返す（呼び出し元で fail-closed 処理）。
      */
     internal fun tryIncrement(key: String): Long =
         try {
