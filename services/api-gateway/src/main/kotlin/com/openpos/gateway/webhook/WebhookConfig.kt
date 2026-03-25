@@ -61,6 +61,14 @@ enum class DeliveryStatus {
 /**
  * Webhook 登録のインメモリストア。
  * テナント分離された Webhook 登録を管理する。
+ *
+ * TODO(#889): DB 永続化への移行計画
+ * 現在は ConcurrentHashMap によるインメモリ実装。本番運用では以下の対応が必要:
+ * 1. webhook_registrations / webhook_deliveries テーブルを Flyway マイグレーションで作成
+ * 2. JPA Entity + Panache Repository に置き換え
+ * 3. organization_id カラム + Hibernate Filter でテナント分離
+ * 4. 配信リトライキューは RabbitMQ DLQ パターンに移行
+ * Pod 再起動で全登録が失われるため、v1.0 前に対応必須。
  */
 @jakarta.enterprise.context.ApplicationScoped
 class WebhookStore {
