@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import io.smallrye.common.annotation.Blocking
+import jakarta.annotation.security.DenyAll
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
@@ -12,6 +13,7 @@ import jakarta.ws.rs.core.Response
  */
 @Path("/api/plans")
 @Blocking
+@DenyAll
 class PlanResource {
     private fun notImplemented(): Response =
         Response

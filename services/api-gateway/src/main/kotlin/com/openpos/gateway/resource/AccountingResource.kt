@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import io.smallrye.common.annotation.Blocking
+import jakarta.annotation.security.DenyAll
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.QueryParam
@@ -12,6 +13,7 @@ import jakarta.ws.rs.core.Response
  */
 @Path("/api/accounting")
 @Blocking
+@DenyAll
 class AccountingResource {
     private fun notImplemented(): Response =
         Response
