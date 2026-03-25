@@ -2,6 +2,7 @@ package com.openpos.gateway.resource
 
 import com.google.protobuf.BoolValue
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
@@ -32,8 +33,12 @@ class DiscountResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @POST
     fun create(body: CreateDiscountBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             CreateDiscountRequest
                 .newBuilder()
@@ -62,6 +67,7 @@ class DiscountResource {
         @PathParam("id") id: String,
         body: UpdateDiscountBody,
     ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             UpdateDiscountRequest
                 .newBuilder()
@@ -86,6 +92,7 @@ class DiscountResource {
     fun delete(
         @PathParam("id") id: String,
     ): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         grpc.withTenant(stub).deleteDiscount(DeleteDiscountRequest.newBuilder().setId(id).build())
         return Response.noContent().build()
     }

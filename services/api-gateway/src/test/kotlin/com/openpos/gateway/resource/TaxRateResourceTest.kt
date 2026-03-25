@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import openpos.product.v1.CreateTaxRateResponse
 import openpos.product.v1.ListTaxRatesResponse
 import openpos.product.v1.ProductServiceGrpc
@@ -22,6 +23,7 @@ class TaxRateResourceTest {
         TaxRateResource().also { r ->
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
+            ProductResourceTest.setField(r, "tenantContext", TenantContext())
         }
 
     private val orgId = UUID.randomUUID().toString()

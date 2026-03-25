@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import openpos.product.v1.Category
@@ -26,6 +27,7 @@ class CategoryResourceTest {
         CategoryResource().also { r ->
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
+            ProductResourceTest.setField(r, "tenantContext", TenantContext())
         }
 
     private val orgId = UUID.randomUUID().toString()

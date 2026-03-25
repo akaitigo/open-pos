@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
@@ -31,8 +32,12 @@ class CategoryResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @POST
     fun create(body: CreateCategoryBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             CreateCategoryRequest
                 .newBuilder()
@@ -69,6 +74,7 @@ class CategoryResource {
         @PathParam("id") id: String,
         body: UpdateCategoryBody,
     ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             UpdateCategoryRequest
                 .newBuilder()
@@ -92,6 +98,7 @@ class CategoryResource {
     fun delete(
         @PathParam("id") id: String,
     ): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         grpc.withTenant(stub).deleteCategory(DeleteCategoryRequest.newBuilder().setId(id).build())
         return Response.noContent().build()
     }
