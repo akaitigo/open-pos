@@ -11,7 +11,8 @@ import jakarta.ws.rs.core.Response
 
 /**
  * ギフトカード REST リソース (#142)。
- * 未実装: gRPC バックエンドが未整備のため全エンドポイントが 501 を返す。
+ * 未実装: gRPC バックエンドが未整備のため全エンドポイントが 501 Not Implemented を返す。
+ * 本番では実装されるまで明示的に 501 でブロックする。
  */
 @Path("/api/gift-cards")
 @Blocking
