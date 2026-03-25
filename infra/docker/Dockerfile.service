@@ -19,7 +19,7 @@ RUN for dir in api-gateway pos-service product-service inventory-service analyti
         echo 'plugins { kotlin("jvm") }' > "services/$dir/build.gradle.kts"; \
       fi; \
     done
-RUN --mount=type=cache,target=/root/.gradle \
+RUN --mount=type=cache,target=/root/.gradle,id=gradle-${SERVICE_NAME} \
     chmod +x gradlew && \
     ./gradlew --no-daemon :services:${SERVICE_NAME}:quarkusBuild -Dquarkus.package.jar.type=uber-jar
 
