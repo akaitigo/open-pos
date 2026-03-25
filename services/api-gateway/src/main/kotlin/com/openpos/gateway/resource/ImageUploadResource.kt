@@ -6,24 +6,19 @@ import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
-import java.util.UUID
 
 /**
  * 画像アップロード REST リソース (#173)。
- * Phase 9: 商品画像管理の REST API placeholder。
- * 本番では GCS / S3 にアップロードし、URL を返す。
+ * 未実装: オブジェクトストレージ連携が未整備のため 501 を返す。
  */
 @Path("/api/images")
 @Blocking
 class ImageUploadResource {
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    fun upload(): Response {
-        // Placeholder: generate a fake URL
-        val imageId = UUID.randomUUID()
-        val fakeUrl = "/api/images/$imageId"
-        return Response.status(Response.Status.CREATED)
-            .entity(mapOf("imageUrl" to fakeUrl, "id" to imageId.toString()))
+    fun upload(): Response =
+        Response
+            .status(501)
+            .entity(mapOf("error" to "NOT_IMPLEMENTED", "message" to "Image upload API is not yet implemented"))
             .build()
-    }
 }

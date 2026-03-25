@@ -10,39 +10,34 @@ import jakarta.ws.rs.core.Response
 
 /**
  * お気に入り商品 REST リソース（#188）。
- * プレースホルダー実装。
+ * 未実装: gRPC バックエンドが未整備のため全エンドポイントが 501 を返す。
  */
 @Path("/api/staff/{staffId}/favorites")
 @Blocking
 class FavoriteProductResource {
+    private fun notImplemented(): Response =
+        Response
+            .status(501)
+            .entity(mapOf("error" to "NOT_IMPLEMENTED", "message" to "Favorite product API is not yet implemented"))
+            .build()
+
     @GET
     fun list(
         @PathParam("staffId") staffId: String,
-    ): List<Map<String, Any>> {
-        // プレースホルダー
-        return emptyList()
-    }
+    ): Response = notImplemented()
 
     @POST
     fun toggle(
         @PathParam("staffId") staffId: String,
         body: ToggleFavoriteBody,
-    ): Response =
-        Response
-            .ok(
-                mapOf(
-                    "staffId" to staffId,
-                    "productId" to body.productId,
-                    "isFavorite" to true,
-                ),
-            ).build()
+    ): Response = notImplemented()
 
     @DELETE
     @Path("/{productId}")
     fun remove(
         @PathParam("staffId") staffId: String,
         @PathParam("productId") productId: String,
-    ): Response = Response.noContent().build()
+    ): Response = notImplemented()
 }
 
 data class ToggleFavoriteBody(

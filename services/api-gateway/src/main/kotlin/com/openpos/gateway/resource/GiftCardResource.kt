@@ -1,64 +1,52 @@
 package com.openpos.gateway.resource
 
-import com.openpos.gateway.cache.RedisCacheService
-import com.openpos.gateway.config.GrpcClientHelper
 import io.smallrye.common.annotation.Blocking
-import jakarta.inject.Inject
 import jakarta.ws.rs.DefaultValue
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
-import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Response
-import org.eclipse.microprofile.faulttolerance.Timeout
 
 /**
  * ギフトカード REST リソース (#142)。
- * Phase 9: ギフトカード管理の REST API placeholder。
+ * 未実装: gRPC バックエンドが未整備のため全エンドポイントが 501 を返す。
  */
 @Path("/api/gift-cards")
 @Blocking
-@Timeout(30000)
 class GiftCardResource {
-    @Inject
-    lateinit var grpc: GrpcClientHelper
-
-    @Inject
-    lateinit var cache: RedisCacheService
+    private fun notImplemented(): Response =
+        Response
+            .status(501)
+            .entity(mapOf("error" to "NOT_IMPLEMENTED", "message" to "Gift card API is not yet implemented"))
+            .build()
 
     @GET
     fun list(
         @QueryParam("page") @DefaultValue("1") page: Int,
         @QueryParam("pageSize") @DefaultValue("20") pageSize: Int,
-    ): Map<String, Any> =
-        mapOf(
-            "data" to emptyList<Any>(),
-            "pagination" to mapOf(
-                "page" to page,
-                "pageSize" to pageSize,
-                "totalCount" to 0,
-                "totalPages" to 0,
-            ),
-        )
+    ): Response = notImplemented()
 
     @GET
     @Path("/{id}")
-    fun get(@PathParam("id") id: String): Response =
-        Response.status(Response.Status.NOT_FOUND).build()
+    fun get(
+        @PathParam("id") id: String,
+    ): Response = notImplemented()
 
     @POST
-    fun create(body: Map<String, Any?>): Response =
-        Response.status(Response.Status.CREATED).entity(body).build()
+    fun create(body: Map<String, Any?>): Response = notImplemented()
 
     @POST
     @Path("/{code}/activate")
-    fun activate(@PathParam("code") code: String): Response =
-        Response.ok(mapOf("code" to code, "status" to "ACTIVE")).build()
+    fun activate(
+        @PathParam("code") code: String,
+    ): Response = notImplemented()
 
     @POST
     @Path("/{code}/redeem")
-    fun redeem(@PathParam("code") code: String, body: Map<String, Any?>): Response =
-        Response.ok(mapOf("code" to code, "action" to "redeem")).build()
+    fun redeem(
+        @PathParam("code") code: String,
+        body: Map<String, Any?>,
+    ): Response = notImplemented()
 }
