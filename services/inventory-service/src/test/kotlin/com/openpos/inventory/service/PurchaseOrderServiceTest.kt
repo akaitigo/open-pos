@@ -6,10 +6,12 @@ import com.openpos.inventory.entity.PurchaseOrderEntity
 import com.openpos.inventory.entity.PurchaseOrderItemEntity
 import com.openpos.inventory.repository.PurchaseOrderItemRepository
 import com.openpos.inventory.repository.PurchaseOrderRepository
+import io.grpc.StatusRuntimeException
 import io.quarkus.panache.common.Page
 import io.quarkus.test.InjectMock
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
+import jakarta.persistence.OptimisticLockException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -329,6 +332,32 @@ class PurchaseOrderServiceTest {
             assertThrows(IllegalArgumentException::class.java) {
                 purchaseOrderService.updateStatus(orderId, "ORDERED", emptyList())
             }
+        }
+
+        @Test
+        fun `楽観的ロック競合時はStatusRuntimeExceptionを投げる`() {
+            // Arrange
+            val orderId = UUID.randomUUID()
+            val entity =
+                PurchaseOrderEntity().apply {
+                    this.id = orderId
+                    this.organizationId = orgId
+                    this.storeId = this@PurchaseOrderServiceTest.storeId
+                    this.supplierName = "テスト仕入先"
+                    this.status = "DRAFT"
+                }
+            whenever(purchaseOrderRepository.findById(orderId)).thenReturn(entity)
+            doNothing().whenever(purchaseOrderRepository).persist(any<PurchaseOrderEntity>())
+            doThrow(OptimisticLockException("concurrent modification"))
+                .whenever(purchaseOrderRepository)
+                .flush()
+
+            // Act & Assert
+            val exception =
+                assertThrows(StatusRuntimeException::class.java) {
+                    purchaseOrderService.updateStatus(orderId, "ORDERED", emptyList())
+                }
+            assertEquals(io.grpc.Status.Code.ABORTED, exception.status.code)
         }
     }
 }
