@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
@@ -28,6 +29,9 @@ class OrganizationResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @POST
     fun create(body: CreateOrganizationBody): Response {
         val request =
@@ -45,12 +49,14 @@ class OrganizationResource {
     @Path("/{id}")
     fun get(
         @PathParam("id") id: String,
-    ): Map<String, Any?> =
-        grpc
+    ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
+        return grpc
             .withTenant(stub)
             .getOrganization(GetOrganizationRequest.newBuilder().setId(id).build())
             .organization
             .toMap()
+    }
 
     @PUT
     @Path("/{id}")
@@ -58,6 +64,7 @@ class OrganizationResource {
         @PathParam("id") id: String,
         body: UpdateOrganizationBody,
     ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val request =
             UpdateOrganizationRequest
                 .newBuilder()
