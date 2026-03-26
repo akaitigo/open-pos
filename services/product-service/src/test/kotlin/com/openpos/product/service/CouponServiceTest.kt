@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -61,6 +62,16 @@ class CouponServiceTest {
             val validFrom = Instant.now()
             val validUntil = Instant.now().plus(30, ChronoUnit.DAYS)
             doNothing().whenever(couponRepository).persist(any<CouponEntity>())
+            val discount =
+                DiscountEntity().apply {
+                    this.id = discountId
+                    this.organizationId = orgId
+                    this.name = "有効割引"
+                    this.discountType = "PERCENTAGE"
+                    this.value = 10
+                    this.isActive = true
+                }
+            whenever(discountRepository.findById(discountId)).thenReturn(discount)
 
             // Act
             val result =
@@ -88,6 +99,16 @@ class CouponServiceTest {
         fun `利用回数無制限のクーポンを作成する`() {
             // Arrange
             doNothing().whenever(couponRepository).persist(any<CouponEntity>())
+            val discount =
+                DiscountEntity().apply {
+                    this.id = discountId
+                    this.organizationId = orgId
+                    this.name = "有効割引"
+                    this.discountType = "FIXED_AMOUNT"
+                    this.value = 50000
+                    this.isActive = true
+                }
+            whenever(discountRepository.findById(discountId)).thenReturn(discount)
 
             // Act
             val result =
@@ -106,6 +127,49 @@ class CouponServiceTest {
             assertNull(result.validUntil)
             assertEquals(true, result.isActive)
             verify(couponRepository).persist(any<CouponEntity>())
+        }
+
+        @Test
+        fun `存在しない割引IDの場合はIllegalArgumentExceptionを投げる`() {
+            // Arrange
+            whenever(discountRepository.findById(discountId)).thenReturn(null)
+
+            // Act & Assert
+            assertThrows(IllegalArgumentException::class.java) {
+                couponService.create(
+                    code = "INVALID_DISC",
+                    discountId = discountId,
+                    maxUses = null,
+                    validFrom = null,
+                    validUntil = null,
+                )
+            }
+        }
+
+        @Test
+        fun `紐付き割引のPERCENTAGE値が不正な場合はIllegalArgumentExceptionを投げる`() {
+            // Arrange
+            val invalidDiscount =
+                DiscountEntity().apply {
+                    this.id = discountId
+                    this.organizationId = orgId
+                    this.name = "不正割引"
+                    this.discountType = "PERCENTAGE"
+                    this.value = 150
+                    this.isActive = true
+                }
+            whenever(discountRepository.findById(discountId)).thenReturn(invalidDiscount)
+
+            // Act & Assert
+            assertThrows(IllegalArgumentException::class.java) {
+                couponService.create(
+                    code = "BAD_DISCOUNT",
+                    discountId = discountId,
+                    maxUses = null,
+                    validFrom = null,
+                    validUntil = null,
+                )
+            }
         }
     }
 

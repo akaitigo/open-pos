@@ -10,6 +10,7 @@ import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -99,6 +100,105 @@ class DiscountServiceTest {
             assertNull(result.validUntil)
             assertTrue(result.isActive)
             verify(discountRepository).persist(any<DiscountEntity>())
+        }
+
+        @Test
+        fun `パーセント割引の値が0の場合は作成できる`() {
+            // Arrange
+            doNothing().whenever(discountRepository).persist(any<DiscountEntity>())
+
+            // Act
+            val result =
+                discountService.create(
+                    name = "0%割引",
+                    discountType = "PERCENTAGE",
+                    value = 0,
+                    validFrom = null,
+                    validUntil = null,
+                )
+
+            // Assert
+            assertEquals(0L, result.value)
+        }
+
+        @Test
+        fun `パーセント割引の値が100の場合は作成できる`() {
+            // Arrange
+            doNothing().whenever(discountRepository).persist(any<DiscountEntity>())
+
+            // Act
+            val result =
+                discountService.create(
+                    name = "100%割引",
+                    discountType = "PERCENTAGE",
+                    value = 100,
+                    validFrom = null,
+                    validUntil = null,
+                )
+
+            // Assert
+            assertEquals(100L, result.value)
+        }
+
+        @Test
+        fun `パーセント割引の値が101以上の場合はIllegalArgumentExceptionを投げる`() {
+            // Act & Assert
+            assertThrows(IllegalArgumentException::class.java) {
+                discountService.create(
+                    name = "不正割引",
+                    discountType = "PERCENTAGE",
+                    value = 101,
+                    validFrom = null,
+                    validUntil = null,
+                )
+            }
+        }
+
+        @Test
+        fun `パーセント割引の値が負数の場合はIllegalArgumentExceptionを投げる`() {
+            // Act & Assert
+            assertThrows(IllegalArgumentException::class.java) {
+                discountService.create(
+                    name = "不正割引",
+                    discountType = "PERCENTAGE",
+                    value = -1,
+                    validFrom = null,
+                    validUntil = null,
+                )
+            }
+        }
+
+        @Test
+        fun `定額割引の値が負数の場合はIllegalArgumentExceptionを投げる`() {
+            // Act & Assert
+            assertThrows(IllegalArgumentException::class.java) {
+                discountService.create(
+                    name = "不正割引",
+                    discountType = "FIXED_AMOUNT",
+                    value = -1,
+                    validFrom = null,
+                    validUntil = null,
+                )
+            }
+        }
+
+        @Test
+        fun `定額割引の値が0の場合は作成できる`() {
+            // Arrange
+            doNothing().whenever(discountRepository).persist(any<DiscountEntity>())
+
+            // Act
+            val result =
+                discountService.create(
+                    name = "0円割引",
+                    discountType = "FIXED_AMOUNT",
+                    value = 0,
+                    validFrom = null,
+                    validUntil = null,
+                )
+
+            // Assert
+            assertEquals(0L, result.value)
         }
     }
 

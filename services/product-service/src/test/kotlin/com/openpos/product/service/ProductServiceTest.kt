@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -121,6 +122,47 @@ class ProductServiceTest {
             assertNull(result.taxRateId)
             assertNull(result.imageUrl)
             verify(productRepository).persist(any<ProductEntity>())
+        }
+
+        @Test
+        fun `価格が0の場合は作成できる`() {
+            // Arrange
+            doNothing().whenever(productRepository).persist(any<ProductEntity>())
+
+            // Act
+            val result =
+                productService.create(
+                    name = "無料商品",
+                    description = null,
+                    barcode = null,
+                    sku = null,
+                    price = 0L,
+                    categoryId = null,
+                    taxRateId = null,
+                    imageUrl = null,
+                    displayOrder = 0,
+                )
+
+            // Assert
+            assertEquals(0L, result.price)
+        }
+
+        @Test
+        fun `価格が負数の場合はIllegalArgumentExceptionを投げる`() {
+            // Act & Assert
+            assertThrows(IllegalArgumentException::class.java) {
+                productService.create(
+                    name = "不正商品",
+                    description = null,
+                    barcode = null,
+                    sku = null,
+                    price = -1L,
+                    categoryId = null,
+                    taxRateId = null,
+                    imageUrl = null,
+                    displayOrder = 0,
+                )
+            }
         }
     }
 

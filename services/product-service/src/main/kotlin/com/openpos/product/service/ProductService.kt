@@ -40,6 +40,8 @@ class ProductService {
         imageUrl: String?,
         displayOrder: Int,
     ): ProductEntity {
+        require(price >= 0) { "Product price must be >= 0, but was $price" }
+
         val orgId =
             requireNotNull(organizationIdHolder.organizationId) {
                 "organizationId is not set"

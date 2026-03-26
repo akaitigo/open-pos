@@ -42,6 +42,29 @@ class DiscountService {
     companion object {
         const val DISCOUNT_TTL_SECONDS = 1800L
         private const val PREFIX = "openpos:product-service"
+
+        /**
+         * 割引値のバリデーション。
+         * PERCENTAGE: 0..100, FIXED_AMOUNT: >= 0
+         */
+        fun validateDiscountValue(
+            discountType: String,
+            value: Long,
+        ) {
+            when (discountType) {
+                "PERCENTAGE" -> {
+                    require(value in 0..100) {
+                        "PERCENTAGE discount value must be between 0 and 100, but was $value"
+                    }
+                }
+
+                "FIXED_AMOUNT" -> {
+                    require(value >= 0) {
+                        "FIXED_AMOUNT discount value must be >= 0, but was $value"
+                    }
+                }
+            }
+        }
     }
 
     private fun discountKey(
@@ -65,6 +88,8 @@ class DiscountService {
         validFrom: Instant?,
         validUntil: Instant?,
     ): DiscountEntity {
+        validateDiscountValue(discountType, value)
+
         val orgId =
             requireNotNull(organizationIdHolder.organizationId) {
                 "organizationId is not set"
