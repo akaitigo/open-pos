@@ -81,4 +81,19 @@ class StockMovementRepository : PanacheRepositoryBase<StockMovementEntity, UUID>
 
         return count(whereClause, params)
     }
+
+    /**
+     * referenceId と movementType で移動履歴を検索する（冪等性チェック用）。
+     */
+    fun findByReferenceIdAndMovementType(
+        referenceId: String,
+        movementType: String,
+    ): StockMovementEntity? =
+        find(
+            "referenceId = :referenceId AND movementType = :movementType",
+            mapOf(
+                "referenceId" to referenceId,
+                "movementType" to movementType,
+            ),
+        ).firstResult()
 }
