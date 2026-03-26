@@ -4,6 +4,7 @@ import com.openpos.gateway.config.GrpcClientHelper
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
+import jakarta.ws.rs.BadRequestException
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import openpos.pos.v1.OfflineTransaction
@@ -12,15 +13,19 @@ import openpos.pos.v1.PaymentInput
 import openpos.pos.v1.PaymentMethod
 import openpos.pos.v1.PosServiceGrpc
 import openpos.pos.v1.SyncOfflineTransactionsRequest
+import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.faulttolerance.Timeout
 import org.jboss.logging.Logger
 
 /**
  * オフライン取引同期エンドポイント。
  *
- * WARNING: クライアント送信の unitPrice/taxRate はオフライン時のスナップショットであり、
- * サーバー側で商品マスタの最新価格と突き合わせ検証すべき。
- * 現在は価格差異をログ出力するのみ。v1.1 でサーバー側価格検証を実装予定。
+ * unitPrice のバリデーション:
+ * - unitPrice <= 0 は即座に拒否（BadRequest）
+ * - unitPrice > maxUnitPrice は WARNING ログ出力後に拒否（BadRequest）
+ *
+ * NOTE: クライアント送信の unitPrice/taxRate はオフライン時のスナップショットであり、
+ * 商品マスタの最新価格との突き合わせ検証は v1.1 で実装予定。
  */
 @Path("/api/sync")
 @Blocking
@@ -36,6 +41,9 @@ class SyncResource {
 
     @Inject
     lateinit var grpc: GrpcClientHelper
+
+    @ConfigProperty(name = "openpos.sync.max-unit-price", defaultValue = "10000000")
+    var maxUnitPrice: Long = 10_000_000
 
     @POST
     @Path("/transactions")
@@ -54,16 +62,7 @@ class SyncResource {
                             .apply { t.createdAt?.let { setCreatedAt(it) } }
                             .addAllItems(
                                 t.items.map { item ->
-                                    // WARNING: クライアント提供の unitPrice はオフラインスナップショット
-                                    // サーバー側で商品マスタ価格との突き合わせ検証が必要（v1.1実装予定）
-                                    if (item.unitPrice <= 0) {
-                                        log.warnf(
-                                            "Suspicious offline item price: productId=%s, unitPrice=%d, clientId=%s",
-                                            item.productId,
-                                            item.unitPrice,
-                                            t.clientId,
-                                        )
-                                    }
+                                    validateUnitPrice(item, t.clientId)
                                     OfflineTransactionItem
                                         .newBuilder()
                                         .setProductId(item.productId)
@@ -107,6 +106,35 @@ class SyncResource {
                     )
                 },
         )
+    }
+
+    private fun validateUnitPrice(
+        item: OfflineItemBody,
+        clientId: String,
+    ) {
+        if (item.unitPrice <= 0) {
+            log.warnf(
+                "Invalid offline item price: productId=%s, unitPrice=%d, clientId=%s",
+                item.productId,
+                item.unitPrice,
+                clientId,
+            )
+            throw BadRequestException(
+                "Invalid unitPrice for product ${item.productId}: must be greater than 0",
+            )
+        }
+        if (item.unitPrice > maxUnitPrice) {
+            log.warnf(
+                "Offline item price exceeds maximum: productId=%s, unitPrice=%d, maxUnitPrice=%d, clientId=%s",
+                item.productId,
+                item.unitPrice,
+                maxUnitPrice,
+                clientId,
+            )
+            throw BadRequestException(
+                "unitPrice for product ${item.productId} exceeds maximum allowed price",
+            )
+        }
     }
 }
 
