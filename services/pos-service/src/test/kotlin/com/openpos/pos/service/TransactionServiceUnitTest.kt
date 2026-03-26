@@ -202,6 +202,15 @@ class TransactionServiceUnitTest {
         }
 
         @Test
+        fun `throws when transaction not found`() {
+            whenever(transactionRepository.findById(any<UUID>())).thenReturn(null)
+
+            assertThrows(ResourceNotFoundException::class.java) {
+                service.addItem(UUID.randomUUID(), productId, 1)
+            }
+        }
+
+        @Test
         fun `uses provided productSnapshot`() {
             val tx = createTransactionEntity()
             whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
@@ -398,6 +407,32 @@ class TransactionServiceUnitTest {
         }
 
         @Test
+        fun `throws when fixed amount item not found`() {
+            val tx = createTransactionEntity()
+            val fakeItemId = UUID.randomUUID()
+            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            whenever(itemRepository.findById(fakeItemId)).thenReturn(null)
+
+            assertThrows(IllegalArgumentException::class.java) {
+                service.applyDiscount(tx.id, null, "Item Off", "FIXED_AMOUNT", "1000", 1000, fakeItemId)
+            }
+        }
+
+        @Test
+        fun `throws when fixed amount item belongs to different transaction`() {
+            val tx = createTransactionEntity()
+            val item = createItemEntity(UUID.randomUUID()).apply { this.subtotal = 50000 } // different transaction
+            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            whenever(itemRepository.findById(item.id)).thenReturn(item)
+
+            assertThrows(IllegalArgumentException::class.java) {
+                service.applyDiscount(tx.id, null, "Item Off", "FIXED_AMOUNT", "1000", 1000, item.id)
+            }
+        }
+
+        @Test
         fun `throws on invalid percentage value`() {
             val tx = createTransactionEntity()
             whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
@@ -439,6 +474,15 @@ class TransactionServiceUnitTest {
             assertNotNull(result.completedAt)
             assertNotNull(result.contentHash)
             verify(eventPublisher).publish(eq("sale.completed"), eq(orgId), any())
+        }
+
+        @Test
+        fun `throws when transaction not found`() {
+            whenever(transactionRepository.findById(any<UUID>())).thenReturn(null)
+
+            assertThrows(ResourceNotFoundException::class.java) {
+                service.finalizeTransaction(UUID.randomUUID(), emptyList())
+            }
         }
 
         @Test
@@ -493,6 +537,15 @@ class TransactionServiceUnitTest {
 
             assertEquals("VOIDED", result.status)
             verify(eventPublisher).publish(eq("sale.voided"), eq(orgId), any())
+        }
+
+        @Test
+        fun `throws when transaction not found`() {
+            whenever(transactionRepository.findById(any<UUID>())).thenReturn(null)
+
+            assertThrows(ResourceNotFoundException::class.java) {
+                service.voidTransaction(UUID.randomUUID(), "reason")
+            }
         }
 
         @Test

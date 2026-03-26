@@ -17,6 +17,25 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
+class SaleCompletedEventDtoTest {
+    @Test
+    fun `default values are applied correctly`() {
+        val dto =
+            SaleCompletedEventDto(
+                transactionId = "tx-1",
+                storeId = "store-1",
+                terminalId = "term-1",
+                items = emptyList(),
+                totalAmount = 10000,
+                transactedAt = "2026-03-26T00:00:00Z",
+            )
+
+        assertEquals(0L, dto.taxTotal)
+        assertEquals(0L, dto.discountTotal)
+        assertEquals(emptyList<SalePaymentDto>(), dto.payments)
+    }
+}
+
 class EventPublisherTest {
     private val emitter: Emitter<String> = mock()
     private val objectMapper = ObjectMapper()

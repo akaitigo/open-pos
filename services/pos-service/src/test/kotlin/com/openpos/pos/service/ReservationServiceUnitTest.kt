@@ -8,6 +8,7 @@ import io.quarkus.panache.common.Page
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -124,6 +125,15 @@ class ReservationServiceUnitTest {
             assertEquals("[{\"productId\":\"abc\"}]", result.items)
             assertEquals(reservedUntil, result.reservedUntil)
             assertEquals("Note", result.note)
+        }
+
+        @Test
+        fun `throws when organizationId is not set`() {
+            organizationIdHolder.organizationId = null
+
+            assertThrows(IllegalArgumentException::class.java) {
+                service.create(storeId, "Customer", null, "[]", Instant.now().plusSeconds(3600), null)
+            }
         }
     }
 
