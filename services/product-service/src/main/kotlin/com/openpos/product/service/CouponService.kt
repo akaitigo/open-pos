@@ -56,6 +56,12 @@ class CouponService {
                 "organizationId is not set"
             }
 
+        val discount =
+            requireNotNull(discountRepository.findById(discountId)) {
+                "Discount not found: $discountId"
+            }
+        DiscountService.validateDiscountValue(discount.discountType, discount.value)
+
         val entity =
             CouponEntity().apply {
                 this.organizationId = orgId
