@@ -133,6 +133,24 @@ class OutboxProcessorTest {
     }
 
     @Test
+    fun `PENDINGイベントがあるとき全件processEventを呼ぶ`() {
+        // Arrange
+        val event1 = createPendingEvent("sale.completed", """{"id":"1"}""")
+        val event2 = createPendingEvent("sale.voided", """{"id":"2"}""")
+        whenever(outboxRepository.findPendingEvents(OutboxProcessor.BATCH_SIZE))
+            .thenReturn(listOf(event1, event2))
+        whenever(outboxRepository.findById(event1.id)).thenReturn(event1)
+        whenever(outboxRepository.findById(event2.id)).thenReturn(event2)
+
+        // Act
+        outboxProcessor.processOutbox()
+
+        // Assert — 両イベントが送信される
+        assertEquals("SENT", event1.status)
+        assertEquals("SENT", event2.status)
+    }
+
+    @Test
     fun `リトライ9回目まではPENDINGを維持する`() {
         // Arrange
         val event = createPendingEvent("sale.voided", """{"eventType":"sale.voided"}""")
