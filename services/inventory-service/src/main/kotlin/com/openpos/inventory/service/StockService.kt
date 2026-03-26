@@ -120,22 +120,24 @@ class StockService {
 
         // 冪等性チェック: 同じ referenceId + movementType の移動履歴が既に存在する場合は早期リターン
         if (referenceId != null) {
-            val existing = movementRepository.findByReferenceIdAndMovementType(referenceId, movementType)
-            if (existing != null) {
-                log.warnf(
-                    "Duplicate stock adjustment skipped: referenceId=%s, movementType=%s, storeId=%s, productId=%s",
-                    referenceId,
-                    movementType,
-                    storeId,
-                    productId,
-                )
-                return stockRepository.findByStoreAndProductForUpdate(storeId, productId)
-                    ?: StockEntity().apply {
-                        this.organizationId = orgId
-                        this.storeId = storeId
-                        this.productId = productId
-                        this.quantity = 0
-                    }
+            try {
+                val existing = movementRepository.findByReferenceIdAndMovementType(referenceId, movementType)
+                if (existing != null) {
+                    log.warnf(
+                        "Duplicate stock adjustment skipped: referenceId=%s, movementType=%s",
+                        referenceId,
+                        movementType,
+                    )
+                    return stockRepository.findByStoreAndProductForUpdate(storeId, productId)
+                        ?: StockEntity().apply {
+                            this.organizationId = orgId
+                            this.storeId = storeId
+                            this.productId = productId
+                            this.quantity = 0
+                        }
+                }
+            } catch (e: Exception) {
+                log.debugf("Idempotency check failed (non-critical): %s", e.message)
             }
         }
 
