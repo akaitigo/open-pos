@@ -566,6 +566,84 @@ class WebhookStoreTest {
     }
 
     @Nested
+    inner class FindPendingDeliveries {
+        @Test
+        fun `PENDING状態の配信のみ返す`() {
+            val pending =
+                WebhookDelivery(
+                    webhookId = UUID.randomUUID(),
+                    eventType = "sale.completed",
+                    payload = "{}",
+                    status = DeliveryStatus.PENDING,
+                )
+            val success =
+                WebhookDelivery(
+                    webhookId = UUID.randomUUID(),
+                    eventType = "sale.completed",
+                    payload = "{}",
+                    status = DeliveryStatus.SUCCESS,
+                )
+            val cursor: KeyScanCursor<String> = mock()
+            whenever(keyCommands.scan(any())).thenReturn(cursor)
+            whenever(cursor.hasNext()).thenReturn(true, false)
+            whenever(cursor.next()).thenReturn(
+                setOf(
+                    "openpos:gateway:webhook:delivery:${pending.id}",
+                    "openpos:gateway:webhook:delivery:${success.id}",
+                ),
+            )
+            whenever(valueCommands.get("openpos:gateway:webhook:delivery:${pending.id}"))
+                .thenReturn(objectMapper.writeValueAsString(pending))
+            whenever(valueCommands.get("openpos:gateway:webhook:delivery:${success.id}"))
+                .thenReturn(objectMapper.writeValueAsString(success))
+
+            val results = store.findPendingDeliveries()
+
+            assertEquals(1, results.size)
+            assertEquals(pending.id, results[0].id)
+        }
+
+        @Test
+        fun `Redis例外時は空リストを返す`() {
+            whenever(keyCommands.scan(any())).thenThrow(RuntimeException("Connection refused"))
+
+            val results = store.findPendingDeliveries()
+
+            assertEquals(0, results.size)
+        }
+
+        @Test
+        fun `個別の配信読み取り失敗時はスキップする`() {
+            val validDelivery =
+                WebhookDelivery(
+                    webhookId = UUID.randomUUID(),
+                    eventType = "sale.completed",
+                    payload = "{}",
+                    status = DeliveryStatus.PENDING,
+                )
+            val badId = UUID.randomUUID()
+            val cursor: KeyScanCursor<String> = mock()
+            whenever(keyCommands.scan(any())).thenReturn(cursor)
+            whenever(cursor.hasNext()).thenReturn(true, false)
+            whenever(cursor.next()).thenReturn(
+                setOf(
+                    "openpos:gateway:webhook:delivery:${validDelivery.id}",
+                    "openpos:gateway:webhook:delivery:$badId",
+                ),
+            )
+            whenever(valueCommands.get("openpos:gateway:webhook:delivery:${validDelivery.id}"))
+                .thenReturn(objectMapper.writeValueAsString(validDelivery))
+            whenever(valueCommands.get("openpos:gateway:webhook:delivery:$badId"))
+                .thenThrow(RuntimeException("Read error"))
+
+            val results = store.findPendingDeliveries()
+
+            assertEquals(1, results.size)
+            assertEquals(validDelivery.id, results[0].id)
+        }
+    }
+
+    @Nested
     inner class FindPendingRetries {
         @Test
         fun `リトライ対象の配信のみ返す`() {
