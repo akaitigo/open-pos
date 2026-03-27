@@ -636,6 +636,144 @@ class TransactionService {
         return TransactionRelations(items, payments, discounts, taxSummaries)
     }
 
+    // === Offline Sync ===
+
+    /**
+     * オフライン取引を一括同期する。
+     *
+     * クライアント端末がオフライン中に記録した取引データを受け取り、
+     * アイテム作成・支払い登録・税サマリ集計・ステータス COMPLETED 化を一括で実行する。
+     * clientId による冪等性を保証し、重複送信時は既存取引を返す。
+     */
+    @Transactional
+    fun syncOfflineTransaction(
+        storeId: UUID,
+        terminalId: UUID,
+        staffId: UUID,
+        clientId: String,
+        items: List<OfflineItemInput>,
+        payments: List<PaymentInput>,
+        createdAt: Instant?,
+    ): TransactionEntity {
+        val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
+
+        // 冪等性: 同一 clientId の既存取引があればそのまま返す
+        if (clientId.isNotBlank()) {
+            val existing = transactionRepository.findByClientId(clientId, orgId)
+            if (existing != null) return existing
+        }
+
+        require(items.isNotEmpty()) { "Offline transaction must have at least one item" }
+        require(payments.isNotEmpty()) { "Offline transaction must have at least one payment" }
+
+        // 1. 取引作成
+        val tx =
+            TransactionEntity().apply {
+                this.organizationId = orgId
+                this.storeId = storeId
+                this.terminalId = terminalId
+                this.staffId = staffId
+                this.transactionNumber = generateTransactionNumber()
+                this.type = "SALE"
+                this.status = "DRAFT"
+                this.clientId = clientId.ifBlank { null }
+            }
+        transactionRepository.persist(tx)
+
+        // 2. アイテム作成（端末キャッシュのスナップショットをそのまま使用）
+        for (offlineItem in items) {
+            val taxResult =
+                taxCalculationService.calculateItemTax(
+                    offlineItem.unitPrice,
+                    offlineItem.quantity,
+                    offlineItem.taxRate,
+                )
+            val item =
+                TransactionItemEntity().apply {
+                    this.organizationId = orgId
+                    this.transactionId = tx.id
+                    this.productId = offlineItem.productId
+                    this.productName = offlineItem.productName
+                    this.unitPrice = offlineItem.unitPrice
+                    this.quantity = offlineItem.quantity
+                    this.taxRateName = offlineItem.taxRateName
+                    this.taxRate = offlineItem.taxRate
+                    this.isReducedTax = offlineItem.isReducedTax
+                    this.subtotal = taxResult.subtotal
+                    this.taxAmount = taxResult.taxAmount
+                    this.total = taxResult.total
+                }
+            itemRepository.persist(item)
+        }
+
+        // 3. 取引合計を計算
+        val savedItems = itemRepository.findByTransactionId(tx.id)
+        tx.subtotal = savedItems.sumOf { it.subtotal }
+        tx.taxTotal = savedItems.sumOf { it.taxAmount }
+        tx.total = tx.subtotal + tx.taxTotal
+
+        // 4. 支払い検証・登録
+        val paymentTotal = payments.sumOf { it.amount }
+        require(paymentTotal >= tx.total) {
+            "Payment total ($paymentTotal) is less than transaction total (${tx.total})"
+        }
+        tx.changeAmount = paymentTotal - tx.total
+
+        for (input in payments) {
+            val payment =
+                PaymentEntity().apply {
+                    this.organizationId = orgId
+                    this.transactionId = tx.id
+                    this.method = input.method
+                    this.amount = input.amount
+                    if (input.method == "CASH") {
+                        this.received = input.received ?: input.amount
+                        this.change = (input.received ?: input.amount) - input.amount
+                    }
+                    this.reference = input.reference
+                }
+            paymentRepository.persist(payment)
+        }
+
+        // 5. 税サマリ集計
+        val taxableItems =
+            savedItems.map {
+                TaxableItem(
+                    taxRateName = it.taxRateName,
+                    taxRate = it.taxRate,
+                    isReducedTax = it.isReducedTax,
+                    subtotal = it.subtotal,
+                )
+            }
+        val summaries = taxCalculationService.aggregateTaxSummaries(taxableItems)
+        for (summary in summaries) {
+            val entity =
+                TaxSummaryEntity().apply {
+                    this.organizationId = orgId
+                    this.transactionId = tx.id
+                    this.taxRateName = summary.taxRateName
+                    this.taxRate = summary.taxRate
+                    this.isReduced = summary.isReduced
+                    this.taxableAmount = summary.taxableAmount
+                    this.taxAmount = summary.taxAmount
+                }
+            taxSummaryRepository.persist(entity)
+        }
+
+        // 6. ステータスを COMPLETED に遷移
+        tx.status = "COMPLETED"
+        tx.completedAt = createdAt ?: Instant.now()
+        tx.contentHash = computeContentHash(tx, savedItems)
+        transactionRepository.persist(tx)
+
+        // 7. イベント発行 + メトリクス
+        publishSaleCompletedEvent(tx, savedItems)
+        transactionsCompletedCounter.increment()
+        revenueCounter.increment(tx.total.toDouble())
+
+        return tx
+    }
+
     // === Internal Helpers ===
 
     private fun getWritableTransaction(transactionId: UUID): TransactionEntity {
@@ -756,4 +894,14 @@ data class PaymentInput(
     val amount: Long,
     val received: Long?,
     val reference: String?,
+)
+
+data class OfflineItemInput(
+    val productId: UUID,
+    val productName: String,
+    val unitPrice: Long,
+    val quantity: Int,
+    val taxRateName: String,
+    val taxRate: String,
+    val isReducedTax: Boolean,
 )

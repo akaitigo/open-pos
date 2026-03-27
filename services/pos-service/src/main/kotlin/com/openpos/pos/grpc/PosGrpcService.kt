@@ -11,6 +11,7 @@ import com.openpos.pos.entity.TransactionEntity
 import com.openpos.pos.entity.TransactionItemEntity
 import com.openpos.pos.service.DrawerService
 import com.openpos.pos.service.JournalService
+import com.openpos.pos.service.OfflineItemInput
 import com.openpos.pos.service.PaymentInput
 import com.openpos.pos.service.SettlementService
 import com.openpos.pos.service.TransactionService
@@ -690,14 +691,42 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         val results =
             request.transactionsList.map { offlineTx ->
                 try {
-                    val type = "SALE"
+                    val items =
+                        offlineTx.itemsList.map { item ->
+                            OfflineItemInput(
+                                productId = item.productId.toUUID(),
+                                productName = item.productName,
+                                unitPrice = item.unitPrice,
+                                quantity = item.quantity,
+                                taxRateName = item.taxRateName,
+                                taxRate = item.taxRate,
+                                isReducedTax = item.isReducedTax,
+                            )
+                        }
+                    val payments =
+                        offlineTx.paymentsList.map { p ->
+                            PaymentInput(
+                                method = p.method.toDbValue(),
+                                amount = p.amount,
+                                received = if (p.received > 0) p.received else null,
+                                reference = p.reference.ifBlank { null },
+                            )
+                        }
+                    val createdAt =
+                        if (offlineTx.createdAt.isNotBlank()) {
+                            Instant.parse(offlineTx.createdAt)
+                        } else {
+                            null
+                        }
                     val entity =
-                        transactionService.createTransaction(
+                        transactionService.syncOfflineTransaction(
                             storeId = offlineTx.storeId.toUUID(),
                             terminalId = offlineTx.terminalId.toUUID(),
                             staffId = offlineTx.staffId.toUUID(),
-                            type = type,
-                            clientId = offlineTx.clientId.ifBlank { null },
+                            clientId = offlineTx.clientId,
+                            items = items,
+                            payments = payments,
+                            createdAt = createdAt,
                         )
                     SyncResult
                         .newBuilder()
