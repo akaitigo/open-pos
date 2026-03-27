@@ -112,6 +112,7 @@ class StaffService {
     /**
      * PIN 認証を行う。
      * pinVerifier は bcrypt 検証関数をコールバックとして受け取る（DI の bcrypt 依存を避ける）。
+     * 悲観的ロック（SELECT FOR UPDATE）で pinFailedCount の read-modify-write を保護する。
      */
     @Transactional
     fun authenticateByPin(
@@ -121,7 +122,7 @@ class StaffService {
         pinVerifier: (String, String) -> Boolean,
     ): PinAuthResult {
         tenantFilterService.enableFilter()
-        val staff = staffRepository.findById(staffId)
+        val staff = staffRepository.findByIdForUpdate(staffId)
         if (staff == null || staff.storeId != storeId) {
             // タイミングサイドチャネル対策: ダミー bcrypt 検証で応答時間を均一化
             pinVerifier("dummy", DUMMY_BCRYPT_HASH)

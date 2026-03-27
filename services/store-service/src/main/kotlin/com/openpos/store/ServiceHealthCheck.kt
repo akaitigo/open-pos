@@ -1,6 +1,7 @@
 package com.openpos.store
 
 import io.quarkus.redis.datasource.ReactiveRedisDataSource
+import io.smallrye.reactive.messaging.providers.extension.HealthCenter
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.persistence.EntityManager
@@ -16,7 +17,7 @@ class ServiceLivenessCheck : HealthCheck {
 }
 
 /**
- * Readiness check: DB + Redis の接続を検証する。
+ * Readiness check: DB + Redis + RabbitMQ の接続を検証する。
  */
 @Readiness
 @ApplicationScoped
@@ -26,6 +27,9 @@ class ServiceReadinessCheck : HealthCheck {
 
     @Inject
     lateinit var redis: ReactiveRedisDataSource
+
+    @Inject
+    lateinit var healthCenter: HealthCenter
 
     override fun call(): HealthCheckResponse {
         val builder = HealthCheckResponse.named("store-service-readiness")
@@ -46,6 +50,11 @@ class ServiceReadinessCheck : HealthCheck {
             builder.withData("redis", "error: ${e.message}")
             return builder.down().build()
         }
+        if (!healthCenter.readiness.isOk) {
+            builder.withData("rabbitmq", "not ready")
+            return builder.down().build()
+        }
+        builder.withData("rabbitmq", "ok")
         return builder.up().build()
     }
 }
