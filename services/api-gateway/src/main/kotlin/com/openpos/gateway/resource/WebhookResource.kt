@@ -102,6 +102,7 @@ class WebhookResource {
         @PathParam("id") id: String,
         body: UpdateWebhookBody,
     ): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val orgId = tenantContext.organizationId ?: return Response.status(Response.Status.BAD_REQUEST).build()
         val webhookId =
             try {
@@ -134,6 +135,7 @@ class WebhookResource {
     fun delete(
         @PathParam("id") id: String,
     ): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val orgId = tenantContext.organizationId ?: return Response.status(Response.Status.BAD_REQUEST).build()
         val webhookId =
             try {
@@ -155,6 +157,7 @@ class WebhookResource {
     @POST
     @Path("/test")
     fun testDelivery(body: TestWebhookBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val orgId = tenantContext.organizationId ?: return Response.status(Response.Status.BAD_REQUEST).build()
         val deliveries =
             deliveryService.deliver(
@@ -194,6 +197,7 @@ class WebhookResource {
     @POST
     @Path("/retry")
     fun retryPending(): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
         val orgId = tenantContext.organizationId ?: return Response.status(Response.Status.BAD_REQUEST).build()
         val retried = deliveryService.retryPendingDeliveries(orgId)
         return Response.ok(mapOf("retriedCount" to retried)).build()
