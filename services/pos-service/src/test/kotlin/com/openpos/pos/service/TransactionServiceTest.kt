@@ -3,8 +3,11 @@ package com.openpos.pos.service
 import com.openpos.pos.config.OrganizationIdHolder
 import com.openpos.pos.entity.TransactionEntity
 import com.openpos.pos.event.EventPublisher
+import com.openpos.pos.grpc.BusinessPreconditionException
+import com.openpos.pos.grpc.InvalidInputException
 import com.openpos.pos.grpc.ProductServiceClient
 import com.openpos.pos.grpc.ProductSnapshot
+import com.openpos.pos.grpc.ResourceNotFoundException
 import com.openpos.pos.repository.PaymentRepository
 import com.openpos.pos.repository.TaxSummaryRepository
 import com.openpos.pos.repository.TransactionDiscountRepository
@@ -16,9 +19,6 @@ import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import com.openpos.pos.grpc.BusinessPreconditionException
-import com.openpos.pos.grpc.InvalidInputException
-import com.openpos.pos.grpc.ResourceNotFoundException
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -417,6 +417,33 @@ class TransactionServiceTest {
             assertNotNull(reduced)
             assertEquals(15000L, reduced!!.taxableAmount)
             assertEquals(1200L, reduced.taxAmount)
+        }
+
+        @Test
+        fun `同一idempotencyKeyで再度finalizeすると既存のCOMPLETED取引を返す`() {
+            val tx = createDraftTransaction()
+            val idempotencyKey = "test-idempotency-key-${UUID.randomUUID()}"
+            whenever(productServiceClient.getProductSnapshot(eq(productId), eq(orgId)))
+                .thenReturn(standardProduct)
+            transactionService.addItem(tx.id, productId, 1)
+            val payments = listOf(PaymentInput(method = "CASH", amount = 11000, received = 11000, reference = null))
+            val first = transactionService.finalizeTransaction(tx.id, payments, idempotencyKey)
+            val second = transactionService.finalizeTransaction(tx.id, payments, idempotencyKey)
+            assertEquals(first.id, second.id)
+            assertEquals("COMPLETED", second.status)
+            assertEquals(idempotencyKey, second.idempotencyKey)
+        }
+
+        @Test
+        fun `idempotencyKeyがnullの場合はキーを保存しない`() {
+            val tx = createDraftTransaction()
+            whenever(productServiceClient.getProductSnapshot(eq(productId), eq(orgId)))
+                .thenReturn(standardProduct)
+            transactionService.addItem(tx.id, productId, 1)
+            val payments = listOf(PaymentInput(method = "CASH", amount = 11000, received = 11000, reference = null))
+            val result = transactionService.finalizeTransaction(tx.id, payments, null)
+            assertEquals("COMPLETED", result.status)
+            assertEquals(null, result.idempotencyKey)
         }
     }
 

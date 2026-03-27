@@ -393,8 +393,18 @@ class TransactionService {
     fun finalizeTransaction(
         transactionId: UUID,
         payments: List<PaymentInput>,
+        idempotencyKey: String? = null,
     ): TransactionEntity {
         tenantFilterService.enableFilter()
+
+        // Idempotency check: return existing COMPLETED transaction for same key
+        if (!idempotencyKey.isNullOrBlank()) {
+            val existing = transactionRepository.findByIdempotencyKey(idempotencyKey)
+            if (existing != null && existing.status == "COMPLETED") {
+                return existing
+            }
+        }
+
         val tx =
             transactionRepository.findById(transactionId)
                 ?: throw ResourceNotFoundException("Transaction not found: $transactionId")
@@ -464,6 +474,9 @@ class TransactionService {
         tx.status = "COMPLETED"
         tx.completedAt = Instant.now()
         tx.contentHash = computeContentHash(tx, items)
+        if (!idempotencyKey.isNullOrBlank()) {
+            tx.idempotencyKey = idempotencyKey
+        }
         transactionRepository.persist(tx)
 
         publishSaleCompletedEvent(tx, items)

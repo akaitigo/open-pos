@@ -78,6 +78,10 @@ class TransactionEntity : BaseEntity() {
     @Column(name = "content_hash", length = 64)
     var contentHash: String? = null
 
+    /** 冪等性キー（finalize の重複実行を防止） */
+    @Column(name = "idempotency_key", length = 128)
+    var idempotencyKey: String? = null
+
     /**
      * 楽観的ロック用バージョン番号。
      */

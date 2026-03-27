@@ -1,5 +1,6 @@
 package com.openpos.pos.grpc
 
+import com.openpos.pos.config.OrganizationIdInterceptor
 import com.openpos.pos.entity.DrawerEntity
 import com.openpos.pos.entity.JournalEntryEntity
 import com.openpos.pos.entity.PaymentEntity
@@ -326,10 +327,12 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                         reference = p.reference.ifBlank { null },
                     )
                 }
+            val idempotencyKey = OrganizationIdInterceptor.IDEMPOTENCY_KEY_CTX_KEY.get()
             val entity =
                 transactionService.finalizeTransaction(
                     transactionId = request.transactionId.toUUID(),
                     payments = payments,
+                    idempotencyKey = idempotencyKey,
                 )
             val receipt = buildReceipt(entity)
             responseObserver.onNext(
