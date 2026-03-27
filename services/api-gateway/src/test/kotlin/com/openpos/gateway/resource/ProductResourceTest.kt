@@ -58,6 +58,7 @@ class ProductResourceTest {
     @BeforeEach
     fun setUp() {
         whenever(grpc.withTenant(stub)).thenReturn(stub)
+        tenantContext.organizationId = UUID.fromString(orgId)
     }
 
     @Nested
@@ -76,7 +77,7 @@ class ProductResourceTest {
 
             // Assert
             assertEquals(201, response.status)
-            verify(cache).invalidatePattern("openpos:gateway:product:list:*")
+            verify(cache).invalidatePattern("openpos:gateway:product:list:$orgId:*")
         }
 
         @Test
@@ -212,7 +213,7 @@ class ProductResourceTest {
 
             // Assert
             assertEquals("コーヒー", result["name"])
-            verify(cache).invalidatePattern("openpos:gateway:product:list:*")
+            verify(cache).invalidatePattern("openpos:gateway:product:list:$orgId:*")
         }
     }
 
@@ -228,7 +229,7 @@ class ProductResourceTest {
 
             // Assert
             assertEquals(204, response.status)
-            verify(cache).invalidatePattern("openpos:gateway:product:list:*")
+            verify(cache).invalidatePattern("openpos:gateway:product:list:$orgId:*")
         }
     }
 

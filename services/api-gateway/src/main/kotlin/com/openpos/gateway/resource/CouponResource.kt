@@ -6,12 +6,15 @@ import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
+import jakarta.ws.rs.DefaultValue
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Response
 import openpos.product.v1.CreateCouponRequest
+import openpos.product.v1.ListCouponsRequest
 import openpos.product.v1.ProductServiceGrpc
 import openpos.product.v1.ValidateCouponRequest
 import org.eclipse.microprofile.faulttolerance.Timeout
@@ -31,12 +34,16 @@ class CouponResource {
     lateinit var tenantContext: TenantContext
 
     @GET
-    fun list(): List<Map<String, Any?>> {
-        // product-service に ListCoupons RPC はないため、
-        // ValidateCoupon を個別に呼ぶのは非効率。
-        // 現時点では空リストを返し、ListCoupons RPC 追加後に正式実装する。
-        // TODO: ListCoupons RPC を proto に追加して正式実装する
-        return emptyList()
+    fun list(
+        @QueryParam("activeOnly") @DefaultValue("false") activeOnly: Boolean,
+    ): List<Map<String, Any?>> {
+        val request =
+            ListCouponsRequest
+                .newBuilder()
+                .setActiveOnly(activeOnly)
+                .build()
+        val response = grpc.withTenant(stub).listCoupons(request)
+        return response.couponsList.map { it.toMap() }
     }
 
     @POST

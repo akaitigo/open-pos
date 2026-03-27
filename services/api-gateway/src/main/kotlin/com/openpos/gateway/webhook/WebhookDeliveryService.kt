@@ -13,12 +13,12 @@ import java.util.UUID
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-// TODO(#908): RabbitMQ 非同期配信に移行予定。
-// HttpClient.send() の同期配信をキュー publish + Consumer 非同期配信に置き換える。
-
 /**
  * Webhook 配信サービス (#410)。
  * 指数バックオフによるリトライと配信トラッキングを提供する。
+ *
+ * 配信は非同期: deliver() は PENDING レコードを Redis に記録し、
+ * WebhookDeliveryConsumer が @Scheduled ポーリングで実際の HTTP 配信を行う。
  *
  * リトライ間隔: 30s, 120s, 480s, 1920s, 7680s（約2時間）
  */
@@ -34,12 +34,12 @@ class WebhookDeliveryService {
             .build()
 
     /**
-     * 指定イベントタイプに該当する全 Webhook に配信する。
+     * 指定イベントタイプに該当する全 Webhook に配信をキューイングする。
      *
      * @param organizationId テナントID
      * @param eventType イベントタイプ（例: "sale.completed", "product.created"）
      * @param payload JSON ペイロード
-     * @return 作成された配信記録のリスト
+     * @return 作成された配信記録のリスト（PENDING 状態）
      */
     fun deliver(
         organizationId: UUID,
@@ -48,14 +48,15 @@ class WebhookDeliveryService {
     ): List<WebhookDelivery> {
         val webhooks = webhookStore.findActiveByEvent(organizationId, eventType)
         return webhooks.map { webhook ->
-            deliverToWebhook(webhook, eventType, payload)
+            enqueueDelivery(webhook, eventType, payload)
         }
     }
 
     /**
-     * 単一 Webhook への配信を試行する。
+     * 単一 Webhook への配信を PENDING としてキューに登録する。
+     * 実際の HTTP 配信は WebhookDeliveryConsumer が行う。
      */
-    fun deliverToWebhook(
+    fun enqueueDelivery(
         webhook: WebhookRegistration,
         eventType: String,
         payload: String,
@@ -68,13 +69,12 @@ class WebhookDeliveryService {
                 status = DeliveryStatus.PENDING,
             )
         webhookStore.recordDelivery(delivery)
-
-        return attemptDelivery(webhook, delivery)
+        return delivery
     }
 
     /**
      * リトライ対象の配信を再試行する。
-     * スケジューラーから定期的に呼び出されることを想定する。
+     * スケジューラーから定期的に呼び出される。
      */
     fun retryPendingDeliveries(organizationId: UUID? = null): Int {
         val pending = webhookStore.findPendingRetries()

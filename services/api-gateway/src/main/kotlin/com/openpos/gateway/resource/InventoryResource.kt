@@ -31,6 +31,8 @@ import openpos.inventory.v1.PurchaseOrderItemInput
 import openpos.inventory.v1.PurchaseOrderStatus
 import openpos.inventory.v1.ReceivedItemInput
 import openpos.inventory.v1.UpdatePurchaseOrderStatusRequest
+import openpos.store.v1.GetStoreRequest
+import openpos.store.v1.StoreServiceGrpc
 import org.eclipse.microprofile.faulttolerance.Timeout
 
 @Path("/api/inventory")
@@ -40,6 +42,10 @@ class InventoryResource {
     @Inject
     @GrpcClient("inventory-service")
     lateinit var stub: InventoryServiceGrpc.InventoryServiceBlockingStub
+
+    @Inject
+    @GrpcClient("store-service")
+    lateinit var storeStub: StoreServiceGrpc.StoreServiceBlockingStub
 
     @Inject
     lateinit var grpc: GrpcClientHelper
@@ -165,6 +171,7 @@ class InventoryResource {
     @Path("/purchase-orders")
     fun createPurchaseOrder(body: CreatePurchaseOrderBody): Response {
         tenantContext.requireRole("OWNER", "MANAGER")
+        validateStoreExists(body.storeId)
         val request =
             CreatePurchaseOrderRequest
                 .newBuilder()
@@ -251,6 +258,23 @@ class InventoryResource {
             .updatePurchaseOrderStatus(request)
             .purchaseOrder
             .toMap()
+    }
+
+    /**
+     * storeId が存在するかを store-service 経由で検証する (#924)。
+     * inventory-service は store-service を呼べないため、api-gateway 層で検証する。
+     */
+    private fun validateStoreExists(storeId: String) {
+        try {
+            grpc.withTenant(storeStub).getStore(
+                GetStoreRequest.newBuilder().setId(storeId).build(),
+            )
+        } catch (e: io.grpc.StatusRuntimeException) {
+            if (e.status.code == io.grpc.Status.Code.NOT_FOUND) {
+                throw jakarta.ws.rs.BadRequestException("Store not found: $storeId")
+            }
+            throw e
+        }
     }
 }
 

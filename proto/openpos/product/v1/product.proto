@@ -55,6 +55,8 @@ service ProductService {
 
   // クーポンを作成する
   rpc CreateCoupon(CreateCouponRequest) returns (CreateCouponResponse);
+  // クーポン一覧を取得する
+  rpc ListCoupons(ListCouponsRequest) returns (ListCouponsResponse);
   // クーポンコードを検証する（取引適用前に呼び出す）
   rpc ValidateCoupon(ValidateCouponRequest) returns (ValidateCouponResponse);
 }
@@ -550,6 +552,18 @@ message ValidateCouponResponse {
   Discount discount = 3;
   // 無効理由（is_valid=false の場合に設定: 例 "EXPIRED", "MAX_USES_REACHED"）
   string reason = 4;
+}
+
+// クーポン一覧取得リクエスト
+message ListCouponsRequest {
+  // true の場合、有効なクーポンのみ返す
+  bool active_only = 1;
+}
+
+// クーポン一覧取得レスポンス
+message ListCouponsResponse {
+  // クーポンリスト
+  repeated Coupon coupons = 1;
 }
 
 // 複数商品一括取得リクエスト
