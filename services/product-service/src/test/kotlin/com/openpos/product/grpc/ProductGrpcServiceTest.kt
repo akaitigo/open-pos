@@ -16,6 +16,7 @@ import com.openpos.product.service.TaxRateService
 import io.grpc.stub.StreamObserver
 import openpos.product.v1.CreateProductRequest
 import openpos.product.v1.DiscountType
+import openpos.product.v1.ListCouponsRequest
 import openpos.product.v1.UpdateDiscountRequest
 import openpos.product.v1.UpdateProductRequest
 import openpos.product.v1.UpdateTaxRateRequest
@@ -301,7 +302,93 @@ class ProductGrpcServiceTest {
         assertTrue(observer.value!!.isValid)
         assertTrue(observer.value!!.hasDiscount())
         assertTrue(observer.value!!.coupon.isActive)
-        assertFalse(observer.value!!.discount.value.isBlank())
+        assertFalse(
+            observer.value!!
+                .discount.value
+                .isBlank(),
+        )
+        assertTrue(observer.completed)
+    }
+
+    @Test
+    fun `listCoupons returns all coupons when activeOnly is false`() {
+        val couponId1 = UUID.randomUUID()
+        val couponId2 = UUID.randomUUID()
+        val discountId = UUID.randomUUID()
+        whenever(couponService.list(false)).thenReturn(
+            listOf(couponEntity(couponId1, discountId), couponEntity(couponId2, discountId)),
+        )
+
+        val observer = CapturingObserver<openpos.product.v1.ListCouponsResponse>()
+
+        grpcService.listCoupons(
+            ListCouponsRequest.newBuilder().setActiveOnly(false).build(),
+            observer,
+        )
+
+        verify(tenantHelper).setupTenantContext()
+        verify(couponService).list(false)
+        assertNotNull(observer.value)
+        assertEquals(2, observer.value?.couponsCount)
+        assertEquals(
+            couponId1.toString(),
+            observer.value
+                ?.couponsList
+                ?.get(0)
+                ?.id,
+        )
+        assertEquals(
+            couponId2.toString(),
+            observer.value
+                ?.couponsList
+                ?.get(1)
+                ?.id,
+        )
+        assertTrue(observer.completed)
+    }
+
+    @Test
+    fun `listCoupons filters active coupons when activeOnly is true`() {
+        val couponId = UUID.randomUUID()
+        val discountId = UUID.randomUUID()
+        whenever(couponService.list(true)).thenReturn(
+            listOf(couponEntity(couponId, discountId)),
+        )
+
+        val observer = CapturingObserver<openpos.product.v1.ListCouponsResponse>()
+
+        grpcService.listCoupons(
+            ListCouponsRequest.newBuilder().setActiveOnly(true).build(),
+            observer,
+        )
+
+        verify(tenantHelper).setupTenantContext()
+        verify(couponService).list(true)
+        assertNotNull(observer.value)
+        assertEquals(1, observer.value?.couponsCount)
+        assertTrue(
+            observer.value
+                ?.couponsList
+                ?.get(0)
+                ?.isActive ?: false,
+        )
+        assertTrue(observer.completed)
+    }
+
+    @Test
+    fun `listCoupons returns empty list when no coupons exist`() {
+        whenever(couponService.list(false)).thenReturn(emptyList())
+
+        val observer = CapturingObserver<openpos.product.v1.ListCouponsResponse>()
+
+        grpcService.listCoupons(
+            ListCouponsRequest.newBuilder().setActiveOnly(false).build(),
+            observer,
+        )
+
+        verify(tenantHelper).setupTenantContext()
+        assertNotNull(observer.value)
+        assertEquals(0, observer.value?.couponsCount)
         assertTrue(observer.completed)
     }
 
@@ -361,9 +448,7 @@ class ProductGrpcServiceTest {
             this.value = value
         }
 
-        override fun onError(t: Throwable) {
-            throw AssertionError("Unexpected error", t)
-        }
+        override fun onError(t: Throwable): Unit = throw AssertionError("Unexpected error", t)
 
         override fun onCompleted() {
             completed = true
