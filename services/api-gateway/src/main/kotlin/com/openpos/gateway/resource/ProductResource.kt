@@ -70,8 +70,8 @@ class ProductResource {
                     body.displayOrder?.let { setDisplayOrder(it) }
                 }.build()
         val response = grpc.withTenant(stub).createProduct(request)
-        val orgId = tenantContext.organizationId
-        cache.invalidatePattern("openpos:gateway:product:list:${orgId ?: "*"}:*")
+        val orgId = requireNotNull(tenantContext.organizationId) { "organizationId is required" }
+        cache.invalidatePattern(RedisCacheService.tenantPattern(orgId.toString(), "product", "list"))
         return Response.status(Response.Status.CREATED).entity(response.product.toMap()).build()
     }
 
@@ -145,8 +145,8 @@ class ProductResource {
                     body.isActive?.let { setIsActiveValue(BoolValue.of(it)) }
                 }.build()
         val response = grpc.withTenant(stub).updateProduct(request)
-        val orgId = tenantContext.organizationId
-        cache.invalidatePattern("openpos:gateway:product:list:${orgId ?: "*"}:*")
+        val orgId = requireNotNull(tenantContext.organizationId) { "organizationId is required" }
+        cache.invalidatePattern(RedisCacheService.tenantPattern(orgId.toString(), "product", "list"))
         return response.product.toMap()
     }
 
@@ -158,8 +158,8 @@ class ProductResource {
     ): Response {
         tenantContext.requireRole("OWNER", "MANAGER")
         grpc.withTenant(stub).deleteProduct(DeleteProductRequest.newBuilder().setId(id).build())
-        val orgId = tenantContext.organizationId
-        cache.invalidatePattern("openpos:gateway:product:list:${orgId ?: "*"}:*")
+        val orgId = requireNotNull(tenantContext.organizationId) { "organizationId is required" }
+        cache.invalidatePattern(RedisCacheService.tenantPattern(orgId.toString(), "product", "list"))
         return Response.noContent().build()
     }
 

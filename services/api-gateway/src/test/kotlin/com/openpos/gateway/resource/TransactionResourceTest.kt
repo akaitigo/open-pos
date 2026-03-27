@@ -31,15 +31,15 @@ class TransactionResourceTest {
     private val stub: PosServiceGrpc.PosServiceBlockingStub = mock()
     private val grpc: GrpcClientHelper = mock()
     private val cache: RedisCacheService = mock()
+    private val orgId = UUID.randomUUID().toString()
+    private val tenantContext = TenantContext().apply { organizationId = UUID.fromString(orgId) }
     private val resource =
         TransactionResource().also { r ->
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
             ProductResourceTest.setField(r, "cache", cache)
-            ProductResourceTest.setField(r, "tenantContext", TenantContext())
+            ProductResourceTest.setField(r, "tenantContext", tenantContext)
         }
-
-    private val orgId = UUID.randomUUID().toString()
     private val txId = UUID.randomUUID().toString()
     private val storeId = UUID.randomUUID().toString()
     private val terminalId = UUID.randomUUID().toString()
@@ -224,7 +224,7 @@ class TransactionResourceTest {
             // Assert
             assertEquals(true, result.containsKey("transaction"))
             assertEquals(true, result.containsKey("receipt"))
-            verify(cache).invalidatePattern("openpos:gateway:transaction:*")
+            verify(cache).invalidatePattern("openpos:gateway:$orgId:transaction:*")
         }
 
         @Test
@@ -274,7 +274,7 @@ class TransactionResourceTest {
 
             // Assert
             assertEquals("VOIDED", result["status"])
-            verify(cache).invalidatePattern("openpos:gateway:transaction:*")
+            verify(cache).invalidatePattern("openpos:gateway:$orgId:transaction:*")
         }
     }
 

@@ -237,7 +237,8 @@ class TransactionResource {
                 tenantStub
             }
         val response = finalStub.finalizeTransaction(request)
-        cache.invalidatePattern("openpos:gateway:transaction:*")
+        val orgId = requireNotNull(tenantContext.organizationId) { "organizationId is required" }
+        cache.invalidatePattern(RedisCacheService.tenantPattern(orgId.toString(), "transaction"))
         return mapOf(
             "transaction" to response.transaction.toMap(),
             "receipt" to response.receipt.toMap(),
@@ -258,7 +259,8 @@ class TransactionResource {
                 .apply { body?.reason?.let { setReason(it) } }
                 .build()
         val response = grpc.withTenant(stub).voidTransaction(request)
-        cache.invalidatePattern("openpos:gateway:transaction:*")
+        val orgId = requireNotNull(tenantContext.organizationId) { "organizationId is required" }
+        cache.invalidatePattern(RedisCacheService.tenantPattern(orgId.toString(), "transaction"))
         return response.transaction.toMap()
     }
 
