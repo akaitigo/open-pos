@@ -160,6 +160,7 @@ class AuthFilterTest {
             whenever(requestContext.getHeaderString("Authorization")).thenReturn("Bearer valid-token")
             whenever(jwt.subject).thenReturn(staffId)
             whenever(jwt.getClaim<String>("role")).thenReturn("MANAGER")
+            whenever(jwt.getClaim<String>("organization_id")).thenReturn("550e8400-e29b-41d4-a716-446655440099")
 
             // Act
             filter.filter(requestContext)
