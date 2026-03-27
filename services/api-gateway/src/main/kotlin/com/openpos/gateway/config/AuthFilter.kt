@@ -83,15 +83,36 @@ class AuthFilter : ContainerRequestFilter {
         // スタッフ情報をヘッダーに設定（下流サービス向け）
         requestContext.headers.putSingle("X-Staff-Id", subject)
 
+        // role クレーム必須: 欠落時は認可不可
         val role = jwt.getClaim<String>("role")
-        if (!role.isNullOrBlank()) {
-            requestContext.headers.putSingle("X-Staff-Role", role)
-            tenantContext.staffRole = role
+        if (role.isNullOrBlank()) {
+            logger.debug("JWT missing required 'role' claim")
+            requestContext.abortWith(
+                Response
+                    .status(Response.Status.FORBIDDEN)
+                    .entity(mapOf("error" to "Forbidden", "message" to "Token missing required 'role' claim"))
+                    .build(),
+            )
+            return
+        }
+        requestContext.headers.putSingle("X-Staff-Role", role)
+        tenantContext.staffRole = role
+
+        // organization_id クレーム必須: 欠落時はテナント境界検証不可
+        val jwtOrgId = jwt.getClaim<String>("organization_id")
+        if (jwtOrgId.isNullOrBlank()) {
+            logger.debug("JWT missing required 'organization_id' claim")
+            requestContext.abortWith(
+                Response
+                    .status(Response.Status.FORBIDDEN)
+                    .entity(mapOf("error" to "Forbidden", "message" to "Token missing required 'organization_id' claim"))
+                    .build(),
+            )
+            return
         }
 
         // テナント境界検証: JWT の organization_id クレームと X-Organization-Id ヘッダーを照合
-        val jwtOrgId = jwt.getClaim<String>("organization_id")
-        if (!jwtOrgId.isNullOrBlank() && tenantContext.organizationId != null) {
+        if (tenantContext.organizationId != null) {
             try {
                 val jwtOrgUuid = java.util.UUID.fromString(jwtOrgId)
                 if (jwtOrgUuid != tenantContext.organizationId) {
