@@ -519,6 +519,58 @@ class TransactionServiceUnitTest {
                 service.finalizeTransaction(tx.id, listOf(PaymentInput("CASH", 100, 100, null)))
             }
         }
+
+        @Test
+        fun `returns existing COMPLETED transaction for same idempotency key`() {
+            val idempotencyKey = "idem-key-123"
+            val existing =
+                createTransactionEntity().apply {
+                    this.status = "COMPLETED"
+                    this.idempotencyKey = idempotencyKey
+                }
+            whenever(transactionRepository.findByIdempotencyKey(idempotencyKey)).thenReturn(existing)
+
+            val result = service.finalizeTransaction(UUID.randomUUID(), emptyList(), idempotencyKey)
+
+            assertEquals(existing.id, result.id)
+            assertEquals("COMPLETED", result.status)
+        }
+
+        @Test
+        fun `stores idempotency key on finalized transaction`() {
+            val idempotencyKey = "idem-key-456"
+            val tx = createTransactionEntity()
+            val item = createItemEntity(tx.id)
+            whenever(transactionRepository.findByIdempotencyKey(idempotencyKey)).thenReturn(null)
+            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
+            whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            whenever(paymentRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            doNothing().whenever(taxSummaryRepository).deleteByTransactionId(tx.id)
+
+            val payments = listOf(PaymentInput("CASH", 11000, 15000, null))
+            val result = service.finalizeTransaction(tx.id, payments, idempotencyKey)
+
+            assertEquals("COMPLETED", result.status)
+            assertEquals(idempotencyKey, result.idempotencyKey)
+        }
+
+        @Test
+        fun `null idempotency key does not store key`() {
+            val tx = createTransactionEntity()
+            val item = createItemEntity(tx.id)
+            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
+            whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            whenever(paymentRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            doNothing().whenever(taxSummaryRepository).deleteByTransactionId(tx.id)
+
+            val payments = listOf(PaymentInput("CASH", 11000, 15000, null))
+            val result = service.finalizeTransaction(tx.id, payments, null)
+
+            assertEquals("COMPLETED", result.status)
+            assertEquals(null, result.idempotencyKey)
+        }
     }
 
     @Nested

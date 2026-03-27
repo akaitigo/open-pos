@@ -10,6 +10,8 @@ import java.util.UUID
 
 @ApplicationScoped
 class TransactionRepository : PanacheRepositoryBase<TransactionEntity, UUID> {
+    fun findByIdempotencyKey(idempotencyKey: String): TransactionEntity? = find("idempotencyKey = ?1", idempotencyKey).firstResult()
+
     fun findByClientId(
         clientId: String,
         organizationId: UUID,

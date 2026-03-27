@@ -37,6 +37,12 @@ class OrganizationIdInterceptor : ServerInterceptor {
         val REQUEST_ID_CTX_KEY: Context.Key<String> =
             Context.key("requestId")
 
+        private val IDEMPOTENCY_KEY: Metadata.Key<String> =
+            Metadata.Key.of("x-idempotency-key", Metadata.ASCII_STRING_MARSHALLER)
+
+        val IDEMPOTENCY_KEY_CTX_KEY: Context.Key<String> =
+            Context.key("idempotencyKey")
+
         private val UUID_REGEX = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
         private val INJECTION_PATTERN = Regex("[\\r\\n\\x00]")
     }
@@ -99,11 +105,15 @@ class OrganizationIdInterceptor : ServerInterceptor {
         org.jboss.logging.MDC
             .put("organization_id", orgId.toString())
 
-        val ctx =
+        var ctx =
             Context
                 .current()
                 .withValue(ORGANIZATION_ID_CTX_KEY, orgId)
                 .withValue(REQUEST_ID_CTX_KEY, requestId)
+        val idempotencyKey = headers.get(IDEMPOTENCY_KEY)
+        if (!idempotencyKey.isNullOrBlank()) {
+            ctx = ctx.withValue(IDEMPOTENCY_KEY_CTX_KEY, idempotencyKey.trim())
+        }
         return Contexts.interceptCall(ctx, call, headers, next)
     }
 
