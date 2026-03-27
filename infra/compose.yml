@@ -423,11 +423,15 @@ services:
   promtail:
     image: grafana/promtail:3.4.2
     container_name: openpos-promtail
+    # WARNING: Docker socket はローカル開発専用。本番 K8s では DaemonSet + hostPath(/var/log) を使用。
     volumes:
       - /var/log:/var/log:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./promtail/config.yml:/etc/promtail/config.yml:ro
     command: -config.file=/etc/promtail/config.yml
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       loki:
         condition: service_healthy
