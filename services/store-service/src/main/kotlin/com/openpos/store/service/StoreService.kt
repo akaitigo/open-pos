@@ -82,7 +82,8 @@ class StoreService {
         settings?.let { entity.settings = it }
         isActive?.let { entity.isActive = it }
         storeRepository.persist(entity)
-        cacheService.invalidateStore(id.toString())
+        val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
+        cacheService.invalidateStore(orgId.toString(), id.toString())
         return entity
     }
 }

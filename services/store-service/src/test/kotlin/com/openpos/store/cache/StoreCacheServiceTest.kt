@@ -143,18 +143,18 @@ class StoreCacheServiceTest {
     @Nested
     inner class KeyGeneration {
         @Test
-        fun `organizationKeyは正しい形式のキーを生成する`() {
-            assertEquals("openpos:store-service:org:org-123", cacheService.organizationKey("org-123"))
+        fun `organizationKeyはorgIdを含む正しい形式のキーを生成する`() {
+            assertEquals("openpos:store-service:org-abc:org:org-123", cacheService.organizationKey("org-abc", "org-123"))
         }
 
         @Test
-        fun `storeKeyは正しい形式のキーを生成する`() {
-            assertEquals("openpos:store-service:store:store-123", cacheService.storeKey("store-123"))
+        fun `storeKeyはorgIdを含む正しい形式のキーを生成する`() {
+            assertEquals("openpos:store-service:org-abc:store:store-123", cacheService.storeKey("org-abc", "store-123"))
         }
 
         @Test
-        fun `terminalListKeyは正しい形式のキーを生成する`() {
-            assertEquals("openpos:store-service:terminal:list:store-456", cacheService.terminalListKey("store-456"))
+        fun `terminalListKeyはorgIdを含む正しい形式のキーを生成する`() {
+            assertEquals("openpos:store-service:org-abc:terminal:list:store-456", cacheService.terminalListKey("org-abc", "store-456"))
         }
     }
 
@@ -162,20 +162,20 @@ class StoreCacheServiceTest {
     inner class InvalidationHelpers {
         @Test
         fun `invalidateOrganizationは組織キーを削除する`() {
-            cacheService.invalidateOrganization("org-123")
-            verify(keyCommands).del("openpos:store-service:org:org-123")
+            cacheService.invalidateOrganization("org-abc", "org-123")
+            verify(keyCommands).del("openpos:store-service:org-abc:org:org-123")
         }
 
         @Test
         fun `invalidateStoreは店舗キーを削除する`() {
-            cacheService.invalidateStore("store-123")
-            verify(keyCommands).del("openpos:store-service:store:store-123")
+            cacheService.invalidateStore("org-abc", "store-123")
+            verify(keyCommands).del("openpos:store-service:org-abc:store:store-123")
         }
 
         @Test
         fun `invalidateTerminalListは端末リストキーを削除する`() {
-            cacheService.invalidateTerminalList("store-456")
-            verify(keyCommands).del("openpos:store-service:terminal:list:store-456")
+            cacheService.invalidateTerminalList("org-abc", "store-456")
+            verify(keyCommands).del("openpos:store-service:org-abc:terminal:list:store-456")
         }
     }
 }
