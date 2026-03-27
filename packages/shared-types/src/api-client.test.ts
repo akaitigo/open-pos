@@ -226,5 +226,124 @@ describe('createApiClient', () => {
     expect(client.patch).toBeDefined()
     expect(client.delete).toBeDefined()
     expect(client.setBaseUrl).toBeDefined()
+    expect(client.setAccessTokenProvider).toBeDefined()
+  })
+
+  it('getAccessToken プロバイダーで Authorization ヘッダーを付与できる', async () => {
+    const mockData = { id: '123', name: 'Test' }
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockData), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const client = createApiClient({
+      baseUrl: 'http://localhost:8080',
+      getAccessToken: () => Promise.resolve('test-jwt-token'),
+    })
+    await client.get('/api/items/123', TestSchema)
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/api/items/123',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer test-jwt-token',
+        }),
+      }),
+    )
+  })
+
+  it('getAccessToken が null を返す場合は Authorization ヘッダーを付与しない', async () => {
+    const mockData = { id: '123', name: 'Test' }
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockData), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const client = createApiClient({
+      baseUrl: 'http://localhost:8080',
+      getAccessToken: () => null,
+    })
+    await client.get('/api/items/123', TestSchema)
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/api/items/123',
+      expect.objectContaining({
+        headers: expect.not.objectContaining({
+          Authorization: expect.any(String),
+        }),
+      }),
+    )
+  })
+
+  it('setAccessTokenProvider で後からプロバイダーを設定できる', async () => {
+    const mockData = { id: '123', name: 'Test' }
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockData), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const client = createApiClient('http://localhost:8080')
+    client.setAccessTokenProvider(() => 'dynamic-token')
+    await client.get('/api/items/123', TestSchema)
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/api/items/123',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer dynamic-token',
+        }),
+      }),
+    )
+  })
+
+  it('setAccessTokenProvider(null) でプロバイダーを解除できる', async () => {
+    const mockData = { id: '123', name: 'Test' }
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockData), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const client = createApiClient({
+      baseUrl: 'http://localhost:8080',
+      getAccessToken: () => 'token',
+    })
+    client.setAccessTokenProvider(null)
+    await client.get('/api/items/123', TestSchema)
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/api/items/123',
+      expect.objectContaining({
+        headers: expect.not.objectContaining({
+          Authorization: expect.any(String),
+        }),
+      }),
+    )
+  })
+
+  it('DELETE リクエストでも Authorization ヘッダーを付与できる', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+
+    const client = createApiClient({
+      baseUrl: 'http://localhost:8080',
+      getAccessToken: () => 'delete-token',
+    })
+    await client.delete('/api/items/123')
+
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/api/items/123',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer delete-token',
+        }),
+      }),
+    )
   })
 })
