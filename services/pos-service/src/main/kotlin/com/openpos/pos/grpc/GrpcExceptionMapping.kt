@@ -2,6 +2,7 @@ package com.openpos.pos.grpc
 
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
+import jakarta.persistence.OptimisticLockException
 import org.jboss.logging.Logger
 
 /**
@@ -53,6 +54,10 @@ fun mapToGrpcException(e: Exception): StatusRuntimeException =
 
         is IllegalStateException -> {
             Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+        }
+
+        is OptimisticLockException -> {
+            Status.ABORTED.withDescription("Concurrent modification detected").asRuntimeException()
         }
 
         is StatusRuntimeException -> {

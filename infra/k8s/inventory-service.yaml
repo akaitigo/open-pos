@@ -22,7 +22,7 @@ spec:
         fsGroup: 65534
       containers:
         - name: inventory-service
-          image: ghcr.io/akaitigo/open-pos/inventory-service:latest
+          image: ghcr.io/akaitigo/open-pos/inventory-service:__IMAGE_TAG__
           securityContext:
             runAsNonRoot: true
             readOnlyRootFilesystem: true
