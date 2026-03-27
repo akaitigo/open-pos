@@ -29,6 +29,7 @@ export default defineConfig({
         'src/components/ui/**',
         'src/main.tsx',
         'src/App.tsx',
+        'src/lib/auth.ts',
       ],
     },
   },
