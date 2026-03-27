@@ -571,6 +571,217 @@ class TransactionServiceTest {
         }
     }
 
+    // === syncOfflineTransaction ===
+
+    @Nested
+    inner class SyncOfflineTransaction {
+        private val clientId = UUID.randomUUID().toString()
+
+        private fun standardOfflineItem() =
+            OfflineItemInput(
+                productId = productId,
+                productName = "テスト商品A",
+                unitPrice = 10000L,
+                quantity = 2,
+                taxRateName = "標準税率10%",
+                taxRate = "0.10",
+                isReducedTax = false,
+            )
+
+        private fun reducedOfflineItem() =
+            OfflineItemInput(
+                productId = UUID.randomUUID(),
+                productName = "テスト食品B",
+                unitPrice = 15000L,
+                quantity = 1,
+                taxRateName = "軽減税率8%",
+                taxRate = "0.08",
+                isReducedTax = true,
+            )
+
+        @Test
+        fun `オフライン取引を正常に同期しCOMPLETEDにする`() {
+            val items = listOf(standardOfflineItem())
+            val payments = listOf(PaymentInput(method = "CASH", amount = 22000, received = 30000, reference = null))
+
+            val result =
+                transactionService.syncOfflineTransaction(
+                    storeId,
+                    terminalId,
+                    staffId,
+                    clientId,
+                    items,
+                    payments,
+                    null,
+                )
+
+            assertEquals("COMPLETED", result.status)
+            assertNotNull(result.completedAt)
+            assertEquals(clientId, result.clientId)
+            assertEquals(20000L, result.subtotal)
+            assertEquals(2000L, result.taxTotal)
+            assertEquals(22000L, result.total)
+            assertEquals(0L, result.changeAmount)
+
+            val savedItems = itemRepository.findByTransactionId(result.id)
+            assertEquals(1, savedItems.size)
+            assertEquals("テスト商品A", savedItems[0].productName)
+            assertEquals(10000L, savedItems[0].unitPrice)
+            assertEquals(2, savedItems[0].quantity)
+
+            val savedPayments = paymentRepository.findByTransactionId(result.id)
+            assertEquals(1, savedPayments.size)
+            assertEquals("CASH", savedPayments[0].method)
+            assertEquals(22000L, savedPayments[0].amount)
+            assertEquals(30000L, savedPayments[0].received)
+            assertEquals(8000L, savedPayments[0].change)
+
+            val taxSummaries = taxSummaryRepository.findByTransactionId(result.id)
+            assertEquals(1, taxSummaries.size)
+            assertEquals("標準税率10%", taxSummaries[0].taxRateName)
+            assertEquals(20000L, taxSummaries[0].taxableAmount)
+            assertEquals(2000L, taxSummaries[0].taxAmount)
+
+            verify(eventPublisher).publish(eq("sale.completed"), eq(orgId), any())
+        }
+
+        @Test
+        fun `複数税率の商品を含むオフライン取引を正常に同期する`() {
+            val items = listOf(standardOfflineItem(), reducedOfflineItem())
+            val payments = listOf(PaymentInput(method = "CASH", amount = 38200, received = 40000, reference = null))
+
+            val result =
+                transactionService.syncOfflineTransaction(
+                    storeId,
+                    terminalId,
+                    staffId,
+                    clientId,
+                    items,
+                    payments,
+                    null,
+                )
+
+            assertEquals("COMPLETED", result.status)
+            assertEquals(35000L, result.subtotal)
+            assertEquals(3200L, result.taxTotal)
+            assertEquals(38200L, result.total)
+
+            val taxSummaries = taxSummaryRepository.findByTransactionId(result.id)
+            assertEquals(2, taxSummaries.size)
+
+            val standard = taxSummaries.find { it.taxRateName == "標準税率10%" }
+            assertNotNull(standard)
+            assertEquals(20000L, standard?.taxableAmount)
+            assertEquals(2000L, standard?.taxAmount)
+
+            val reduced = taxSummaries.find { it.taxRateName == "軽減税率8%" }
+            assertNotNull(reduced)
+            assertEquals(15000L, reduced?.taxableAmount)
+            assertEquals(1200L, reduced?.taxAmount)
+        }
+
+        @Test
+        fun `同一clientIdで再送信すると既存取引を返す（冪等性）`() {
+            val items = listOf(standardOfflineItem())
+            val payments = listOf(PaymentInput(method = "CASH", amount = 22000, received = 22000, reference = null))
+
+            val first =
+                transactionService.syncOfflineTransaction(
+                    storeId,
+                    terminalId,
+                    staffId,
+                    clientId,
+                    items,
+                    payments,
+                    null,
+                )
+            val second =
+                transactionService.syncOfflineTransaction(
+                    storeId,
+                    terminalId,
+                    staffId,
+                    clientId,
+                    items,
+                    payments,
+                    null,
+                )
+
+            assertEquals(first.id, second.id)
+        }
+
+        @Test
+        fun `アイテムが空の場合はエラー`() {
+            val payments = listOf(PaymentInput(method = "CASH", amount = 0, received = 0, reference = null))
+
+            assertThrows(IllegalArgumentException::class.java) {
+                transactionService.syncOfflineTransaction(
+                    storeId,
+                    terminalId,
+                    staffId,
+                    clientId,
+                    emptyList(),
+                    payments,
+                    null,
+                )
+            }
+        }
+
+        @Test
+        fun `支払いが空の場合はエラー`() {
+            val items = listOf(standardOfflineItem())
+
+            assertThrows(IllegalArgumentException::class.java) {
+                transactionService.syncOfflineTransaction(
+                    storeId,
+                    terminalId,
+                    staffId,
+                    clientId,
+                    items,
+                    emptyList(),
+                    null,
+                )
+            }
+        }
+
+        @Test
+        fun `支払い合計が不足の場合はエラー`() {
+            val items = listOf(standardOfflineItem())
+            val payments = listOf(PaymentInput(method = "CASH", amount = 10000, received = 10000, reference = null))
+
+            assertThrows(IllegalArgumentException::class.java) {
+                transactionService.syncOfflineTransaction(
+                    storeId,
+                    terminalId,
+                    staffId,
+                    clientId,
+                    items,
+                    payments,
+                    null,
+                )
+            }
+        }
+
+        @Test
+        fun `createdAtを指定するとcompletedAtに設定される`() {
+            val items = listOf(standardOfflineItem())
+            val payments = listOf(PaymentInput(method = "CASH", amount = 22000, received = 22000, reference = null))
+            val offlineCreatedAt = java.time.Instant.parse("2026-03-25T10:00:00Z")
+
+            val result =
+                transactionService.syncOfflineTransaction(
+                    storeId,
+                    terminalId,
+                    staffId,
+                    clientId,
+                    items,
+                    payments,
+                    offlineCreatedAt,
+                )
+
+            assertEquals(offlineCreatedAt, result.completedAt)
+        }
+    }
+
     // === ヘルパーメソッド ===
 
     private fun createDraftTransaction(): TransactionEntity =
