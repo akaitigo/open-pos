@@ -53,7 +53,8 @@ class OutboxProcessorTest {
     @Test
     fun `PENDINGイベントなし時は何もしない`() {
         // Arrange
-        whenever(outboxRepository.findPendingEvents(OutboxProcessor.BATCH_SIZE)).thenReturn(emptyList())
+        whenever(outboxRepository.findPendingAndMarkInProgress(OutboxProcessor.BATCH_SIZE))
+            .thenReturn(emptyList())
 
         // Act
         outboxProcessor.processOutbox()
@@ -84,7 +85,7 @@ class OutboxProcessorTest {
     }
 
     @Test
-    fun `送信失敗時はretryCountをインクリメントしPENDINGのまま`() {
+    fun `送信失敗時はretryCountをインクリメントしPENDINGに戻す`() {
         // Arrange
         val event = createPendingEvent("sale.completed", """{"eventType":"sale.completed"}""")
         whenever(outboxRepository.findById(event.id)).thenReturn(event)
@@ -137,7 +138,7 @@ class OutboxProcessorTest {
         // Arrange
         val event1 = createPendingEvent("sale.completed", """{"id":"1"}""")
         val event2 = createPendingEvent("sale.voided", """{"id":"2"}""")
-        whenever(outboxRepository.findPendingEvents(OutboxProcessor.BATCH_SIZE))
+        whenever(outboxRepository.findPendingAndMarkInProgress(OutboxProcessor.BATCH_SIZE))
             .thenReturn(listOf(event1, event2))
         whenever(outboxRepository.findById(event1.id)).thenReturn(event1)
         whenever(outboxRepository.findById(event2.id)).thenReturn(event2)
@@ -151,7 +152,7 @@ class OutboxProcessorTest {
     }
 
     @Test
-    fun `リトライ9回目まではPENDINGを維持する`() {
+    fun `リトライ9回目まではPENDINGに戻す`() {
         // Arrange
         val event = createPendingEvent("sale.voided", """{"eventType":"sale.voided"}""")
         event.retryCount = OutboxProcessor.MAX_RETRY_COUNT - 2 // 8
@@ -173,5 +174,40 @@ class OutboxProcessorTest {
         assertEquals("PENDING", event.status)
         assertEquals(OutboxProcessor.MAX_RETRY_COUNT - 1, event.retryCount) // 9
         verify(outboxRepository).persist(event)
+    }
+
+    @Test
+    fun `claimPendingEventsはfindPendingAndMarkInProgressに委譲する`() {
+        // Arrange
+        val event = createPendingEvent("sale.completed", """{"id":"1"}""")
+        whenever(outboxRepository.findPendingAndMarkInProgress(OutboxProcessor.BATCH_SIZE))
+            .thenReturn(listOf(event))
+
+        // Act
+        val result = outboxProcessor.claimPendingEvents()
+
+        // Assert
+        assertEquals(1, result.size)
+        assertEquals(event.id, result[0].id)
+        verify(outboxRepository).findPendingAndMarkInProgress(OutboxProcessor.BATCH_SIZE)
+    }
+
+    @Test
+    fun `存在しないイベントIDの場合は何もしない`() {
+        // Arrange
+        val nonExistentId = UUID.randomUUID()
+        whenever(outboxRepository.findById(nonExistentId)).thenReturn(null)
+
+        // Act
+        outboxProcessor.processEvent(
+            nonExistentId.toString(),
+            "sale.completed",
+            """{"eventType":"sale.completed"}""",
+            0,
+        )
+
+        // Assert
+        verify(emitter, never()).send(any<Message<String>>())
+        verify(outboxRepository, never()).persist(any<OutboxEventEntity>())
     }
 }

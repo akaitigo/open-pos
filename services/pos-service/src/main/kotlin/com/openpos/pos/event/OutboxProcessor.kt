@@ -1,5 +1,6 @@
 package com.openpos.pos.event
 
+import com.openpos.pos.entity.OutboxEventEntity
 import com.openpos.pos.repository.OutboxRepository
 import io.quarkus.scheduler.Scheduled
 import io.smallrye.reactive.messaging.rabbitmq.OutgoingRabbitMQMetadata
@@ -17,6 +18,10 @@ import java.time.Instant
  * アウトボックスプロセッサ。
  * 定期的に PENDING イベントを取得し、RabbitMQ への再送信を試みる。
  * 最大リトライ回数（10回）を超えた場合は FAILED に遷移する。
+ *
+ * 二重パブリッシュ防止:
+ * SELECT FOR UPDATE → IN_PROGRESS 更新を同一トランザクション内で実行し、
+ * 他インスタンスが同じイベントを取得できないようにする。
  */
 @ApplicationScoped
 class OutboxProcessor {
@@ -40,17 +45,25 @@ class OutboxProcessor {
      */
     @Scheduled(every = "10s", identity = "outbox-processor")
     fun processOutbox() {
-        val pendingEvents = outboxRepository.findPendingEvents(BATCH_SIZE)
-        if (pendingEvents.isEmpty()) {
+        val claimedEvents = claimPendingEvents()
+        if (claimedEvents.isEmpty()) {
             return
         }
 
-        log.infof("Processing %d pending outbox events", pendingEvents.size)
+        log.infof("Processing %d claimed outbox events", claimedEvents.size)
 
-        for (event in pendingEvents) {
+        for (event in claimedEvents) {
             processEvent(event.id.toString(), event.eventType, event.payload, event.retryCount)
         }
     }
+
+    /**
+     * PENDING イベントを取得し IN_PROGRESS に遷移する。
+     * SELECT FOR UPDATE とステータス更新が同一トランザクション内で実行され、
+     * 複数インスタンス間での二重取得を防止する。
+     */
+    @Transactional
+    fun claimPendingEvents(): List<OutboxEventEntity> = outboxRepository.findPendingAndMarkInProgress(BATCH_SIZE)
 
     /**
      * 個別のアウトボックスイベントを処理する。
@@ -92,6 +105,7 @@ class OutboxProcessor {
                     MAX_RETRY_COUNT,
                 )
             } else {
+                event.status = "PENDING"
                 log.warnf(
                     e,
                     "Failed to send outbox event %s (type=%s), retry %d/%d",
