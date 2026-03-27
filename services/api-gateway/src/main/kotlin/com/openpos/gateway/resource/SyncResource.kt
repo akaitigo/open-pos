@@ -45,9 +45,27 @@ class SyncResource {
     @ConfigProperty(name = "openpos.sync.max-unit-price", defaultValue = "10000000")
     var maxUnitPrice: Long = 10_000_000
 
+    @ConfigProperty(name = "openpos.sync.max-transactions", defaultValue = "100")
+    var maxTransactions: Int = 100
+
+    @ConfigProperty(name = "openpos.sync.max-items-per-transaction", defaultValue = "500")
+    var maxItemsPerTransaction: Int = 500
+
     @POST
     @Path("/transactions")
     fun syncTransactions(body: SyncTransactionsBody): Map<String, Any> {
+        if (body.transactions.size > maxTransactions) {
+            throw BadRequestException(
+                "Too many transactions: ${body.transactions.size} exceeds maximum of $maxTransactions",
+            )
+        }
+        body.transactions.forEachIndexed { index, t ->
+            if (t.items.size > maxItemsPerTransaction) {
+                throw BadRequestException(
+                    "Transaction[$index] has too many items: ${t.items.size} exceeds maximum of $maxItemsPerTransaction",
+                )
+            }
+        }
         val request =
             SyncOfflineTransactionsRequest
                 .newBuilder()

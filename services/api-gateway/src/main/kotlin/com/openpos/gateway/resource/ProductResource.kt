@@ -7,6 +7,7 @@ import com.openpos.gateway.cache.RedisCacheService
 import com.openpos.gateway.config.GrpcClientHelper
 import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.paginatedResponse
+import com.openpos.gateway.config.requireValidPage
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
@@ -97,6 +98,7 @@ class ProductResource {
         @QueryParam("search") search: String?,
         @QueryParam("activeOnly") @DefaultValue("false") activeOnly: Boolean,
     ): Map<String, Any> {
+        requireValidPage(page)
         val request =
             ListProductsRequest
                 .newBuilder()

@@ -4,6 +4,7 @@ import com.google.protobuf.BoolValue
 import com.openpos.gateway.config.GrpcClientHelper
 import com.openpos.gateway.config.SessionTokenService
 import com.openpos.gateway.config.paginatedResponse
+import com.openpos.gateway.config.requireValidPage
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
@@ -86,6 +87,7 @@ class StaffResource {
         @QueryParam("page") @DefaultValue("1") page: Int,
         @QueryParam("pageSize") @DefaultValue("20") pageSize: Int,
     ): Map<String, Any> {
+        requireValidPage(page)
         val request =
             ListStaffRequest
                 .newBuilder()
