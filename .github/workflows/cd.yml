@@ -196,6 +196,23 @@ jobs:
           kubectl get nodes -o wide
           kubectl get ns openpos || kubectl create ns openpos
 
+      - name: Validate required secrets exist
+        run: |
+          echo "Validating required secrets in openpos-secrets..."
+          REQUIRED_KEYS=(CORS_ALLOWED_ORIGINS HYDRA_JWKS_URL HYDRA_ISSUER OPENPOS_SESSION_JWT_SECRET REDIS_URL DB_URL)
+          MISSING=()
+          for KEY in "${REQUIRED_KEYS[@]}"; do
+            if ! kubectl get secret openpos-secrets -n openpos -o jsonpath="{.data.${KEY}}" 2>/dev/null | base64 -d | grep -q .; then
+              MISSING+=("$KEY")
+            fi
+          done
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::error::Missing or empty required secrets: ${MISSING[*]}"
+            echo "Ensure these are configured in GCP Secret Manager and ExternalSecret has synced."
+            exit 1
+          fi
+          echo "All required secrets validated."
+
       - name: Apply ExternalSecret for GCP Secret Manager
         run: |
           kubectl apply -f infra/k8s/external-secret.yaml

@@ -55,6 +55,11 @@ spec:
                 secretKeyRef:
                   name: openpos-secrets
                   key: OPENPOS_SESSION_JWT_SECRET
+            - name: CORS_ALLOWED_ORIGINS
+              valueFrom:
+                secretKeyRef:
+                  name: openpos-secrets
+                  key: CORS_ALLOWED_ORIGINS
             - name: PRODUCT_SERVICE_HOST
               value: product-service
             - name: PRODUCT_SERVICE_PORT

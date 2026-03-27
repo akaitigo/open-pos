@@ -23,6 +23,8 @@ data:
   QUARKUS_HTTP_PORT: '8080'
   QUARKUS_LOG_LEVEL: 'INFO'
   QUARKUS_LOG_CONSOLE_JSON: 'true'
+  # CORS — also stored in ExternalSecret for env var injection
+  # CORS_ALLOWED_ORIGINS: managed via GCP Secret Manager (see external-secret.yaml)
   # gRPC service endpoints
   PRODUCT_SERVICE_HOST: 'product-service'
   PRODUCT_SERVICE_PORT: '9000'
