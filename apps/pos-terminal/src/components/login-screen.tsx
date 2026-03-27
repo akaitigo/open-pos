@@ -149,6 +149,7 @@ export function LoginScreen() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
+                aria-label="戻る"
                 onClick={() => {
                   setSelectedStaff(null)
                   setPin('')
@@ -161,7 +162,11 @@ export function LoginScreen() {
 
             <div className="text-center">
               <p className="mb-2 text-sm text-muted-foreground">PINを入力してください</p>
-              <div className="flex justify-center gap-2">
+              <div
+                className="flex justify-center gap-2"
+                role="status"
+                aria-label={`PIN入力済み ${pin.length} 桁`}
+              >
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div
                     key={i}
