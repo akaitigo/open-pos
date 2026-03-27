@@ -276,7 +276,7 @@ class StaffServiceTest {
                     this.pinFailedCount = 0
                     this.pinLockedUntil = null
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            whenever(staffRepository.findByIdForUpdate(staffId)).thenReturn(entity)
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
@@ -295,7 +295,7 @@ class StaffServiceTest {
         fun `存在しないスタッフIDの場合はNOT_FOUNDを返す`() {
             // Arrange
             val staffId = UUID.randomUUID()
-            whenever(staffRepository.findById(staffId)).thenReturn(null)
+            whenever(staffRepository.findByIdForUpdate(staffId)).thenReturn(null)
 
             // Act
             val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
@@ -321,7 +321,7 @@ class StaffServiceTest {
                     this.pinHash = "1234"
                     this.isActive = true
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            whenever(staffRepository.findByIdForUpdate(staffId)).thenReturn(entity)
 
             // Act
             val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
@@ -346,7 +346,7 @@ class StaffServiceTest {
                     this.pinHash = "1234"
                     this.isActive = false
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            whenever(staffRepository.findByIdForUpdate(staffId)).thenReturn(entity)
 
             // Act
             val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
@@ -373,7 +373,7 @@ class StaffServiceTest {
                     this.pinFailedCount = 5
                     this.pinLockedUntil = Instant.now().plusSeconds(3600)
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            whenever(staffRepository.findByIdForUpdate(staffId)).thenReturn(entity)
 
             // Act
             val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
@@ -400,7 +400,7 @@ class StaffServiceTest {
                     this.pinFailedCount = 0
                     this.pinLockedUntil = null
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            whenever(staffRepository.findByIdForUpdate(staffId)).thenReturn(entity)
 
             // Act
             val result = staffService.authenticateByPin(staffId, storeId, "1234") { plain, hash -> plain == hash }
@@ -427,7 +427,7 @@ class StaffServiceTest {
                     this.pinFailedCount = 0
                     this.pinLockedUntil = null
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            whenever(staffRepository.findByIdForUpdate(staffId)).thenReturn(entity)
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
@@ -456,7 +456,7 @@ class StaffServiceTest {
                     this.pinFailedCount = 4
                     this.pinLockedUntil = null
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            whenever(staffRepository.findByIdForUpdate(staffId)).thenReturn(entity)
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
@@ -485,7 +485,7 @@ class StaffServiceTest {
                     this.pinFailedCount = 3
                     this.pinLockedUntil = null
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            whenever(staffRepository.findByIdForUpdate(staffId)).thenReturn(entity)
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
@@ -513,7 +513,7 @@ class StaffServiceTest {
                     this.pinFailedCount = 5
                     this.pinLockedUntil = Instant.now().minusSeconds(3600)
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            whenever(staffRepository.findByIdForUpdate(staffId)).thenReturn(entity)
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
@@ -541,7 +541,7 @@ class StaffServiceTest {
                     this.pinFailedCount = 5
                     this.pinLockedUntil = Instant.now().minusSeconds(3600)
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            whenever(staffRepository.findByIdForUpdate(staffId)).thenReturn(entity)
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act

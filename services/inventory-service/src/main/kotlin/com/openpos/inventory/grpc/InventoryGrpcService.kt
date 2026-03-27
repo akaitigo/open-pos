@@ -402,7 +402,7 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
             )
             responseObserver.onCompleted()
         } catch (e: Exception) {
-            responseObserver.onError(Status.INTERNAL.withDescription(e.message).asRuntimeException())
+            responseObserver.onError(Status.INTERNAL.withDescription("Internal server error").asRuntimeException())
         }
     }
 
@@ -490,7 +490,7 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
         } catch (e: IllegalArgumentException) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription(e.message).asRuntimeException())
         } catch (e: Exception) {
-            responseObserver.onError(Status.INTERNAL.withDescription(e.message).asRuntimeException())
+            responseObserver.onError(Status.INTERNAL.withDescription("Internal server error").asRuntimeException())
         }
     }
 
