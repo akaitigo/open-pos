@@ -299,6 +299,86 @@ class WebhookStoreTest {
     }
 
     @Nested
+    inner class Update {
+        @Test
+        fun `Webhookを更新するとRedisにJSON保存される`() {
+            val registration =
+                WebhookRegistration(
+                    organizationId = orgId,
+                    url = "https://example.com/updated",
+                    events = listOf("sale.completed", "product.created"),
+                    secret = "new-secret",
+                )
+            val result = store.update(registration)
+            assertEquals(registration.id, result.id)
+            verify(valueCommands).set(
+                eq("openpos:gateway:webhook:${registration.id}"),
+                any(),
+            )
+        }
+
+        @Test
+        fun `Redis例外時はそのまま例外をスローする`() {
+            val registration =
+                WebhookRegistration(
+                    organizationId = orgId,
+                    url = "https://example.com/webhook",
+                    events = listOf("sale.completed"),
+                    secret = "secret",
+                )
+            whenever(valueCommands.set(any(), any())).thenThrow(RuntimeException("Connection refused"))
+            org.junit.jupiter.api.assertThrows<RuntimeException> {
+                store.update(registration)
+            }
+        }
+    }
+
+    @Nested
+    inner class Clear {
+        @Test
+        fun `全Webhookデータをクリアする`() {
+            val cursor: KeyScanCursor<String> = mock()
+            whenever(keyCommands.scan(any())).thenReturn(cursor)
+            whenever(cursor.hasNext()).thenReturn(true, false, true, false, true, false, true, false)
+            whenever(cursor.next())
+                .thenReturn(setOf("openpos:gateway:webhook:abc"))
+                .thenReturn(setOf("openpos:gateway:webhook:org:def"))
+                .thenReturn(setOf("openpos:gateway:webhook:delivery:ghi"))
+                .thenReturn(setOf("openpos:gateway:webhook:delivery:wh:jkl"))
+            store.clear()
+            verify(keyCommands).del("openpos:gateway:webhook:abc")
+            verify(keyCommands).del("openpos:gateway:webhook:org:def")
+            verify(keyCommands).del("openpos:gateway:webhook:delivery:ghi")
+            verify(keyCommands).del("openpos:gateway:webhook:delivery:wh:jkl")
+        }
+
+        @Test
+        fun `スキャン結果が空なら何も削除しない`() {
+            val cursor: KeyScanCursor<String> = mock()
+            whenever(keyCommands.scan(any())).thenReturn(cursor)
+            whenever(cursor.hasNext()).thenReturn(false)
+            store.clear()
+        }
+
+        @Test
+        fun `Redis例外時は例外をスローせず静かに失敗する`() {
+            whenever(keyCommands.scan(any())).thenThrow(RuntimeException("Connection refused"))
+            store.clear()
+        }
+    }
+
+    @Nested
+    inner class DeleteErrors {
+        @Test
+        fun `Redis例外時はfalseを返す`() {
+            val id = UUID.randomUUID()
+            whenever(valueCommands.get(any())).thenThrow(RuntimeException("Connection refused"))
+            val result = store.delete(id)
+            assertFalse(result)
+        }
+    }
+
+    @Nested
     inner class DeliveryOperations {
         @Test
         fun `配信記録をTTL付きで保存する`() {
@@ -428,6 +508,61 @@ class WebhookStoreTest {
             // Assert
             assertEquals(0, results.size)
         }
+
+        @Test
+        fun `配信記録保存時にRedis例外で例外をスローする`() {
+            val delivery =
+                WebhookDelivery(
+                    webhookId = UUID.randomUUID(),
+                    eventType = "sale.completed",
+                    payload = """{"test":true}""",
+                    status = DeliveryStatus.PENDING,
+                )
+            whenever(valueCommands.setex(any(), any(), any())).thenThrow(RuntimeException("Connection refused"))
+            org.junit.jupiter.api.assertThrows<RuntimeException> {
+                store.recordDelivery(delivery)
+            }
+        }
+
+        @Test
+        fun `配信記録更新時にRedis例外で例外をスローする`() {
+            val delivery =
+                WebhookDelivery(
+                    webhookId = UUID.randomUUID(),
+                    eventType = "sale.completed",
+                    payload = """{"test":true}""",
+                    status = DeliveryStatus.SUCCESS,
+                )
+            whenever(keyCommands.ttl(any<String>())).thenThrow(RuntimeException("Connection refused"))
+            org.junit.jupiter.api.assertThrows<RuntimeException> {
+                store.updateDelivery(delivery)
+            }
+        }
+
+        @Test
+        fun `個別の配信読み取り失敗時はスキップして残りを返す`() {
+            val webhookId = UUID.randomUUID()
+            val id1 = UUID.randomUUID()
+            val id2 = UUID.randomUUID()
+            val d1 =
+                WebhookDelivery(
+                    id = id1,
+                    webhookId = webhookId,
+                    eventType = "sale.completed",
+                    payload = "{}",
+                    status = DeliveryStatus.SUCCESS,
+                    createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+                )
+            whenever(setCommands.smembers("openpos:gateway:webhook:delivery:wh:$webhookId"))
+                .thenReturn(setOf(id1.toString(), id2.toString()))
+            whenever(valueCommands.get("openpos:gateway:webhook:delivery:$id1"))
+                .thenReturn(objectMapper.writeValueAsString(d1))
+            whenever(valueCommands.get("openpos:gateway:webhook:delivery:$id2"))
+                .thenThrow(RuntimeException("Read error"))
+            val results = store.findDeliveries(webhookId)
+            assertEquals(1, results.size)
+            assertEquals(id1, results[0].id)
+        }
     }
 
     @Nested
@@ -495,6 +630,36 @@ class WebhookStoreTest {
 
             // Assert
             assertEquals(0, pending.size)
+        }
+
+        @Test
+        fun `個別の配信読み取り失敗時はスキップする`() {
+            val validDelivery =
+                WebhookDelivery(
+                    webhookId = UUID.randomUUID(),
+                    eventType = "sale.completed",
+                    payload = "{}",
+                    status = DeliveryStatus.RETRYING,
+                    attemptCount = 1,
+                    nextRetryAt = Instant.now().minusSeconds(60),
+                )
+            val badId = UUID.randomUUID()
+            val cursor: KeyScanCursor<String> = mock()
+            whenever(keyCommands.scan(any())).thenReturn(cursor)
+            whenever(cursor.hasNext()).thenReturn(true, false)
+            whenever(cursor.next()).thenReturn(
+                setOf(
+                    "openpos:gateway:webhook:delivery:${validDelivery.id}",
+                    "openpos:gateway:webhook:delivery:$badId",
+                ),
+            )
+            whenever(valueCommands.get("openpos:gateway:webhook:delivery:${validDelivery.id}"))
+                .thenReturn(objectMapper.writeValueAsString(validDelivery))
+            whenever(valueCommands.get("openpos:gateway:webhook:delivery:$badId"))
+                .thenThrow(RuntimeException("Read error"))
+            val pending = store.findPendingRetries()
+            assertEquals(1, pending.size)
+            assertEquals(validDelivery.id, pending[0].id)
         }
     }
 }
