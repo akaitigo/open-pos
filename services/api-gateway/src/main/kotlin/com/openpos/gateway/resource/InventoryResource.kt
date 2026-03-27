@@ -3,6 +3,7 @@ package com.openpos.gateway.resource
 import com.openpos.gateway.config.GrpcClientHelper
 import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.paginatedResponse
+import com.openpos.gateway.config.requireValidPage
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
@@ -56,6 +57,7 @@ class InventoryResource {
         @QueryParam("pageSize") @DefaultValue("20") pageSize: Int,
         @QueryParam("lowStockOnly") @DefaultValue("false") lowStockOnly: Boolean,
     ): Map<String, Any> {
+        requireValidPage(page)
         val request =
             ListStocksRequest
                 .newBuilder()
@@ -126,6 +128,7 @@ class InventoryResource {
         @QueryParam("startDate") startDate: String?,
         @QueryParam("endDate") endDate: String?,
     ): Map<String, Any> {
+        requireValidPage(page)
         val request =
             ListStockMovementsRequest
                 .newBuilder()
@@ -201,6 +204,7 @@ class InventoryResource {
         @QueryParam("page") @DefaultValue("1") page: Int,
         @QueryParam("pageSize") @DefaultValue("20") pageSize: Int,
     ): Map<String, Any> {
+        requireValidPage(page)
         val request =
             ListPurchaseOrdersRequest
                 .newBuilder()

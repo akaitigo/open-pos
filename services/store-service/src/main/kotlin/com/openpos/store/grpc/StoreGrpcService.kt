@@ -2,6 +2,7 @@ package com.openpos.store.grpc
 
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.openpos.store.config.DataMaskingUtil
 import com.openpos.store.entity.DataProcessingConsentEntity
 import com.openpos.store.entity.OrganizationEntity
 import com.openpos.store.entity.StaffEntity
@@ -318,7 +319,7 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
             entityId = entity.id.toString(),
             details =
                 objectMapper.writeValueAsString(
-                    mapOf("name" to entity.name, "role" to entity.role, "storeId" to entity.storeId.toString()),
+                    mapOf("name" to DataMaskingUtil.maskName(entity.name), "role" to entity.role, "storeId" to entity.storeId.toString()),
                 ),
         )
         responseObserver.onNext(
@@ -405,7 +406,7 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
             entityId = entity.id.toString(),
             details =
                 objectMapper.writeValueAsString(
-                    mapOf("name" to entity.name, "role" to entity.role),
+                    mapOf("name" to DataMaskingUtil.maskName(entity.name), "role" to entity.role),
                 ),
         )
         responseObserver.onNext(

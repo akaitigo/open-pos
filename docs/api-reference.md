@@ -136,7 +136,7 @@ api-gateway には SmallRye OpenAPI (`quarkus-smallrye-openapi`) が組み込ま
 ```json
 {
   "data": [ ... ],
-  "meta": { "page": 0, "size": 20, "total": 150, "totalPages": 8 }
+  "pagination": { "page": 1, "pageSize": 20, "totalCount": 150, "totalPages": 8 }
 }
 ```
 
@@ -155,8 +155,11 @@ api-gateway には SmallRye OpenAPI (`quarkus-smallrye-openapi`) が組み込ま
 ## ページネーション
 
 ```
-GET /api/products?page=0&size=20&sort=display_order,asc
+GET /api/products?page=1&pageSize=20
 ```
+
+- `page` は 1 始まり（0 以下を指定すると 400 Bad Request）
+- `pageSize` のデフォルトは 20
 
 ## gRPC サービス（内部通信）
 

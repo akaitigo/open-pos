@@ -451,3 +451,12 @@ fun <T> paginatedResponse(
         "data" to data,
         "pagination" to pagination.toMap(),
     )
+
+/**
+ * ページ番号のバリデーション。1未満の場合は 400 Bad Request を返す。
+ */
+fun requireValidPage(page: Int) {
+    if (page < 1) {
+        throw jakarta.ws.rs.BadRequestException("page must be >= 1, got $page")
+    }
+}
