@@ -66,6 +66,18 @@ spec:
                 secretKeyRef:
                   name: openpos-secrets
                   key: RABBITMQ_PASS
+            - name: PRODUCT_SERVICE_HOST
+              value: product-service
+            - name: PRODUCT_SERVICE_PORT
+              value: '9000'
+            - name: INVENTORY_SERVICE_HOST
+              value: inventory-service
+            - name: INVENTORY_SERVICE_PORT
+              value: '9000'
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+            - name: RABBITMQ_PORT
+              value: '5672'
           startupProbe:
             httpGet:
               path: /q/health/live
