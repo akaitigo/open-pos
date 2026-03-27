@@ -63,7 +63,8 @@ enum class DeliveryStatus {
     FAILED,
 }
 
-// TODO(#908): Webhook 配信を RabbitMQ 非同期化し、スレッドブロッキングを解消予定。
+// #908: 非同期配信は Redis ポーリング + @Scheduled で実装済み。
+// WebhookDeliveryConsumer が PENDING レコードを定期ポーリングして HTTP 配信を行う。
 
 /**
  * Webhook 登録の Redis ストア (#963)。
@@ -233,6 +234,33 @@ class WebhookStore {
                 webhookId,
                 e.message,
             )
+            emptyList()
+        }
+
+    fun findPendingDeliveries(): List<WebhookDelivery> =
+        try {
+            val allKeys = mutableListOf<String>()
+            val cursor =
+                redis.key().scan(
+                    KeyScanArgs().match(DELIVERY_PREFIX + "*").count(100),
+                )
+            while (cursor.hasNext()) {
+                allKeys.addAll(cursor.next())
+            }
+            allKeys
+                .mapNotNull { key ->
+                    try {
+                        val json = redis.value(String::class.java).get(key)
+                        json?.let {
+                            objectMapper.readValue(it, WebhookDelivery::class.java)
+                        }
+                    } catch (e: Exception) {
+                        LOG.warnf("Failed to read delivery from key %s: %s", key, e.message)
+                        null
+                    }
+                }.filter { it.status == DeliveryStatus.PENDING }
+        } catch (e: Exception) {
+            LOG.warnf("Failed to find pending deliveries: %s", e.message)
             emptyList()
         }
 

@@ -17,6 +17,7 @@ dependencies {
     implementation(libs.quarkus.opentelemetry)
     implementation(libs.quarkus.smallrye.openapi)
     implementation(libs.quarkus.smallrye.fault.tolerance)
+    implementation(libs.quarkus.scheduler)
     implementation(libs.kotlin.stdlib)
     implementation(libs.quarkus.arc)
     implementation(libs.jackson.module.kotlin)
