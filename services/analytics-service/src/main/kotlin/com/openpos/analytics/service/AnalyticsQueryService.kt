@@ -5,6 +5,8 @@ import com.openpos.analytics.repository.DailySalesRepository
 import com.openpos.analytics.repository.ProductSalesRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDate
 import java.util.UUID
 
@@ -55,9 +57,10 @@ class AnalyticsQueryService {
         val totalRevenue = grouped.sumOf { it.third }
         if (totalRevenue == 0L) return emptyList()
 
+        val totalRevenueBd = BigDecimal.valueOf(totalRevenue)
         var cumulative = 0.0
         return grouped.map { (productId, name, revenue) ->
-            val ratio = revenue.toDouble() / totalRevenue
+            val ratio = BigDecimal.valueOf(revenue).divide(totalRevenueBd, 10, RoundingMode.HALF_UP).toDouble()
             cumulative += ratio
             val rank =
                 when {
@@ -112,7 +115,12 @@ class AnalyticsQueryService {
                     val totalCost = records.sumOf { it.costAmount }
                     val totalQty = records.sumOf { it.quantitySold }
                     val grossProfit = totalRevenue - totalCost
-                    val marginRate = if (totalRevenue > 0) grossProfit.toDouble() / totalRevenue else 0.0
+                    val marginRate =
+                        if (totalRevenue > 0) {
+                            BigDecimal.valueOf(grossProfit).divide(BigDecimal.valueOf(totalRevenue), 10, RoundingMode.HALF_UP).toDouble()
+                        } else {
+                            0.0
+                        }
                     GrossProfitItem(
                         productId = productId,
                         productName = name,

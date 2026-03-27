@@ -29,6 +29,7 @@ subprojects {
 
         afterEvaluate {
             dependencies {
+                "implementation"(rootProject.libs.quarkus.logging.json)
                 "testImplementation"(rootProject.libs.testcontainers)
                 "testImplementation"(rootProject.libs.testcontainers.postgresql)
                 "testImplementation"(rootProject.libs.testcontainers.junit.jupiter)
