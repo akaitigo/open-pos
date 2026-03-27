@@ -43,6 +43,9 @@ apps/*/public/demo-config.json
 proto/gen/
 services/*/src/main/proto/openpos/
 
+# === Stale build artifacts ===
+services/com/
+
 # === Docker ===
 docker-compose.override.yml
 compose.override.yml

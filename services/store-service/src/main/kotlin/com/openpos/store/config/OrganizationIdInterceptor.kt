@@ -2,6 +2,7 @@ package com.openpos.store.config
 
 import io.grpc.Context
 import io.grpc.Contexts
+import io.grpc.ForwardingServerCallListener.SimpleForwardingServerCallListener
 import io.grpc.Metadata
 import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
@@ -55,7 +56,8 @@ class OrganizationIdInterceptor : ServerInterceptor {
         val methodName = call.methodDescriptor.bareMethodName
         if (methodName == "CreateOrganization") {
             val ctx = Context.current().withValue(REQUEST_ID_CTX_KEY, requestId)
-            return Contexts.interceptCall(ctx, call, headers, next)
+            val delegate = Contexts.interceptCall(ctx, call, headers, next)
+            return MdcCleanupListener(delegate)
         }
 
         val orgIdStr = headers.get(ORGANIZATION_ID_KEY)
@@ -104,7 +106,37 @@ class OrganizationIdInterceptor : ServerInterceptor {
                 .current()
                 .withValue(ORGANIZATION_ID_CTX_KEY, orgId)
                 .withValue(REQUEST_ID_CTX_KEY, requestId)
-        return Contexts.interceptCall(ctx, call, headers, next)
+        val delegate = Contexts.interceptCall(ctx, call, headers, next)
+        return MdcCleanupListener(delegate)
+    }
+
+    private class MdcCleanupListener<ReqT>(
+        delegate: ServerCall.Listener<ReqT>,
+    ) : SimpleForwardingServerCallListener<ReqT>(delegate) {
+        private fun cleanupMdc() {
+            org.jboss.logging.MDC
+                .remove("requestId")
+            org.jboss.logging.MDC
+                .remove("trace_id")
+            org.jboss.logging.MDC
+                .remove("organization_id")
+        }
+
+        override fun onComplete() {
+            try {
+                super.onComplete()
+            } finally {
+                cleanupMdc()
+            }
+        }
+
+        override fun onCancel() {
+            try {
+                super.onCancel()
+            } finally {
+                cleanupMdc()
+            }
+        }
     }
 
     private fun extractOrGenerateRequestId(headers: Metadata): String {

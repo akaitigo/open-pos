@@ -483,6 +483,7 @@ class TransactionService {
 
         // ビジネスメトリクス更新
         transactionsCompletedCounter.increment()
+        // Micrometer Counter.increment() accepts double — acceptable for metrics (not financial calc)
         revenueCounter.increment(tx.total.toDouble())
 
         return tx
@@ -769,6 +770,7 @@ class TransactionService {
         // 7. イベント発行 + メトリクス
         publishSaleCompletedEvent(tx, savedItems)
         transactionsCompletedCounter.increment()
+        // Micrometer Counter.increment() accepts double — acceptable for metrics (not financial calc)
         revenueCounter.increment(tx.total.toDouble())
 
         return tx

@@ -39,6 +39,7 @@ quarkus-smallrye-openapi = { module = "io.quarkus:quarkus-smallrye-openapi" }
 quarkus-smallrye-fault-tolerance = { module = "io.quarkus:quarkus-smallrye-fault-tolerance" }
 quarkus-micrometer-registry-prometheus = { module = "io.quarkus:quarkus-micrometer-registry-prometheus" }
 quarkus-opentelemetry = { module = "io.quarkus:quarkus-opentelemetry" }
+quarkus-logging-json = { module = "io.quarkus:quarkus-logging-json" }
 quarkus-scheduler = { module = "io.quarkus:quarkus-scheduler" }
 
 # Kotlin

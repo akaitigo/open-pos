@@ -23,6 +23,9 @@ class ProductCacheService {
         /** デフォルト TTL: 3600 秒（1 時間） — products, categories 用 */
         const val TTL_SECONDS = 3600L
         private const val PREFIX = "openpos:product-service"
+        private const val LOCK_TTL_SECONDS = 5L
+        private const val LOCK_RETRY_DELAY_MS = 50L
+        private const val LOCK_MAX_RETRIES = 10
     }
 
     // === Generic Operations ===
@@ -45,6 +48,58 @@ class ProductCacheService {
         } catch (e: Exception) {
             log.warnf("Redis SET failed for key=%s: %s", key, e.message)
         }
+    }
+
+    /**
+     * Cache stampede 防止付きの cache-aside 取得。
+     * キャッシュミス時に Redis SETNX でロックを取得し、1リクエストのみがキャッシュを再構築する。
+     * ロックを取得できなかったリクエストは短時間待機後にキャッシュを再取得する。
+     */
+    fun getOrLoad(
+        key: String,
+        ttlSeconds: Long = TTL_SECONDS,
+        loader: () -> String?,
+    ): String? {
+        get(key)?.let { return it }
+
+        val lockKey = "$key:lock"
+        val acquired =
+            try {
+                redis.value(String::class.java).setnx(lockKey, "1")
+            } catch (e: Exception) {
+                log.warnf("Redis SETNX failed for lock=%s: %s", lockKey, e.message)
+                false
+            }
+
+        if (acquired) {
+            try {
+                redis.key().expire(lockKey, LOCK_TTL_SECONDS)
+                val value = loader()
+                if (value != null) {
+                    set(key, value, ttlSeconds)
+                }
+                return value
+            } finally {
+                try {
+                    redis.key().del(lockKey)
+                } catch (e: Exception) {
+                    log.warnf("Redis DEL lock failed for key=%s: %s", lockKey, e.message)
+                }
+            }
+        }
+
+        // ロック取得失敗: 短時間待機後にキャッシュを再取得
+        for (i in 1..LOCK_MAX_RETRIES) {
+            try {
+                Thread.sleep(LOCK_RETRY_DELAY_MS)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                break
+            }
+            get(key)?.let { return it }
+        }
+        // フォールバック: ロック待機タイムアウト後は直接ロードする
+        return loader()
     }
 
     fun invalidate(vararg keys: String) {

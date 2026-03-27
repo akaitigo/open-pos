@@ -174,6 +174,126 @@ class ProductCacheServiceTest {
     }
 
     @Nested
+    inner class GetOrLoad {
+        @Test
+        fun `キャッシュヒット時はloaderを呼ばずにキャッシュ値を返す`() {
+            val key = "openpos:product-service:product:123"
+            whenever(valueCommands.get(key)).thenReturn("cached-value")
+
+            val result = cacheService.getOrLoad(key) { "loaded-value" }
+
+            assertEquals("cached-value", result)
+            verify(valueCommands, never()).setnx(any(), any())
+        }
+
+        @Test
+        fun `キャッシュミスでロック取得成功時はloaderを呼んでキャッシュに設定する`() {
+            val key = "openpos:product-service:product:456"
+            val lockKey = "$key:lock"
+            whenever(valueCommands.get(key)).thenReturn(null)
+            whenever(valueCommands.setnx(lockKey, "1")).thenReturn(true)
+
+            val result = cacheService.getOrLoad(key) { "loaded-value" }
+
+            assertEquals("loaded-value", result)
+            verify(valueCommands).setex(key, 3600L, "loaded-value")
+            verify(keyCommands).del(lockKey)
+        }
+
+        @Test
+        fun `loaderがnullを返す場合はキャッシュに設定せずnullを返す`() {
+            val key = "openpos:product-service:product:789"
+            val lockKey = "$key:lock"
+            whenever(valueCommands.get(key)).thenReturn(null)
+            whenever(valueCommands.setnx(lockKey, "1")).thenReturn(true)
+
+            val result = cacheService.getOrLoad(key) { null }
+
+            assertNull(result)
+            verify(valueCommands, never()).setex(any(), any(), any())
+            verify(keyCommands).del(lockKey)
+        }
+
+        @Test
+        fun `ロック取得失敗時はリトライ後にキャッシュ値を返す`() {
+            val key = "openpos:product-service:product:retry"
+            val lockKey = "$key:lock"
+            whenever(valueCommands.get(key))
+                .thenReturn(null)
+                .thenReturn("eventually-cached")
+            whenever(valueCommands.setnx(lockKey, "1")).thenReturn(false)
+
+            val result = cacheService.getOrLoad(key) { "fallback" }
+
+            assertEquals("eventually-cached", result)
+        }
+
+        @Test
+        fun `SETNX例外時はフォールバックでloaderを呼ぶ`() {
+            val key = "openpos:product-service:product:err"
+            whenever(valueCommands.get(key)).thenReturn(null)
+            whenever(valueCommands.setnx(any(), any())).thenThrow(RuntimeException("Redis down"))
+
+            val result = cacheService.getOrLoad(key) { "fallback-value" }
+
+            assertEquals("fallback-value", result)
+        }
+
+        @Test
+        fun `ロック解放失敗時でもloaderの結果は返される`() {
+            val key = "openpos:product-service:product:lock-del-fail"
+            val lockKey = "$key:lock"
+            whenever(valueCommands.get(key)).thenReturn(null)
+            whenever(valueCommands.setnx(lockKey, "1")).thenReturn(true)
+            whenever(keyCommands.del(lockKey)).thenThrow(RuntimeException("Redis down"))
+
+            val result = cacheService.getOrLoad(key) { "loaded-despite-error" }
+
+            assertEquals("loaded-despite-error", result)
+        }
+
+        @Test
+        fun `ロック取得失敗でリトライ全て失敗した場合はloaderを直接呼ぶ`() {
+            val key = "openpos:product-service:product:timeout"
+            val lockKey = "$key:lock"
+            whenever(valueCommands.get(key)).thenReturn(null)
+            whenever(valueCommands.setnx(lockKey, "1")).thenReturn(false)
+
+            val result = cacheService.getOrLoad(key) { "direct-load" }
+
+            assertEquals("direct-load", result)
+        }
+
+        @Test
+        fun `リトライ中にInterruptedException発生時はloaderを直接呼ぶ`() {
+            val key = "openpos:product-service:product:interrupt"
+            val lockKey = "$key:lock"
+            whenever(valueCommands.get(key)).thenReturn(null)
+            whenever(valueCommands.setnx(lockKey, "1")).thenReturn(false)
+
+            Thread.currentThread().interrupt()
+            val result = cacheService.getOrLoad(key) { "interrupted-fallback" }
+
+            assertEquals("interrupted-fallback", result)
+            // interrupted フラグがクリアされていることを確認
+            Thread.interrupted()
+        }
+
+        @Test
+        fun `カスタムTTLでgetOrLoadが動作する`() {
+            val key = "openpos:product-service:product:custom-ttl"
+            val lockKey = "$key:lock"
+            whenever(valueCommands.get(key)).thenReturn(null)
+            whenever(valueCommands.setnx(lockKey, "1")).thenReturn(true)
+
+            val result = cacheService.getOrLoad(key, ttlSeconds = 120L) { "loaded" }
+
+            assertEquals("loaded", result)
+            verify(valueCommands).setex(key, 120L, "loaded")
+        }
+    }
+
+    @Nested
     inner class KeyGeneration {
         @Test
         fun `productKeyはorgIdを含む正しい形式のキーを生成する`() {
@@ -243,6 +363,21 @@ class ProductCacheServiceTest {
 
             // Assert
             verify(keyCommands).del("openpos:product-service:org-1:category:cat-001")
+        }
+    }
+
+    @Nested
+    inner class InvalidateAllCategoryLists {
+        @Test
+        fun `全カテゴリリストキャッシュのパターン削除が呼ばれる`() {
+            val cursor: KeyScanCursor<String> = mock()
+            whenever(keyCommands.scan(any())).thenReturn(cursor)
+            whenever(cursor.hasNext()).thenReturn(true, false)
+            whenever(cursor.next()).thenReturn(setOf("openpos:product-service:org-1:category:list:root"))
+
+            cacheService.invalidateAllCategoryLists("org-1")
+
+            verify(keyCommands).del("openpos:product-service:org-1:category:list:root")
         }
     }
 }

@@ -43,6 +43,7 @@ class SalesEventProcessorUnitTest {
         processor.dailySalesRepository = dailySalesRepository
         processor.productSalesRepository = productSalesRepository
         processor.hourlySalesRepository = hourlySalesRepository
+        processor.timezoneName = "UTC"
 
         doNothing().whenever(dailySalesRepository).persist(any<DailySalesEntity>())
         doNothing().whenever(productSalesRepository).persist(any<ProductSalesEntity>())

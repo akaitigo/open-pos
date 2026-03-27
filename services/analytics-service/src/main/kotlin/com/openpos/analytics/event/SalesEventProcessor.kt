@@ -9,9 +9,10 @@ import com.openpos.analytics.repository.ProductSalesRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
+import org.eclipse.microprofile.config.inject.ConfigProperty
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
+import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -28,6 +29,12 @@ class SalesEventProcessor {
     @Inject
     lateinit var hourlySalesRepository: HourlySalesRepository
 
+    @ConfigProperty(name = "openpos.analytics.timezone", defaultValue = "Asia/Tokyo")
+    lateinit var timezoneName: String
+
+    val timezone: ZoneId
+        get() = ZoneId.of(timezoneName)
+
     /**
      * 売上完了イベントを処理する。
      * 日次・商品別・時間帯別の集計を更新する。
@@ -39,8 +46,8 @@ class SalesEventProcessor {
     ) {
         val storeId = UUID.fromString(payload.storeId)
         val transactedAt = Instant.parse(payload.transactedAt)
-        val saleDate = transactedAt.atZone(ZoneOffset.UTC).toLocalDate()
-        val hour = transactedAt.atZone(ZoneOffset.UTC).hour
+        val saleDate = transactedAt.atZone(timezone).toLocalDate()
+        val hour = transactedAt.atZone(timezone).hour
 
         // 日次売上更新
         updateDailySales(organizationId, storeId, saleDate, payload.totalAmount, payload.taxTotal, payload.discountTotal, payload.payments)
@@ -74,8 +81,8 @@ class SalesEventProcessor {
     ) {
         val storeId = UUID.fromString(payload.storeId)
         val originalTransactedAt = Instant.parse(payload.originalTransactedAt)
-        val originalDate = originalTransactedAt.atZone(ZoneOffset.UTC).toLocalDate()
-        val originalHour = originalTransactedAt.atZone(ZoneOffset.UTC).hour
+        val originalDate = originalTransactedAt.atZone(timezone).toLocalDate()
+        val originalHour = originalTransactedAt.atZone(timezone).hour
 
         // 日次売上ロールバック（取消合計を計算）
         val totalAmount = payload.items.sumOf { it.subtotal }
