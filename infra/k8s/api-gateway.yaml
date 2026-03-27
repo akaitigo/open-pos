@@ -22,7 +22,7 @@ spec:
         fsGroup: 65534
       containers:
         - name: api-gateway
-          image: ghcr.io/akaitigo/open-pos/api-gateway:latest
+          image: ghcr.io/akaitigo/open-pos/api-gateway:__IMAGE_TAG__
           securityContext:
             runAsNonRoot: true
             readOnlyRootFilesystem: true

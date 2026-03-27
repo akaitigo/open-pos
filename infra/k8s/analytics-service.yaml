@@ -22,7 +22,7 @@ spec:
         fsGroup: 65534
       containers:
         - name: analytics-service
-          image: ghcr.io/akaitigo/open-pos/analytics-service:latest
+          image: ghcr.io/akaitigo/open-pos/analytics-service:__IMAGE_TAG__
           securityContext:
             runAsNonRoot: true
             readOnlyRootFilesystem: true

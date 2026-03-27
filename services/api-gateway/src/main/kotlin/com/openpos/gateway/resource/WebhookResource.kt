@@ -50,7 +50,7 @@ class WebhookResource {
             } catch (e: Exception) {
                 return "Invalid URL"
             }
-        if (uri.scheme != "https" && uri.scheme != "http") return "URL scheme must be http or https"
+        if (uri.scheme != "https") return "URL scheme must be https"
         val host = uri.host ?: return "URL must have a host"
         return try {
             val address = InetAddress.getByName(host)

@@ -22,7 +22,7 @@ spec:
         fsGroup: 65534
       containers:
         - name: product-service
-          image: ghcr.io/akaitigo/open-pos/product-service:latest
+          image: ghcr.io/akaitigo/open-pos/product-service:__IMAGE_TAG__
           securityContext:
             runAsNonRoot: true
             readOnlyRootFilesystem: true
