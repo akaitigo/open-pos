@@ -89,19 +89,39 @@ jobs:
           cache-to: type=gha,mode=max
 
   # Container image signing with Cosign (#657)
-  # TODO: Enable after Cosign key setup in repository secrets
-  # sign-images:
-  #   needs: [version, build-and-push]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: sigstore/cosign-installer@v3
-  #     - name: Sign container images
-  #       run: |
-  #         for SERVICE in api-gateway product-service store-service pos-service inventory-service analytics-service; do
-  #           cosign sign --key env://COSIGN_KEY ${{ env.IMAGE_PREFIX }}/${SERVICE}:${{ github.sha }}
-  #         done
-  #       env:
-  #         COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+  # Automatically signs images when COSIGN_KEY secret is configured.
+  # To enable: add a Cosign private key as repository secret COSIGN_KEY.
+  sign-images:
+    needs: [version, build-and-push]
+    if: ${{ github.event_name != 'workflow_dispatch' || true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - name: Check if Cosign key is available
+        id: check-key
+        run: |
+          if [ -n "${{ secrets.COSIGN_KEY }}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::COSIGN_KEY secret not configured — skipping image signing"
+          fi
+
+      - uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3
+        if: steps.check-key.outputs.available == 'true'
+
+      - name: Sign container images
+        if: steps.check-key.outputs.available == 'true'
+        run: |
+          SERVICES=(api-gateway product-service store-service pos-service inventory-service analytics-service)
+          for SERVICE in "${SERVICES[@]}"; do
+            echo "Signing ${SERVICE}..."
+            cosign sign --key env://COSIGN_KEY "${{ env.IMAGE_PREFIX }}/${SERVICE}:${{ github.sha }}"
+          done
+        env:
+          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
 
   deploy-staging:
     needs: [version, build-and-push]
