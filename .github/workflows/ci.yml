@@ -195,6 +195,8 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package.json') }}
+      - name: Clear Docker Hub credentials
+        run: docker logout docker.io 2>/dev/null || true
       - name: Install Playwright & Start demo stack in parallel
         run: |
           set -euo pipefail
