@@ -195,6 +195,53 @@ class StaffResourceTest {
             // Cleanup
             tenantContext.staffRole = "OWNER"
         }
+
+        @Test
+        fun `create - MANAGERがOWNERロールで作成しようとするとForbiddenException`() {
+            // Arrange
+            tenantContext.staffRole = "MANAGER"
+
+            // Act & Assert
+            assertThrows<ForbiddenException> {
+                resource.create(CreateStaffBody(storeId = storeId, name = "新人", pin = "1234", role = "OWNER"))
+            }
+
+            // Cleanup
+            tenantContext.staffRole = "OWNER"
+        }
+
+        @Test
+        fun `create - OWNERはOWNERロールでスタッフ作成できる`() {
+            // Arrange
+            tenantContext.staffRole = "OWNER"
+            whenever(stub.createStaff(any())).thenReturn(
+                CreateStaffResponse.newBuilder().setStaff(buildStaff()).build(),
+            )
+
+            // Act
+            val response = resource.create(CreateStaffBody(storeId = storeId, name = "新人", pin = "1234", role = "OWNER"))
+
+            // Assert — no exception thrown
+            assertEquals(201, response.status)
+        }
+
+        @Test
+        fun `create - MANAGERはCASHIERロールでスタッフ作成できる`() {
+            // Arrange
+            tenantContext.staffRole = "MANAGER"
+            whenever(stub.createStaff(any())).thenReturn(
+                CreateStaffResponse.newBuilder().setStaff(buildStaff()).build(),
+            )
+
+            // Act
+            val response = resource.create(CreateStaffBody(storeId = storeId, name = "新人", pin = "1234", role = "CASHIER"))
+
+            // Assert — no exception thrown
+            assertEquals(201, response.status)
+
+            // Cleanup
+            tenantContext.staffRole = "OWNER"
+        }
     }
 
     @Nested
