@@ -46,7 +46,7 @@ class OrganizationService {
         businessType?.let { entity.businessType = it }
         invoiceNumber?.let { entity.invoiceNumber = it }
         organizationRepository.persist(entity)
-        cacheService.invalidateOrganization(id.toString())
+        cacheService.invalidateOrganization(id.toString(), id.toString())
         return entity
     }
 }

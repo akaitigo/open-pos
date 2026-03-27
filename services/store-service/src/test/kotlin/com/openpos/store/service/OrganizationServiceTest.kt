@@ -30,7 +30,7 @@ class OrganizationServiceTest {
 
     @BeforeEach
     fun setUp() {
-        doNothing().whenever(cacheService).invalidateOrganization(any())
+        doNothing().whenever(cacheService).invalidateOrganization(any(), any())
     }
 
     // === create ===

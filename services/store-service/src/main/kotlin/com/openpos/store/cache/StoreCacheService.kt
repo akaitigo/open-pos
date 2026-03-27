@@ -9,7 +9,7 @@ import org.jboss.logging.Logger
 /**
  * store-service の Redis キャッシュサービス。
  * cache-aside パターンで組織・店舗・端末の検索結果をキャッシュする。
- * キー形式: openpos:store-service:{entity}:{id}
+ * キー形式: openpos:store-service:{orgId}:{entity}:{id}
  * TTL: 600 秒（10 分）
  */
 @ApplicationScoped
@@ -76,36 +76,54 @@ class StoreCacheService {
 
     // === Organization Keys ===
 
-    fun organizationKey(id: String): String = "$PREFIX:org:$id"
+    fun organizationKey(
+        orgId: String,
+        id: String,
+    ): String = "$PREFIX:$orgId:org:$id"
 
     // === Store Keys ===
 
-    fun storeKey(id: String): String = "$PREFIX:store:$id"
+    fun storeKey(
+        orgId: String,
+        id: String,
+    ): String = "$PREFIX:$orgId:store:$id"
 
     // === Terminal Keys ===
 
-    fun terminalListKey(storeId: String): String = "$PREFIX:terminal:list:$storeId"
+    fun terminalListKey(
+        orgId: String,
+        storeId: String,
+    ): String = "$PREFIX:$orgId:terminal:list:$storeId"
 
     // === Invalidation Helpers ===
 
     /**
      * 組織関連のキャッシュを無効化する。
      */
-    fun invalidateOrganization(organizationId: String) {
-        invalidate(organizationKey(organizationId))
+    fun invalidateOrganization(
+        orgId: String,
+        organizationId: String,
+    ) {
+        invalidate(organizationKey(orgId, organizationId))
     }
 
     /**
      * 店舗関連のキャッシュを無効化する。
      */
-    fun invalidateStore(storeId: String) {
-        invalidate(storeKey(storeId))
+    fun invalidateStore(
+        orgId: String,
+        storeId: String,
+    ) {
+        invalidate(storeKey(orgId, storeId))
     }
 
     /**
      * 端末リストキャッシュを無効化する。
      */
-    fun invalidateTerminalList(storeId: String) {
-        invalidate(terminalListKey(storeId))
+    fun invalidateTerminalList(
+        orgId: String,
+        storeId: String,
+    ) {
+        invalidate(terminalListKey(orgId, storeId))
     }
 }

@@ -50,7 +50,7 @@ class TerminalServiceTest {
     fun setUp() {
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
-        doNothing().whenever(cacheService).invalidateTerminalList(any())
+        doNothing().whenever(cacheService).invalidateTerminalList(any(), any())
         val storeEntity =
             StoreEntity().apply {
                 this.id = storeId

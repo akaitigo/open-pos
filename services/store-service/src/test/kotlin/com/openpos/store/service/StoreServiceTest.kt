@@ -45,7 +45,7 @@ class StoreServiceTest {
     fun setUp() {
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
-        doNothing().whenever(cacheService).invalidateStore(any())
+        doNothing().whenever(cacheService).invalidateStore(any(), any())
     }
 
     // === create ===

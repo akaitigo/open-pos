@@ -53,7 +53,7 @@ class TerminalService {
                 this.isActive = true
             }
         terminalRepository.persist(entity)
-        cacheService.invalidateTerminalList(storeId.toString())
+        cacheService.invalidateTerminalList(orgId.toString(), storeId.toString())
         return entity
     }
 
@@ -64,11 +64,12 @@ class TerminalService {
 
     @Transactional
     fun updateSync(terminalId: UUID): TerminalEntity? {
+        val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
         tenantFilterService.enableFilter()
         val entity = terminalRepository.findById(terminalId) ?: return null
         entity.lastSyncAt = Instant.now()
         terminalRepository.persist(entity)
-        cacheService.invalidateTerminalList(entity.storeId.toString())
+        cacheService.invalidateTerminalList(orgId.toString(), entity.storeId.toString())
         return entity
     }
 }
