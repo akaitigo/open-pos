@@ -174,6 +174,7 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
+                    aria-label="削除"
                     onClick={() => removeParkedTransaction(parked.id)}
                   >
                     <X className="h-3 w-3" />
