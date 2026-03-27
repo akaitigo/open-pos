@@ -1,6 +1,9 @@
 import { z } from 'zod'
 import { ApiErrorResponseSchema } from './api-types'
 
+/** アクセストークンを動的に取得するプロバイダー */
+export type AccessTokenProvider = () => Promise<string | null> | string | null
+
 /** API クライアントのオプション */
 export interface ApiClientOptions {
   /** ベース URL */
@@ -9,6 +12,8 @@ export interface ApiClientOptions {
   organizationId?: string
   /** リクエストごとに追加するヘッダー */
   headers?: Record<string, string>
+  /** Bearer トークンを動的に取得するプロバイダー */
+  getAccessToken?: AccessTokenProvider
 }
 
 /** API エラークラス */
@@ -59,6 +64,9 @@ export interface ApiClient {
 
   /** ベース URL を設定 */
   setBaseUrl(baseUrl: string): void
+
+  /** アクセストークンプロバイダーを設定 */
+  setAccessTokenProvider(provider: AccessTokenProvider | null): void
 }
 
 /** URL にクエリパラメータを付与する */
@@ -108,6 +116,13 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
 
   let baseUrl = config.baseUrl
   let organizationId = config.organizationId
+  let accessTokenProvider: AccessTokenProvider | null = config.getAccessToken ?? null
+
+  /** Resolve access token from provider */
+  async function resolveAccessToken(): Promise<string | null> {
+    if (!accessTokenProvider) return null
+    return await accessTokenProvider()
+  }
 
   /** Validated request that returns parsed data via Zod schema */
   async function requestWithSchema<T>(
@@ -128,6 +143,11 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
 
     if (organizationId) {
       headers['X-Organization-Id'] = organizationId
+    }
+
+    const token = await resolveAccessToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
     }
 
     const fetchInit: RequestInit = {
@@ -167,6 +187,11 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
 
     if (organizationId) {
       headers['X-Organization-Id'] = organizationId
+    }
+
+    const token = await resolveAccessToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
     }
 
     const fetchInit: RequestInit = {
@@ -224,6 +249,10 @@ export function createApiClient(options: ApiClientOptions | string): ApiClient {
 
     setBaseUrl(nextBaseUrl: string): void {
       baseUrl = nextBaseUrl
+    },
+
+    setAccessTokenProvider(provider: AccessTokenProvider | null): void {
+      accessTokenProvider = provider
     },
   }
 }
