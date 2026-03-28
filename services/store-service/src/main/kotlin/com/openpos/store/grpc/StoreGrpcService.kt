@@ -6,12 +6,14 @@ import com.openpos.store.config.DataMaskingUtil
 import com.openpos.store.entity.DataProcessingConsentEntity
 import com.openpos.store.entity.OrganizationEntity
 import com.openpos.store.entity.StaffEntity
+import com.openpos.store.entity.StampCardEntity
 import com.openpos.store.entity.StoreEntity
 import com.openpos.store.entity.TerminalEntity
 import com.openpos.store.service.AuditLogService
 import com.openpos.store.service.GdprService
 import com.openpos.store.service.OrganizationService
 import com.openpos.store.service.StaffService
+import com.openpos.store.service.StampCardService
 import com.openpos.store.service.StoreService
 import com.openpos.store.service.TerminalService
 import io.grpc.Status
@@ -92,6 +94,9 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
 
     @Inject
     lateinit var gdprService: GdprService
+
+    @Inject
+    lateinit var stampCardService: StampCardService
 
     @Inject
     lateinit var tenantHelper: GrpcTenantHelper
@@ -695,4 +700,92 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
             "CASHIER" -> StaffRole.STAFF_ROLE_CASHIER
             else -> StaffRole.STAFF_ROLE_UNSPECIFIED
         }
+
+    // === StampCard ===
+
+    override fun getStampCard(
+        request: openpos.store.v1.GetStampCardRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.store.v1.GetStampCardResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val card = stampCardService.getByCustomerId(java.util.UUID.fromString(request.customerId))
+        if (card == null) {
+            responseObserver.onError(
+                Status.NOT_FOUND.withDescription("Stamp card not found for customer: ${request.customerId}").asRuntimeException(),
+            )
+            return
+        }
+        responseObserver.onNext(
+            openpos.store.v1.GetStampCardResponse
+                .newBuilder()
+                .setStampCard(card.toStampCardProto())
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun issueStampCard(
+        request: openpos.store.v1.IssueStampCardRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.store.v1.IssueStampCardResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val card =
+            stampCardService.issue(
+                customerId = java.util.UUID.fromString(request.customerId),
+                maxStamps = if (request.maxStamps > 0) request.maxStamps else 10,
+                rewardDescription = request.rewardDescription.ifBlank { null },
+            )
+        responseObserver.onNext(
+            openpos.store.v1.IssueStampCardResponse
+                .newBuilder()
+                .setStampCard(card.toStampCardProto())
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun addStamp(
+        request: openpos.store.v1.AddStampRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.store.v1.AddStampResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val card = stampCardService.addStamp(java.util.UUID.fromString(request.customerId))
+        responseObserver.onNext(
+            openpos.store.v1.AddStampResponse
+                .newBuilder()
+                .setStampCard(card.toStampCardProto())
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun redeemStampReward(
+        request: openpos.store.v1.RedeemStampRewardRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.store.v1.RedeemStampRewardResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val card = stampCardService.redeemReward(java.util.UUID.fromString(request.customerId))
+        responseObserver.onNext(
+            openpos.store.v1.RedeemStampRewardResponse
+                .newBuilder()
+                .setStampCard(card.toStampCardProto())
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    private fun StampCardEntity.toStampCardProto(): openpos.store.v1.StampCard =
+        openpos.store.v1.StampCard
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setCustomerId(customerId.toString())
+            .setStampCount(stampCount)
+            .setMaxStamps(maxStamps)
+            .apply { rewardDescription?.let { setRewardDescription(it) } }
+            .setStatus(status)
+            .setIssuedAt(issuedAt.toString())
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .build()
 }
