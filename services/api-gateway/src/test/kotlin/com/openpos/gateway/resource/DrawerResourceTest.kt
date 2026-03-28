@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import openpos.pos.v1.CloseDrawerResponse
 import openpos.pos.v1.Drawer
 import openpos.pos.v1.GetDrawerStatusResponse
@@ -22,6 +23,7 @@ class DrawerResourceTest {
         DrawerResource().also { r ->
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
+            ProductResourceTest.setField(r, "tenantContext", TenantContext())
         }
 
     private val drawerId = UUID.randomUUID().toString()

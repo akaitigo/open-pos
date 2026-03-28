@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import com.openpos.gateway.config.toMap
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
@@ -27,9 +28,13 @@ class DrawerResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @POST
     @Path("/open")
     fun open(body: OpenDrawerBody): Response {
+        tenantContext.requireRole("OWNER", "MANAGER", "CASHIER")
         val request =
             OpenDrawerRequest
                 .newBuilder()
@@ -44,6 +49,7 @@ class DrawerResource {
     @POST
     @Path("/close")
     fun close(body: CloseDrawerBody): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER", "CASHIER")
         val request =
             CloseDrawerRequest
                 .newBuilder()
