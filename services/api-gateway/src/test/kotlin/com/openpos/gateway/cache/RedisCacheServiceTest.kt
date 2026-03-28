@@ -5,7 +5,9 @@ import io.quarkus.redis.datasource.keys.KeyCommands
 import io.quarkus.redis.datasource.keys.KeyScanCursor
 import io.quarkus.redis.datasource.value.ValueCommands
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -104,6 +106,51 @@ class RedisCacheServiceTest {
         fun `Redis例外時は例外をスローせずログ出力する`() {
             whenever(keyCommands.del(any<String>())).thenThrow(RuntimeException("Connection refused"))
             redisCacheService.invalidate("openpos:product:123")
+        }
+    }
+
+    @Nested
+    inner class TenantKeyGeneration {
+        private val orgId1 = "11111111-1111-1111-1111-111111111111"
+        private val orgId2 = "22222222-2222-2222-2222-222222222222"
+
+        @Test
+        fun `tenantKeyはorgIdをプレフィックスに含むキーを生成する`() {
+            val key = RedisCacheService.tenantKey(orgId1, "product", "123")
+            assertEquals("openpos:gateway:$orgId1:product:123", key)
+        }
+
+        @Test
+        fun `tenantPatternはorgIdスコープのワイルドカードパターンを生成する`() {
+            val pattern = RedisCacheService.tenantPattern(orgId1, "product", "list")
+            assertEquals("openpos:gateway:$orgId1:product:list:*", pattern)
+        }
+
+        @Test
+        fun `異なるorgIdは異なるキーを生成する`() {
+            val key1 = RedisCacheService.tenantKey(orgId1, "product", "123")
+            val key2 = RedisCacheService.tenantKey(orgId2, "product", "123")
+            assertFalse(key1 == key2, "異なるテナントのキーは一致してはならない")
+        }
+
+        @Test
+        fun `テナントAのパターンはテナントBのキーにマッチしない`() {
+            val patternA = RedisCacheService.tenantPattern(orgId1, "product", "list")
+            val keyB = RedisCacheService.tenantKey(orgId2, "product", "list", "page1")
+            assertFalse(
+                keyB.startsWith(patternA.removeSuffix(":*")),
+                "テナントAのパターンがテナントBのキーにマッチしてはならない",
+            )
+        }
+
+        @Test
+        fun `テナントAのパターンはテナントAのキーにマッチする`() {
+            val patternA = RedisCacheService.tenantPattern(orgId1, "product", "list")
+            val keyA = RedisCacheService.tenantKey(orgId1, "product", "list", "page1")
+            assertTrue(
+                keyA.startsWith(patternA.removeSuffix(":*")),
+                "テナントAのパターンはテナントAのキーにマッチすべき",
+            )
         }
     }
 

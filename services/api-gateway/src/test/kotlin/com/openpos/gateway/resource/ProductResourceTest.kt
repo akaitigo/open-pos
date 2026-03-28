@@ -77,7 +77,7 @@ class ProductResourceTest {
 
             // Assert
             assertEquals(201, response.status)
-            verify(cache).invalidatePattern("openpos:gateway:product:list:$orgId:*")
+            verify(cache).invalidatePattern("openpos:gateway:$orgId:product:list:*")
         }
 
         @Test
@@ -213,7 +213,7 @@ class ProductResourceTest {
 
             // Assert
             assertEquals("コーヒー", result["name"])
-            verify(cache).invalidatePattern("openpos:gateway:product:list:$orgId:*")
+            verify(cache).invalidatePattern("openpos:gateway:$orgId:product:list:*")
         }
     }
 
@@ -229,7 +229,7 @@ class ProductResourceTest {
 
             // Assert
             assertEquals(204, response.status)
-            verify(cache).invalidatePattern("openpos:gateway:product:list:$orgId:*")
+            verify(cache).invalidatePattern("openpos:gateway:$orgId:product:list:*")
         }
     }
 
