@@ -5,6 +5,7 @@ import com.openpos.analytics.repository.HourlySalesRepository
 import com.openpos.analytics.repository.ProductSalesRepository
 import com.openpos.analytics.service.AnalyticsQueryService
 import com.openpos.analytics.service.AnalyticsService
+import com.openpos.analytics.service.SalesTargetService
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import io.quarkus.grpc.GrpcService
@@ -13,6 +14,8 @@ import jakarta.inject.Inject
 import openpos.analytics.v1.AbcAnalysisItem
 import openpos.analytics.v1.AnalyticsServiceGrpc
 import openpos.analytics.v1.DailySales
+import openpos.analytics.v1.DeleteSalesTargetRequest
+import openpos.analytics.v1.DeleteSalesTargetResponse
 import openpos.analytics.v1.GetAbcAnalysisRequest
 import openpos.analytics.v1.GetAbcAnalysisResponse
 import openpos.analytics.v1.GetDailySalesRequest
@@ -27,11 +30,18 @@ import openpos.analytics.v1.GetSalesForecastRequest
 import openpos.analytics.v1.GetSalesForecastResponse
 import openpos.analytics.v1.GetSalesSummaryRequest
 import openpos.analytics.v1.GetSalesSummaryResponse
+import openpos.analytics.v1.GetSalesTargetRequest
+import openpos.analytics.v1.GetSalesTargetResponse
 import openpos.analytics.v1.GrossProfitItem
 import openpos.analytics.v1.HourlySales
+import openpos.analytics.v1.ListSalesTargetsRequest
+import openpos.analytics.v1.ListSalesTargetsResponse
 import openpos.analytics.v1.ProductSales
 import openpos.analytics.v1.SalesForecastPoint
 import openpos.analytics.v1.SalesSummary
+import openpos.analytics.v1.SalesTarget
+import openpos.analytics.v1.UpsertSalesTargetRequest
+import openpos.analytics.v1.UpsertSalesTargetResponse
 import openpos.common.v1.DateRange
 import openpos.common.v1.PaginationResponse
 import java.time.LocalDate
@@ -57,6 +67,9 @@ class AnalyticsGrpcService : AnalyticsServiceGrpc.AnalyticsServiceImplBase() {
 
     @Inject
     lateinit var hourlySalesRepository: HourlySalesRepository
+
+    @Inject
+    lateinit var salesTargetService: SalesTargetService
 
     // === Daily Sales ===
 
@@ -324,7 +337,119 @@ class AnalyticsGrpcService : AnalyticsServiceGrpc.AnalyticsServiceImplBase() {
         responseObserver.onCompleted()
     }
 
+    // === Sales Targets ===
+
+    override fun listSalesTargets(
+        request: ListSalesTargetsRequest,
+        responseObserver: StreamObserver<ListSalesTargetsResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        var targets = salesTargetService.listAll()
+
+        // Apply store_id filter
+        if (request.storeId.isNotEmpty()) {
+            val storeId = request.storeId.toUUID()
+            targets = targets.filter { it.storeId == storeId }
+        }
+
+        // Apply month filter
+        if (request.month.isNotEmpty()) {
+            val month =
+                try {
+                    LocalDate.parse(request.month)
+                } catch (e: Exception) {
+                    throw Status.INVALID_ARGUMENT.withDescription("Invalid month: ${request.month}").asRuntimeException()
+                }
+            targets = targets.filter { it.targetMonth == month }
+        }
+
+        responseObserver.onNext(
+            ListSalesTargetsResponse
+                .newBuilder()
+                .addAllSalesTargets(targets.map { it.toProto() })
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun getSalesTarget(
+        request: GetSalesTargetRequest,
+        responseObserver: StreamObserver<GetSalesTargetResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val id = request.id.toUUID()
+        val entity =
+            salesTargetService.findById(id)
+                ?: throw Status.NOT_FOUND.withDescription("Sales target not found: ${request.id}").asRuntimeException()
+
+        responseObserver.onNext(
+            GetSalesTargetResponse
+                .newBuilder()
+                .setSalesTarget(entity.toProto())
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun upsertSalesTarget(
+        request: UpsertSalesTargetRequest,
+        responseObserver: StreamObserver<UpsertSalesTargetResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val storeId = if (request.storeId.isNotEmpty()) request.storeId.toUUID() else null
+        val targetMonth =
+            try {
+                LocalDate.parse(request.targetMonth)
+            } catch (e: Exception) {
+                throw Status.INVALID_ARGUMENT
+                    .withDescription("Invalid target_month: ${request.targetMonth}")
+                    .asRuntimeException()
+            }
+        if (request.targetAmount <= 0) {
+            throw Status.INVALID_ARGUMENT
+                .withDescription("target_amount must be positive")
+                .asRuntimeException()
+        }
+
+        val entity = salesTargetService.upsert(storeId, targetMonth, request.targetAmount)
+
+        responseObserver.onNext(
+            UpsertSalesTargetResponse
+                .newBuilder()
+                .setSalesTarget(entity.toProto())
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun deleteSalesTarget(
+        request: DeleteSalesTargetRequest,
+        responseObserver: StreamObserver<DeleteSalesTargetResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val id = request.id.toUUID()
+        val deleted = salesTargetService.delete(id)
+        if (!deleted) {
+            throw Status.NOT_FOUND.withDescription("Sales target not found: ${request.id}").asRuntimeException()
+        }
+
+        responseObserver.onNext(DeleteSalesTargetResponse.getDefaultInstance())
+        responseObserver.onCompleted()
+    }
+
     // === Utility Extensions ===
+
+    private fun com.openpos.analytics.entity.SalesTargetEntity.toProto(): SalesTarget =
+        SalesTarget
+            .newBuilder()
+            .setId(id.toString())
+            .setStoreId(storeId?.toString().orEmpty())
+            .setTargetMonth(targetMonth.toString())
+            .setTargetAmount(targetAmount)
+            .setOrganizationId(organizationId.toString())
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .build()
 
     private fun String.toUUID(): UUID =
         try {

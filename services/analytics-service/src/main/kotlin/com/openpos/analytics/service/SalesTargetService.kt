@@ -38,6 +38,17 @@ class SalesTargetService {
         return salesTargetRepository.findByStoreAndMonth(storeId, targetMonth)
     }
 
+    fun findById(id: UUID): SalesTargetEntity? {
+        tenantFilterService.enableFilter()
+        return salesTargetRepository.findById(id)
+    }
+
+    @Transactional
+    fun delete(id: UUID): Boolean {
+        tenantFilterService.enableFilter()
+        return salesTargetRepository.deleteById(id)
+    }
+
     @Transactional
     fun upsert(
         storeId: UUID?,

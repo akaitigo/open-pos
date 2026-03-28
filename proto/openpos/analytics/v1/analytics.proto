@@ -25,6 +25,14 @@ service AnalyticsService {
   rpc GetGrossProfitReport(GetGrossProfitReportRequest) returns (GetGrossProfitReportResponse);
   // 売上予測・トレンド分析を取得する（単純移動平均）
   rpc GetSalesForecast(GetSalesForecastRequest) returns (GetSalesForecastResponse);
+  // 売上目標一覧を取得する
+  rpc ListSalesTargets(ListSalesTargetsRequest) returns (ListSalesTargetsResponse);
+  // 売上目標を取得する（ID指定）
+  rpc GetSalesTarget(GetSalesTargetRequest) returns (GetSalesTargetResponse);
+  // 売上目標を作成または更新する（store_id + target_month で一意）
+  rpc UpsertSalesTarget(UpsertSalesTargetRequest) returns (UpsertSalesTargetResponse);
+  // 売上目標を削除する
+  rpc DeleteSalesTarget(DeleteSalesTargetRequest) returns (DeleteSalesTargetResponse);
 }
 
 // 日次売上
@@ -262,3 +270,77 @@ message GetSalesForecastResponse {
   // トレンドデータポイントリスト
   repeated SalesForecastPoint data_points = 1;
 }
+
+// === 売上目標 ===
+
+// 売上目標
+// 組織×店舗×月ごとの売上目標を管理します
+// 金額フィールドはすべて銭単位（10000 = 100円）です
+message SalesTarget {
+  // 売上目標ID
+  string id = 1;
+  // 店舗ID（組織全体の場合は空文字）
+  string store_id = 2;
+  // 対象月（ISO 8601 日付形式の月初日: 例 "2026-04-01"）
+  string target_month = 3;
+  // 目標金額（銭単位）
+  int64 target_amount = 4;
+  // 組織ID
+  string organization_id = 5;
+  // 作成日時（ISO 8601）
+  string created_at = 6;
+  // 更新日時（ISO 8601）
+  string updated_at = 7;
+}
+
+// 売上目標一覧取得リクエスト
+message ListSalesTargetsRequest {
+  // 店舗IDフィルター（省略時は全店舗）
+  string store_id = 1;
+  // 月フィルター（ISO 8601 日付形式の月初日、省略時は全月）
+  string month = 2;
+}
+
+// 売上目標一覧取得レスポンス
+message ListSalesTargetsResponse {
+  // 売上目標リスト
+  repeated SalesTarget sales_targets = 1;
+}
+
+// 売上目標取得リクエスト
+message GetSalesTargetRequest {
+  // 売上目標ID（必須）
+  string id = 1;
+}
+
+// 売上目標取得レスポンス
+message GetSalesTargetResponse {
+  // 売上目標
+  SalesTarget sales_target = 1;
+}
+
+// 売上目標作成・更新リクエスト
+// store_id + target_month で既存レコードを検索し、存在すれば更新、なければ新規作成する
+message UpsertSalesTargetRequest {
+  // 店舗ID（組織全体の場合は空文字）
+  string store_id = 1;
+  // 対象月（ISO 8601 日付形式の月初日: 例 "2026-04-01"）
+  string target_month = 2;
+  // 目標金額（銭単位、正の値のみ）
+  int64 target_amount = 3;
+}
+
+// 売上目標作成・更新レスポンス
+message UpsertSalesTargetResponse {
+  // 作成または更新された売上目標
+  SalesTarget sales_target = 1;
+}
+
+// 売上目標削除リクエスト
+message DeleteSalesTargetRequest {
+  // 売上目標ID（必須）
+  string id = 1;
+}
+
+// 売上目標削除レスポンス
+message DeleteSalesTargetResponse {}

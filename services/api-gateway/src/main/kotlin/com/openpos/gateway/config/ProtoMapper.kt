@@ -424,6 +424,17 @@ fun openpos.analytics.v1.SalesForecastPoint.toMap(): Map<String, Any?> =
         "movingAverage" to movingAverage,
     )
 
+fun openpos.analytics.v1.SalesTarget.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "storeId" to storeId.ifEmpty { null },
+        "targetMonth" to targetMonth,
+        "targetAmount" to targetAmount,
+        "organizationId" to organizationId,
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
 // === システム設定 ===
 
 fun openpos.store.v1.SystemSetting.toMap(): Map<String, Any?> =
