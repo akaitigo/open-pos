@@ -47,6 +47,18 @@ service PosService {
   rpc CreateSettlement(CreateSettlementRequest) returns (CreateSettlementResponse);
   // 精算を取得する
   rpc GetSettlement(GetSettlementRequest) returns (GetSettlementResponse);
+  // ギフトカード一覧を取得する
+  rpc ListGiftCards(ListGiftCardsRequest) returns (ListGiftCardsResponse);
+  // ギフトカードをコードで取得する
+  rpc GetGiftCard(GetGiftCardRequest) returns (GetGiftCardResponse);
+  // ギフトカードを発行する
+  rpc CreateGiftCard(CreateGiftCardRequest) returns (CreateGiftCardResponse);
+  // ギフトカードを有効化する
+  rpc ActivateGiftCard(ActivateGiftCardRequest) returns (ActivateGiftCardResponse);
+  // ギフトカードから残高を利用する
+  rpc RedeemGiftCard(RedeemGiftCardRequest) returns (RedeemGiftCardResponse);
+  // ギフトカードの残高を確認する
+  rpc GetGiftCardBalance(GetGiftCardBalanceRequest) returns (GetGiftCardBalanceResponse);
 }
 
 // 取引種別
@@ -673,4 +685,114 @@ message GetSettlementRequest {
 message GetSettlementResponse {
   // 精算情報
   Settlement settlement = 1;
+}
+
+// === ギフトカード ===
+
+// ギフトカード
+// プリペイド方式のストアバリューカードです
+// 金額フィールドはすべて銭単位（10000 = 100円）です
+message GiftCard {
+  // ギフトカードID
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // カードコード（16桁、ハイフン区切り: XXXX-XXXX-XXXX-XXXX）
+  string code = 3;
+  // 初期チャージ金額（銭単位）
+  int64 initial_amount = 4;
+  // 現在残高（銭単位）
+  int64 balance = 5;
+  // ステータス（PENDING, ACTIVE, DEPLETED, EXPIRED, CANCELLED）
+  string status = 6;
+  // 発行日時（ISO 8601）
+  string issued_at = 7;
+  // 有効期限（ISO 8601、省略時は無期限）
+  string expires_at = 8;
+  // 作成日時（ISO 8601）
+  string created_at = 9;
+  // 更新日時（ISO 8601）
+  string updated_at = 10;
+}
+
+// ギフトカード一覧取得リクエスト
+message ListGiftCardsRequest {
+  // ページネーション
+  openpos.common.v1.PaginationRequest pagination = 1;
+}
+
+// ギフトカード一覧取得レスポンス
+message ListGiftCardsResponse {
+  // ギフトカードリスト
+  repeated GiftCard gift_cards = 1;
+  // ページネーション情報
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+// ギフトカード取得リクエスト
+message GetGiftCardRequest {
+  // カードコード（必須）
+  string code = 1;
+}
+
+// ギフトカード取得レスポンス
+message GetGiftCardResponse {
+  // ギフトカード
+  GiftCard gift_card = 1;
+}
+
+// ギフトカード発行リクエスト
+message CreateGiftCardRequest {
+  // 初期チャージ金額（銭単位、正の値のみ）
+  int64 initial_amount = 1;
+  // 有効期限（ISO 8601、省略時は無期限）
+  string expires_at = 2;
+}
+
+// ギフトカード発行レスポンス
+message CreateGiftCardResponse {
+  // 発行されたギフトカード
+  GiftCard gift_card = 1;
+}
+
+// ギフトカード有効化リクエスト
+message ActivateGiftCardRequest {
+  // カードコード（必須）
+  string code = 1;
+}
+
+// ギフトカード有効化レスポンス
+message ActivateGiftCardResponse {
+  // 有効化されたギフトカード
+  GiftCard gift_card = 1;
+}
+
+// ギフトカード残高利用リクエスト
+message RedeemGiftCardRequest {
+  // カードコード（必須）
+  string code = 1;
+  // 利用金額（銭単位、正の値のみ）
+  int64 amount = 2;
+}
+
+// ギフトカード残高利用レスポンス
+message RedeemGiftCardResponse {
+  // 利用後のギフトカード
+  GiftCard gift_card = 1;
+}
+
+// ギフトカード残高確認リクエスト
+message GetGiftCardBalanceRequest {
+  // カードコード（必須）
+  string code = 1;
+}
+
+// ギフトカード残高確認レスポンス
+message GetGiftCardBalanceResponse {
+  // カードコード
+  string code = 1;
+  // 現在残高（銭単位）
+  int64 balance = 2;
+  // ステータス
+  string status = 3;
 }

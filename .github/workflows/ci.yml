@@ -97,7 +97,19 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
-      # TODO: detekt CI統合（Gradle plugin方式でConfiguration Cache競合のため保留 #638）
+      - name: Static Analysis (detekt CLI)
+        run: |
+          DETEKT_VERSION="1.23.8"
+          curl -sSL "https://github.com/detekt/detekt/releases/download/v${DETEKT_VERSION}/detekt-cli-${DETEKT_VERSION}.zip" -o detekt.zip
+          unzip -q detekt.zip -d detekt-cli
+          ./detekt-cli/detekt-cli-${DETEKT_VERSION}/bin/detekt-cli \
+            --input services/ \
+            --excludes "**/build/**,**/generated/**" \
+            --baseline detekt-baseline.xml \
+            --build-upon-default-config \
+            --report sarif:build/reports/detekt/detekt.sarif || true
+        # Note: detekt runs with || true + baseline to avoid blocking on pre-existing issues.
+        # New violations are reported but do not fail the build until baseline is refreshed.
       - name: Clean generated sources to avoid stale cache
         run: ./gradlew --parallel clean quarkusGenerateCode
       - name: Build, Test & Coverage Verification
@@ -183,6 +195,8 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package.json') }}
+      - name: Clear Docker Hub credentials
+        run: docker logout docker.io 2>/dev/null || true
       - name: Install Playwright & Start demo stack in parallel
         run: |
           set -euo pipefail

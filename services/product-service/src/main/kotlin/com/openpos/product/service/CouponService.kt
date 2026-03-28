@@ -78,6 +78,19 @@ class CouponService {
     }
 
     /**
+     * クーポン一覧を取得する。
+     * activeOnly が true の場合は有効かつ期間内のもののみ返す。
+     */
+    fun list(activeOnly: Boolean): List<CouponEntity> {
+        tenantFilterService.enableFilter()
+        return if (activeOnly) {
+            couponRepository.findActiveAndValid(Instant.now())
+        } else {
+            couponRepository.findAllOrdered()
+        }
+    }
+
+    /**
      * クーポンコードで検索する。
      */
     fun findByCode(code: String): CouponEntity? {
