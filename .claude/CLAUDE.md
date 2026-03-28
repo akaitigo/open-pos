@@ -187,10 +187,16 @@ pnpm -r typecheck       # 型チェック
 pnpm -r lint            # ESLint
 pnpm -r run test        # ユニット/機能テスト
 pnpm -r build           # ビルド確認
+
+# E2E テスト（必須 — CI では informational のためローカルで必ず実行）
+# GitHub Free ランナーでは Docker ビルドがタイムアウトするため、CI の required check から除外している。
+# PR 作成前にローカルで pass を確認すること。
+make docker-demo && pnpm --filter e2e test
 ```
 
 - 失敗したら PR を作成せず、原因を修正してから再実行
 - `make verify` で Proto 以外の基本チェックをまとめて実行可能
+- `make verify-full` で E2E 含む全チェックをまとめて実行可能
 
 ### 必須手順
 1. ブランチ作成 → コミット → push
