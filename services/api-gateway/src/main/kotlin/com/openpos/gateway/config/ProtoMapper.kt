@@ -22,6 +22,7 @@ import openpos.product.v1.Coupon
 import openpos.product.v1.Discount
 import openpos.product.v1.DiscountType
 import openpos.product.v1.Product
+import openpos.product.v1.ProductVariant
 import openpos.product.v1.TaxRate
 import openpos.store.v1.Organization
 import openpos.store.v1.Staff
@@ -43,6 +44,21 @@ fun Product.toMap(): Map<String, Any?> =
         "imageUrl" to imageUrl.ifEmpty { null },
         "displayOrder" to displayOrder,
         "isActive" to isActive,
+        "variants" to variantsList.map { it.toMap() },
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
+fun ProductVariant.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "productId" to productId,
+        "name" to name,
+        "sku" to sku.ifEmpty { null },
+        "barcode" to barcode.ifEmpty { null },
+        "price" to price,
+        "isActive" to isActive,
+        "displayOrder" to displayOrder,
         "createdAt" to createdAt,
         "updatedAt" to updatedAt,
     )

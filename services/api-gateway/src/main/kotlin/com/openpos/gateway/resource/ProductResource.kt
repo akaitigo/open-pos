@@ -23,12 +23,16 @@ import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Response
 import openpos.common.v1.PaginationRequest
 import openpos.product.v1.CreateProductRequest
+import openpos.product.v1.CreateProductVariantRequest
 import openpos.product.v1.DeleteProductRequest
+import openpos.product.v1.DeleteProductVariantRequest
 import openpos.product.v1.GetProductByBarcodeRequest
 import openpos.product.v1.GetProductRequest
+import openpos.product.v1.ListProductVariantsRequest
 import openpos.product.v1.ListProductsRequest
 import openpos.product.v1.ProductServiceGrpc
 import openpos.product.v1.UpdateProductRequest
+import openpos.product.v1.UpdateProductVariantRequest
 import org.eclipse.microprofile.faulttolerance.Timeout
 import org.eclipse.microprofile.openapi.annotations.Operation
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
@@ -176,6 +180,85 @@ class ProductResource {
             .product
             .toMap()
     }
+
+    // === ProductVariant ===
+
+    @POST
+    @Path("/{productId}/variants")
+    @Operation(summary = "商品バリアントを作成する")
+    fun createVariant(
+        @PathParam("productId") productId: String,
+        body: CreateProductVariantBody,
+    ): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
+        val request =
+            CreateProductVariantRequest
+                .newBuilder()
+                .setProductId(productId)
+                .setName(body.name)
+                .setPrice(body.price)
+                .apply {
+                    body.sku?.let { setSku(it) }
+                    body.barcode?.let { setBarcode(it) }
+                    body.displayOrder?.let { setDisplayOrder(it) }
+                }.build()
+        val response = grpc.withTenant(stub).createProductVariant(request)
+        cache.invalidatePattern("openpos:gateway:product:list:*")
+        return Response.status(Response.Status.CREATED).entity(response.variant.toMap()).build()
+    }
+
+    @GET
+    @Path("/{productId}/variants")
+    @Operation(summary = "商品バリアント一覧を取得する")
+    fun listVariants(
+        @PathParam("productId") productId: String,
+    ): List<Map<String, Any?>> {
+        val request = ListProductVariantsRequest.newBuilder().setProductId(productId).build()
+        return grpc
+            .withTenant(stub)
+            .listProductVariants(request)
+            .variantsList
+            .map { it.toMap() }
+    }
+
+    @PUT
+    @Path("/{productId}/variants/{variantId}")
+    @Operation(summary = "商品バリアントを更新する")
+    fun updateVariant(
+        @PathParam("productId") productId: String,
+        @PathParam("variantId") variantId: String,
+        body: UpdateProductVariantBody,
+    ): Map<String, Any?> {
+        tenantContext.requireRole("OWNER", "MANAGER")
+        val request =
+            UpdateProductVariantRequest
+                .newBuilder()
+                .setId(variantId)
+                .apply {
+                    body.name?.let { setName(it) }
+                    body.sku?.let { setSku(it) }
+                    body.barcode?.let { setBarcode(it) }
+                    body.price?.let { setPrice(Int64Value.of(it)) }
+                    body.isActive?.let { setIsActive(BoolValue.of(it)) }
+                    body.displayOrder?.let { setDisplayOrder(Int32Value.of(it)) }
+                }.build()
+        val response = grpc.withTenant(stub).updateProductVariant(request)
+        cache.invalidatePattern("openpos:gateway:product:list:*")
+        return response.variant.toMap()
+    }
+
+    @DELETE
+    @Path("/{productId}/variants/{variantId}")
+    @Operation(summary = "商品バリアントを削除する")
+    fun deleteVariant(
+        @PathParam("productId") productId: String,
+        @PathParam("variantId") variantId: String,
+    ): Response {
+        tenantContext.requireRole("OWNER", "MANAGER")
+        grpc.withTenant(stub).deleteProductVariant(DeleteProductVariantRequest.newBuilder().setId(variantId).build())
+        cache.invalidatePattern("openpos:gateway:product:list:*")
+        return Response.noContent().build()
+    }
 }
 
 data class CreateProductBody(
@@ -201,4 +284,21 @@ data class UpdateProductBody(
     val imageUrl: String? = null,
     val displayOrder: Int? = null,
     val isActive: Boolean? = null,
+)
+
+data class CreateProductVariantBody(
+    val name: String,
+    val price: Long,
+    val sku: String? = null,
+    val barcode: String? = null,
+    val displayOrder: Int? = null,
+)
+
+data class UpdateProductVariantBody(
+    val name: String? = null,
+    val sku: String? = null,
+    val barcode: String? = null,
+    val price: Long? = null,
+    val isActive: Boolean? = null,
+    val displayOrder: Int? = null,
 )
