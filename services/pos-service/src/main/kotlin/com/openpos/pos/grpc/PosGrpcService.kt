@@ -2,6 +2,7 @@ package com.openpos.pos.grpc
 
 import com.openpos.pos.config.OrganizationIdInterceptor
 import com.openpos.pos.entity.DrawerEntity
+import com.openpos.pos.entity.GiftCardEntity
 import com.openpos.pos.entity.JournalEntryEntity
 import com.openpos.pos.entity.PaymentEntity
 import com.openpos.pos.entity.SettlementEntity
@@ -10,6 +11,7 @@ import com.openpos.pos.entity.TransactionDiscountEntity
 import com.openpos.pos.entity.TransactionEntity
 import com.openpos.pos.entity.TransactionItemEntity
 import com.openpos.pos.service.DrawerService
+import com.openpos.pos.service.GiftCardService
 import com.openpos.pos.service.JournalService
 import com.openpos.pos.service.OfflineItemInput
 import com.openpos.pos.service.PaymentInput
@@ -88,6 +90,9 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
 
     @Inject
     lateinit var settlementService: SettlementService
+
+    @Inject
+    lateinit var giftCardService: GiftCardService
 
     @Inject
     lateinit var productServiceClient: ProductServiceClient
@@ -1071,4 +1076,118 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         sb.appendLine("================================")
         return sb.toString()
     }
+
+    // === GiftCard ===
+
+    override fun listGiftCards(
+        request: openpos.pos.v1.ListGiftCardsRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.ListGiftCardsResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val cards = giftCardService.listAll()
+        val response =
+            openpos.pos.v1.ListGiftCardsResponse
+                .newBuilder()
+                .addAllGiftCards(cards.map { it.toGiftCardProto() })
+                .build()
+        responseObserver.onNext(response)
+        responseObserver.onCompleted()
+    }
+
+    override fun getGiftCard(
+        request: openpos.pos.v1.GetGiftCardRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.GetGiftCardResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val card = giftCardService.findByCode(request.code)
+        if (card == null) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription("Gift card not found: ${request.code}").asRuntimeException())
+            return
+        }
+        responseObserver.onNext(
+            openpos.pos.v1.GetGiftCardResponse
+                .newBuilder()
+                .setGiftCard(card.toGiftCardProto())
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun createGiftCard(
+        request: openpos.pos.v1.CreateGiftCardRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.CreateGiftCardResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val expiresAt = if (request.expiresAt.isNotBlank()) Instant.parse(request.expiresAt) else null
+        val card = giftCardService.create(request.initialAmount, expiresAt)
+        responseObserver.onNext(
+            openpos.pos.v1.CreateGiftCardResponse
+                .newBuilder()
+                .setGiftCard(card.toGiftCardProto())
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun activateGiftCard(
+        request: openpos.pos.v1.ActivateGiftCardRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.ActivateGiftCardResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val card = giftCardService.activate(request.code)
+        responseObserver.onNext(
+            openpos.pos.v1.ActivateGiftCardResponse
+                .newBuilder()
+                .setGiftCard(card.toGiftCardProto())
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun redeemGiftCard(
+        request: openpos.pos.v1.RedeemGiftCardRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.RedeemGiftCardResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val card = giftCardService.redeem(request.code, request.amount)
+        responseObserver.onNext(
+            openpos.pos.v1.RedeemGiftCardResponse
+                .newBuilder()
+                .setGiftCard(card.toGiftCardProto())
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun getGiftCardBalance(
+        request: openpos.pos.v1.GetGiftCardBalanceRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.GetGiftCardBalanceResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val card = giftCardService.getBalance(request.code)
+        responseObserver.onNext(
+            openpos.pos.v1.GetGiftCardBalanceResponse
+                .newBuilder()
+                .setCode(card.code)
+                .setBalance(card.balance)
+                .setStatus(card.status)
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    private fun GiftCardEntity.toGiftCardProto(): openpos.pos.v1.GiftCard =
+        openpos.pos.v1.GiftCard
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setCode(code)
+            .setInitialAmount(initialAmount)
+            .setBalance(balance)
+            .setStatus(status)
+            .setIssuedAt(issuedAt.toString())
+            .apply { expiresAt?.let { setExpiresAt(it.toString()) } }
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .build()
 }
