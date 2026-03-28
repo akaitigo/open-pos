@@ -175,6 +175,10 @@ jobs:
           path: apps/*/coverage/
         if: ${{ !cancelled() }}
 
+  # E2E is informational (not required for merge).
+  # Reason: GitHub Free runners cannot reliably complete the full Docker build
+  # within the 45-min timeout. E2E MUST be run locally before creating a PR.
+  # See CLAUDE.md "PR 作成前のローカル CI 検証" for the required local command.
   e2e:
     name: E2E Test (Playwright)
     needs: [changes]
@@ -226,13 +230,14 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [changes, proto-lint, backend, frontend, e2e]
+    # E2E is excluded from required checks — see comment above the e2e job.
+    needs: [changes, proto-lint, backend, frontend]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Verify all jobs passed or were skipped
         run: |
-          results=("${{ needs.changes.result }}" "${{ needs.proto-lint.result }}" "${{ needs.backend.result }}" "${{ needs.frontend.result }}" "${{ needs.e2e.result }}")
+          results=("${{ needs.changes.result }}" "${{ needs.proto-lint.result }}" "${{ needs.backend.result }}" "${{ needs.frontend.result }}")
           for r in "${results[@]}"; do
             if [[ "$r" != "success" && "$r" != "skipped" ]]; then
               echo "::error::Job failed with result: $r"
@@ -261,6 +266,5 @@ jobs:
           | proto-lint | \`${{ needs.proto-lint.result }}\` |
           | backend | \`${{ needs.backend.result }}\` |
           | frontend | \`${{ needs.frontend.result }}\` |
-          | e2e | \`${{ needs.e2e.result }}\` |
 
           [ワークフロー実行を確認](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
