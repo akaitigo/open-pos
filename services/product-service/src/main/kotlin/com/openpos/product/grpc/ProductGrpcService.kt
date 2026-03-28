@@ -46,6 +46,8 @@ import openpos.product.v1.GetProductRequest
 import openpos.product.v1.GetProductResponse
 import openpos.product.v1.ListCategoriesRequest
 import openpos.product.v1.ListCategoriesResponse
+import openpos.product.v1.ListCouponsRequest
+import openpos.product.v1.ListCouponsResponse
 import openpos.product.v1.ListDiscountsRequest
 import openpos.product.v1.ListDiscountsResponse
 import openpos.product.v1.ListProductsRequest
@@ -476,6 +478,18 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         result.discount?.let { builder.setDiscount(it.toProto()) }
         result.reason?.let { builder.setReason(it) }
         responseObserver.onNext(builder.build())
+        responseObserver.onCompleted()
+    }
+
+    override fun listCoupons(
+        request: ListCouponsRequest,
+        responseObserver: io.grpc.stub.StreamObserver<ListCouponsResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val coupons = couponService.list(request.activeOnly)
+        responseObserver.onNext(
+            ListCouponsResponse.newBuilder().addAllCoupons(coupons.map { it.toProto() }).build(),
+        )
         responseObserver.onCompleted()
     }
 
