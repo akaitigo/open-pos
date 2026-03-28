@@ -433,6 +433,22 @@ fun openpos.store.v1.SystemSetting.toMap(): Map<String, Any?> =
         "description" to description.ifEmpty { null },
     )
 
+// === ギフトカード ===
+
+fun openpos.pos.v1.GiftCard.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "code" to code,
+        "initialAmount" to initialAmount,
+        "balance" to balance,
+        "status" to status,
+        "issuedAt" to issuedAt,
+        "expiresAt" to expiresAt.ifBlank { null },
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
 // === ページネーション ===
 
 fun PaginationResponse.toMap(): Map<String, Any> =
