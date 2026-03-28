@@ -4,6 +4,7 @@ import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Index
 import jakarta.persistence.Table
+import jakarta.persistence.Version
 import java.time.Instant
 
 /**
@@ -39,4 +40,8 @@ class GiftCardEntity : BaseEntity() {
 
     @Column(name = "expires_at")
     var expiresAt: Instant? = null
+
+    @Version
+    @Column(name = "version")
+    var version: Long = 0
 }

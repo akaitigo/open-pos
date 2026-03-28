@@ -12,6 +12,7 @@ CREATE TABLE pos_schema.gift_cards (
     expires_at      TIMESTAMPTZ,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    version         BIGINT      NOT NULL DEFAULT 0,
     CONSTRAINT uq_gift_cards_org_code UNIQUE (organization_id, code)
 );
 

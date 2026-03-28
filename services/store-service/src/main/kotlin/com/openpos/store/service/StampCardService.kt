@@ -34,6 +34,9 @@ class StampCardService {
     ): StampCardEntity {
         val orgId =
             requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
+        tenantFilterService.enableFilter()
+        val existing = stampCardRepository.findActiveByCustomerId(customerId)
+        require(existing == null) { "Customer already has an active stamp card" }
         val effectiveMaxStamps = if (maxStamps > 0) maxStamps else 10
 
         val entity =
