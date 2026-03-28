@@ -1,6 +1,9 @@
 package com.openpos.gateway.resource
 
+import com.openpos.gateway.config.GrpcClientHelper
 import com.openpos.gateway.config.TenantContext
+import com.openpos.gateway.config.toMap
+import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
 import jakarta.ws.rs.DefaultValue
@@ -10,20 +13,31 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Response
+import openpos.pos.v1.ActivateGiftCardRequest
+import openpos.pos.v1.CreateGiftCardRequest
+import openpos.pos.v1.GetGiftCardBalanceRequest
+import openpos.pos.v1.GetGiftCardRequest
+import openpos.pos.v1.ListGiftCardsRequest
+import openpos.pos.v1.PosServiceGrpc
+import openpos.pos.v1.RedeemGiftCardRequest
 import org.eclipse.microprofile.openapi.annotations.Operation
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
-import java.time.Instant
-import java.util.UUID
 
 /**
  * ギフトカード REST リソース (#142)。
- * gRPC バックエンド未整備のため、ゲートウェイレベルで一時的に管理する。
- * バックエンドサービス実装後に gRPC 呼び出しに切り替える。
+ * pos-service の GiftCard gRPC RPCs にプロキシする。
  */
 @Path("/api/gift-cards")
 @Blocking
 @Tag(name = "GiftCards", description = "ギフトカード管理API")
 class GiftCardResource {
+    @Inject
+    @GrpcClient("pos-service")
+    lateinit var stub: PosServiceGrpc.PosServiceBlockingStub
+
+    @Inject
+    lateinit var grpc: GrpcClientHelper
+
     @Inject
     lateinit var tenantContext: TenantContext
 
@@ -33,50 +47,39 @@ class GiftCardResource {
         @QueryParam("page") @DefaultValue("1") page: Int,
         @QueryParam("pageSize") @DefaultValue("20") pageSize: Int,
     ): Map<String, Any> {
-        // TODO: gRPC バックエンド実装後に ListGiftCards RPC に切り替え
+        val request = ListGiftCardsRequest.getDefaultInstance()
+        val response = grpc.withTenant(stub).listGiftCards(request)
         return mapOf(
-            "data" to emptyList<Any>(),
-            "pagination" to
-                mapOf(
-                    "page" to page,
-                    "pageSize" to pageSize,
-                    "totalCount" to 0,
-                    "totalPages" to 0,
-                ),
+            "data" to response.giftCardsList.map { it.toMap() },
         )
     }
 
     @GET
-    @Path("/{id}")
-    @Operation(summary = "IDでギフトカードを取得する")
+    @Path("/{code}")
+    @Operation(summary = "コードでギフトカードを取得する")
     fun get(
-        @PathParam("id") id: String,
-    ): Response {
-        // TODO: gRPC バックエンド実装後に GetGiftCard RPC に切り替え
-        return Response
-            .status(Response.Status.NOT_FOUND)
-            .entity(mapOf("error" to "NOT_FOUND", "message" to "Gift card not found"))
-            .build()
+        @PathParam("code") code: String,
+    ): Map<String, Any?> {
+        val request = GetGiftCardRequest.newBuilder().setCode(code).build()
+        return grpc
+            .withTenant(stub)
+            .getGiftCard(request)
+            .giftCard
+            .toMap()
     }
 
     @POST
     @Operation(summary = "ギフトカードを発行する")
     fun create(body: CreateGiftCardBody): Response {
         tenantContext.requireRole("OWNER", "MANAGER")
-        val now = Instant.now().toString()
-        val card =
-            mapOf(
-                "id" to UUID.randomUUID().toString(),
-                "code" to generateGiftCardCode(),
-                "initialAmount" to body.initialAmount,
-                "balance" to body.initialAmount,
-                "status" to "ACTIVE",
-                "issuedAt" to now,
-                "expiresAt" to body.expiresAt,
-                "createdAt" to now,
-                "updatedAt" to now,
-            )
-        return Response.status(Response.Status.CREATED).entity(card).build()
+        val request =
+            CreateGiftCardRequest
+                .newBuilder()
+                .setInitialAmount(body.initialAmount)
+                .apply { body.expiresAt?.let { setExpiresAt(it) } }
+                .build()
+        val response = grpc.withTenant(stub).createGiftCard(request)
+        return Response.status(Response.Status.CREATED).entity(response.giftCard.toMap()).build()
     }
 
     @POST
@@ -84,17 +87,14 @@ class GiftCardResource {
     @Operation(summary = "ギフトカードを有効化する")
     fun activate(
         @PathParam("code") code: String,
-    ): Response {
+    ): Map<String, Any?> {
         tenantContext.requireRole("OWNER", "MANAGER", "STAFF")
-        // TODO: gRPC バックエンド実装後に ActivateGiftCard RPC に切り替え
-        return Response
-            .ok(
-                mapOf(
-                    "code" to code,
-                    "status" to "ACTIVE",
-                    "activatedAt" to Instant.now().toString(),
-                ),
-            ).build()
+        val request = ActivateGiftCardRequest.newBuilder().setCode(code).build()
+        return grpc
+            .withTenant(stub)
+            .activateGiftCard(request)
+            .giftCard
+            .toMap()
     }
 
     @POST
@@ -103,19 +103,20 @@ class GiftCardResource {
     fun redeem(
         @PathParam("code") code: String,
         body: RedeemGiftCardBody,
-    ): Response {
+    ): Map<String, Any?> {
         tenantContext.requireRole("OWNER", "MANAGER", "STAFF")
         require(body.amount > 0) { "Redeem amount must be positive" }
-        // TODO: gRPC バックエンド実装後に RedeemGiftCard RPC に切り替え
-        return Response
-            .ok(
-                mapOf(
-                    "code" to code,
-                    "redeemedAmount" to body.amount,
-                    "remainingBalance" to 0L,
-                    "redeemedAt" to Instant.now().toString(),
-                ),
-            ).build()
+        val request =
+            RedeemGiftCardRequest
+                .newBuilder()
+                .setCode(code)
+                .setAmount(body.amount)
+                .build()
+        return grpc
+            .withTenant(stub)
+            .redeemGiftCard(request)
+            .giftCard
+            .toMap()
     }
 
     @GET
@@ -123,17 +124,14 @@ class GiftCardResource {
     @Operation(summary = "ギフトカードの残高を確認する")
     fun checkBalance(
         @PathParam("code") code: String,
-    ): Response {
-        // TODO: gRPC バックエンド実装後に GetGiftCardBalance RPC に切り替え
-        return Response
-            .status(Response.Status.NOT_FOUND)
-            .entity(mapOf("error" to "NOT_FOUND", "message" to "Gift card not found"))
-            .build()
-    }
-
-    private fun generateGiftCardCode(): String {
-        val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        return (1..16).map { chars.random() }.chunked(4).joinToString("-") { it.joinToString("") }
+    ): Map<String, Any> {
+        val request = GetGiftCardBalanceRequest.newBuilder().setCode(code).build()
+        val response = grpc.withTenant(stub).getGiftCardBalance(request)
+        return mapOf(
+            "code" to response.code,
+            "balance" to response.balance,
+            "status" to response.status,
+        )
     }
 }
 
