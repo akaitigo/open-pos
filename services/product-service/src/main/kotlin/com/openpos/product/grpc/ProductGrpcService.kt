@@ -4,11 +4,13 @@ import com.openpos.product.entity.CategoryEntity
 import com.openpos.product.entity.CouponEntity
 import com.openpos.product.entity.DiscountEntity
 import com.openpos.product.entity.ProductEntity
+import com.openpos.product.entity.ProductVariantEntity
 import com.openpos.product.entity.TaxRateEntity
 import com.openpos.product.service.CategoryService
 import com.openpos.product.service.CouponService
 import com.openpos.product.service.DiscountService
 import com.openpos.product.service.ProductService
+import com.openpos.product.service.ProductVariantService
 import com.openpos.product.service.TaxRateService
 import io.grpc.Status
 import io.quarkus.grpc.GrpcService
@@ -28,6 +30,8 @@ import openpos.product.v1.CreateDiscountRequest
 import openpos.product.v1.CreateDiscountResponse
 import openpos.product.v1.CreateProductRequest
 import openpos.product.v1.CreateProductResponse
+import openpos.product.v1.CreateProductVariantRequest
+import openpos.product.v1.CreateProductVariantResponse
 import openpos.product.v1.CreateTaxRateRequest
 import openpos.product.v1.CreateTaxRateResponse
 import openpos.product.v1.DeleteCategoryRequest
@@ -36,6 +40,8 @@ import openpos.product.v1.DeleteDiscountRequest
 import openpos.product.v1.DeleteDiscountResponse
 import openpos.product.v1.DeleteProductRequest
 import openpos.product.v1.DeleteProductResponse
+import openpos.product.v1.DeleteProductVariantRequest
+import openpos.product.v1.DeleteProductVariantResponse
 import openpos.product.v1.DeleteTaxRateRequest
 import openpos.product.v1.DeleteTaxRateResponse
 import openpos.product.v1.Discount
@@ -50,12 +56,15 @@ import openpos.product.v1.ListCouponsRequest
 import openpos.product.v1.ListCouponsResponse
 import openpos.product.v1.ListDiscountsRequest
 import openpos.product.v1.ListDiscountsResponse
+import openpos.product.v1.ListProductVariantsRequest
+import openpos.product.v1.ListProductVariantsResponse
 import openpos.product.v1.ListProductsRequest
 import openpos.product.v1.ListProductsResponse
 import openpos.product.v1.ListTaxRatesRequest
 import openpos.product.v1.ListTaxRatesResponse
 import openpos.product.v1.Product
 import openpos.product.v1.ProductServiceGrpc
+import openpos.product.v1.ProductVariant
 import openpos.product.v1.TaxRate
 import openpos.product.v1.UpdateCategoryRequest
 import openpos.product.v1.UpdateCategoryResponse
@@ -63,6 +72,8 @@ import openpos.product.v1.UpdateDiscountRequest
 import openpos.product.v1.UpdateDiscountResponse
 import openpos.product.v1.UpdateProductRequest
 import openpos.product.v1.UpdateProductResponse
+import openpos.product.v1.UpdateProductVariantRequest
+import openpos.product.v1.UpdateProductVariantResponse
 import openpos.product.v1.UpdateTaxRateRequest
 import openpos.product.v1.UpdateTaxRateResponse
 import openpos.product.v1.ValidateCouponRequest
@@ -88,6 +99,9 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
 
     @Inject
     lateinit var couponService: CouponService
+
+    @Inject
+    lateinit var productVariantService: ProductVariantService
 
     @Inject
     lateinit var tenantHelper: GrpcTenantHelper
@@ -125,8 +139,9 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         val entity =
             productService.findById(request.id.toUUID())
                 ?: throw Status.NOT_FOUND.withDescription("Product not found: ${request.id}").asRuntimeException()
+        val variants = productVariantService.listByProductId(entity.id)
         responseObserver.onNext(
-            GetProductResponse.newBuilder().setProduct(entity.toProto()).build(),
+            GetProductResponse.newBuilder().setProduct(entity.toProto(variants)).build(),
         )
         responseObserver.onCompleted()
     }
@@ -146,11 +161,14 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
                 page = page,
                 pageSize = pageSize,
             )
+        val productIds = products.map { it.id }
+        val allVariants = productVariantService.listByProductIds(productIds)
+        val variantsByProductId = allVariants.groupBy { it.productId }
         val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
         responseObserver.onNext(
             ListProductsResponse
                 .newBuilder()
-                .addAllProducts(products.map { it.toProto() })
+                .addAllProducts(products.map { it.toProto(variantsByProductId[it.id].orEmpty()) })
                 .setPagination(
                     PaginationResponse
                         .newBuilder()
@@ -216,8 +234,9 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         val entity =
             productService.findByBarcode(request.barcode)
                 ?: throw Status.NOT_FOUND.withDescription("Product not found for barcode: ${request.barcode}").asRuntimeException()
+        val variants = productVariantService.listByProductId(entity.id)
         responseObserver.onNext(
-            GetProductByBarcodeResponse.newBuilder().setProduct(entity.toProto()).build(),
+            GetProductByBarcodeResponse.newBuilder().setProduct(entity.toProto(variants)).build(),
         )
         responseObserver.onCompleted()
     }
@@ -229,10 +248,12 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         tenantHelper.setupTenantContext()
         val ids = request.idsList.map { it.toUUID() }
         val entities = productService.findByIds(ids)
+        val allVariants = productVariantService.listByProductIds(entities.map { it.id })
+        val variantsByProductId = allVariants.groupBy { it.productId }
         responseObserver.onNext(
             BatchGetProductsResponse
                 .newBuilder()
-                .addAllProducts(entities.map { it.toProto() })
+                .addAllProducts(entities.map { it.toProto(variantsByProductId[it.id].orEmpty()) })
                 .build(),
         )
         responseObserver.onCompleted()
@@ -493,9 +514,80 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         responseObserver.onCompleted()
     }
 
+    // === ProductVariant ===
+
+    override fun createProductVariant(
+        request: CreateProductVariantRequest,
+        responseObserver: io.grpc.stub.StreamObserver<CreateProductVariantResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        val entity =
+            productVariantService.create(
+                productId = request.productId.toUUID(),
+                name = request.name,
+                sku = request.sku.ifBlank { null },
+                barcode = request.barcode.ifBlank { null },
+                price = request.price,
+                displayOrder = request.displayOrder,
+            )
+        responseObserver.onNext(
+            CreateProductVariantResponse.newBuilder().setVariant(entity.toProto()).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun listProductVariants(
+        request: ListProductVariantsRequest,
+        responseObserver: io.grpc.stub.StreamObserver<ListProductVariantsResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val variants = productVariantService.listByProductId(request.productId.toUUID())
+        responseObserver.onNext(
+            ListProductVariantsResponse.newBuilder().addAllVariants(variants.map { it.toProto() }).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun updateProductVariant(
+        request: UpdateProductVariantRequest,
+        responseObserver: io.grpc.stub.StreamObserver<UpdateProductVariantResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val entity =
+                productVariantService.update(
+                    id = request.id.toUUID(),
+                    name = request.name.ifBlank { null },
+                    sku = request.sku.ifBlank { null },
+                    barcode = request.barcode.ifBlank { null },
+                    price = if (request.hasPrice()) request.price.value else null,
+                    isActive = if (request.hasIsActive()) request.isActive.value else null,
+                    displayOrder = if (request.hasDisplayOrder()) request.displayOrder.value else null,
+                )
+            responseObserver.onNext(
+                UpdateProductVariantResponse.newBuilder().setVariant(entity.toProto()).build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: IllegalArgumentException) {
+            throw Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
+        }
+    }
+
+    override fun deleteProductVariant(
+        request: DeleteProductVariantRequest,
+        responseObserver: io.grpc.stub.StreamObserver<DeleteProductVariantResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val deleted = productVariantService.delete(request.id.toUUID())
+        if (!deleted) {
+            throw Status.NOT_FOUND.withDescription("ProductVariant not found: ${request.id}").asRuntimeException()
+        }
+        responseObserver.onNext(DeleteProductVariantResponse.getDefaultInstance())
+        responseObserver.onCompleted()
+    }
     // === Mapper Extensions ===
 
-    private fun ProductEntity.toProto(): Product =
+    private fun ProductEntity.toProto(variants: List<ProductVariantEntity> = emptyList()): Product =
         Product
             .newBuilder()
             .setId(id.toString())
@@ -510,6 +602,22 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
             .setImageUrl(imageUrl.orEmpty())
             .setDisplayOrder(displayOrder)
             .setIsActive(isActive)
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .addAllVariants(variants.map { it.toProto() })
+            .build()
+
+    private fun ProductVariantEntity.toProto(): ProductVariant =
+        ProductVariant
+            .newBuilder()
+            .setId(id.toString())
+            .setProductId(productId.toString())
+            .setName(name)
+            .setSku(sku.orEmpty())
+            .setBarcode(barcode.orEmpty())
+            .setPrice(price)
+            .setIsActive(isActive)
+            .setDisplayOrder(displayOrder)
             .setCreatedAt(createdAt.toString())
             .setUpdatedAt(updatedAt.toString())
             .build()

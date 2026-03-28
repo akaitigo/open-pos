@@ -59,6 +59,14 @@ service ProductService {
   rpc ListCoupons(ListCouponsRequest) returns (ListCouponsResponse);
   // クーポンコードを検証する（取引適用前に呼び出す）
   rpc ValidateCoupon(ValidateCouponRequest) returns (ValidateCouponResponse);
+  // 商品バリアントを作成する
+  rpc CreateProductVariant(CreateProductVariantRequest) returns (CreateProductVariantResponse);
+  // 商品のバリアント一覧を取得する
+  rpc ListProductVariants(ListProductVariantsRequest) returns (ListProductVariantsResponse);
+  // 商品バリアントを更新する
+  rpc UpdateProductVariant(UpdateProductVariantRequest) returns (UpdateProductVariantResponse);
+  // 商品バリアントを削除する
+  rpc DeleteProductVariant(DeleteProductVariantRequest) returns (DeleteProductVariantResponse);
 }
 
 // 商品
@@ -93,6 +101,34 @@ message Product {
   string created_at = 13;
   // 更新日時（ISO 8601 形式）
   string updated_at = 14;
+  // バリアント一覧（サイズ・カラー等）。バリアントがない場合は空リスト
+  repeated ProductVariant variants = 15;
+}
+
+// 商品バリアント
+// 親商品のサイズ・カラー等のバリエーションです
+// 各バリアントは独自のSKU・バーコード・価格を持ちます
+message ProductVariant {
+  // バリアントID（UUID）
+  string id = 1;
+  // 親商品ID
+  string product_id = 2;
+  // バリアント名（例: "Sサイズ", "レッド"）
+  string name = 3;
+  // SKU（在庫管理コード、バリアント固有）
+  string sku = 4;
+  // バーコード（バリアント固有）
+  string barcode = 5;
+  // 販売価格（銭単位。0の場合は親商品の価格を使用）
+  int64 price = 6;
+  // 有効フラグ
+  bool is_active = 7;
+  // 表示順序
+  int32 display_order = 8;
+  // 作成日時（ISO 8601）
+  string created_at = 9;
+  // 更新日時（ISO 8601）
+  string updated_at = 10;
 }
 
 // カテゴリ
@@ -577,3 +613,69 @@ message BatchGetProductsResponse {
   // 取得された商品リスト（見つからなかったIDは含まれない）
   repeated Product products = 1;
 }
+
+// === 商品バリアント ===
+
+// バリアント作成リクエスト
+message CreateProductVariantRequest {
+  // 親商品ID（必須）
+  string product_id = 1;
+  // バリアント名（例: "Sサイズ"）
+  string name = 2;
+  // SKU
+  string sku = 3;
+  // バーコード
+  string barcode = 4;
+  // 販売価格（銭単位。0で親商品の価格を使用）
+  int64 price = 5;
+  // 表示順序
+  int32 display_order = 6;
+}
+
+// バリアント作成レスポンス
+message CreateProductVariantResponse {
+  ProductVariant variant = 1;
+}
+
+// バリアント一覧取得リクエスト
+message ListProductVariantsRequest {
+  // 親商品ID（必須）
+  string product_id = 1;
+}
+
+// バリアント一覧取得レスポンス
+message ListProductVariantsResponse {
+  repeated ProductVariant variants = 1;
+}
+
+// バリアント更新リクエスト
+message UpdateProductVariantRequest {
+  // バリアントID（必須）
+  string id = 1;
+  // バリアント名
+  string name = 2;
+  // SKU
+  string sku = 3;
+  // バーコード
+  string barcode = 4;
+  // 販売価格（銭単位）
+  google.protobuf.Int64Value price = 5;
+  // 有効フラグ
+  google.protobuf.BoolValue is_active = 6;
+  // 表示順序
+  google.protobuf.Int32Value display_order = 7;
+}
+
+// バリアント更新レスポンス
+message UpdateProductVariantResponse {
+  ProductVariant variant = 1;
+}
+
+// バリアント削除リクエスト
+message DeleteProductVariantRequest {
+  // バリアントID（必須）
+  string id = 1;
+}
+
+// バリアント削除レスポンス
+message DeleteProductVariantResponse {}

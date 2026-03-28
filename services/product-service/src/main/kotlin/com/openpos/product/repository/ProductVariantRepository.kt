@@ -7,6 +7,10 @@ import java.util.UUID
 
 @ApplicationScoped
 class ProductVariantRepository : PanacheRepositoryBase<ProductVariantEntity, UUID> {
-    fun listByProductId(productId: UUID): List<ProductVariantEntity> =
-        find("productId", productId).list()
+    fun findByProductId(productId: UUID): List<ProductVariantEntity> = find("productId = ?1 order by displayOrder asc", productId).list()
+
+    fun findByProductIds(productIds: List<UUID>): List<ProductVariantEntity> {
+        if (productIds.isEmpty()) return emptyList()
+        return find("productId in ?1 order by displayOrder asc", productIds).list()
+    }
 }
