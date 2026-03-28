@@ -50,6 +50,44 @@ class TransactionRepository : PanacheRepositoryBase<TransactionEntity, UUID> {
         return count(query, params)
     }
 
+    fun findCompletedTransactionIds(
+        storeId: UUID,
+        startDate: Instant,
+        endDate: Instant,
+    ): List<UUID> =
+        find(
+            "storeId = :storeId AND status = :status AND completedAt >= :startDate AND completedAt <= :endDate",
+            mapOf(
+                "storeId" to storeId,
+                "status" to "COMPLETED",
+                "startDate" to startDate,
+                "endDate" to endDate,
+            ),
+        ).list().map { it.id }
+
+    @Suppress("UNCHECKED_CAST")
+    fun aggregateStaffSales(
+        storeId: UUID,
+        startDate: Instant,
+        endDate: Instant,
+    ): List<Array<Any>> =
+        getEntityManager()
+            .createQuery(
+                """
+                SELECT t.staffId, COUNT(t), SUM(t.total)
+                FROM TransactionEntity t
+                WHERE t.storeId = :storeId
+                  AND t.status = 'COMPLETED'
+                  AND t.createdAt >= :startDate
+                  AND t.createdAt <= :endDate
+                GROUP BY t.staffId
+                """.trimIndent(),
+                Array::class.java,
+            ).setParameter("storeId", storeId)
+            .setParameter("startDate", startDate)
+            .setParameter("endDate", endDate)
+            .resultList as List<Array<Any>>
+
     private fun buildFilterQuery(
         storeId: UUID?,
         terminalId: UUID?,

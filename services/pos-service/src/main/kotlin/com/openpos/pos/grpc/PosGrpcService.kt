@@ -16,6 +16,8 @@ import com.openpos.pos.service.JournalService
 import com.openpos.pos.service.OfflineItemInput
 import com.openpos.pos.service.PaymentInput
 import com.openpos.pos.service.SettlementService
+import com.openpos.pos.service.TaxReportService
+import com.openpos.pos.repository.TransactionRepository
 import com.openpos.pos.service.TransactionService
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -44,6 +46,8 @@ import openpos.pos.v1.GetReceiptRequest
 import openpos.pos.v1.GetReceiptResponse
 import openpos.pos.v1.GetSettlementRequest
 import openpos.pos.v1.GetSettlementResponse
+import openpos.pos.v1.GetTaxReportRequest
+import openpos.pos.v1.GetTaxReportResponse
 import openpos.pos.v1.GetTransactionRequest
 import openpos.pos.v1.GetTransactionResponse
 import openpos.pos.v1.JournalEntry
@@ -62,7 +66,11 @@ import openpos.pos.v1.RemoveTransactionItemResponse
 import openpos.pos.v1.Settlement
 import openpos.pos.v1.SyncOfflineTransactionsRequest
 import openpos.pos.v1.SyncOfflineTransactionsResponse
+import openpos.pos.v1.GetStaffSalesReportRequest
+import openpos.pos.v1.GetStaffSalesReportResponse
+import openpos.pos.v1.StaffSalesItem
 import openpos.pos.v1.SyncResult
+import openpos.pos.v1.TaxReportItem
 import openpos.pos.v1.TaxSummary
 import openpos.pos.v1.Transaction
 import openpos.pos.v1.TransactionDiscount
@@ -95,6 +103,9 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     lateinit var giftCardService: GiftCardService
 
     @Inject
+    lateinit var taxReportService: TaxReportService
+
+    @Inject
     lateinit var productServiceClient: ProductServiceClient
 
     @Inject
@@ -102,6 +113,9 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
 
     @Inject
     lateinit var storeServiceClient: StoreServiceClient
+
+    @Inject
+    lateinit var transactionRepository: TransactionRepository
 
     // === Create ===
 
@@ -142,18 +156,32 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         tenantHelper.setupTenantContext()
         val quantity = if (request.quantity > 0) request.quantity else 1
         try {
-            // gRPC外部呼び出しを@Transactional外で実行（デッドロック防止 #608）
-            val productId = request.productId.toUUID()
             val orgId = requireNotNull(tenantHelper.organizationIdHolder.organizationId) { "organizationId is not set" }
-            val snapshot = transactionService.fetchProductSnapshot(productId, orgId)
+            val isCustomProduct = request.customProductName.isNotBlank()
 
             val entity =
-                transactionService.addItem(
-                    transactionId = request.transactionId.toUUID(),
-                    productId = productId,
-                    quantity = quantity,
-                    productSnapshot = snapshot,
-                )
+                if (isCustomProduct) {
+                    // アドホック商品: 商品マスタ不要、税率のみ取得
+                    val taxRateId = request.customTaxRateId.toUUID()
+                    val taxRateSnapshot = transactionService.fetchTaxRateSnapshot(taxRateId, orgId)
+                    transactionService.addCustomItem(
+                        transactionId = request.transactionId.toUUID(),
+                        productName = request.customProductName,
+                        unitPrice = request.customProductPrice,
+                        quantity = quantity,
+                        taxRateSnapshot = taxRateSnapshot,
+                    )
+                } else {
+                    // 通常の商品追加: gRPC外部呼び出しを@Transactional外で実行（デッドロック防止 #608）
+                    val productId = request.productId.toUUID()
+                    val snapshot = transactionService.fetchProductSnapshot(productId, orgId)
+                    transactionService.addItem(
+                        transactionId = request.transactionId.toUUID(),
+                        productId = productId,
+                        quantity = quantity,
+                        productSnapshot = snapshot,
+                    )
+                }
             responseObserver.onNext(
                 AddTransactionItemResponse
                     .newBuilder()
@@ -943,7 +971,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         TransactionItem
             .newBuilder()
             .setId(id.toString())
-            .setProductId(productId.toString())
+            .setProductId(productId?.toString().orEmpty())
             .setProductName(productName)
             .setUnitPrice(unitPrice)
             .setQuantity(quantity)
@@ -1174,6 +1202,107 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                 .build(),
         )
         responseObserver.onCompleted()
+    }
+
+
+    // === Tax Report (#1031) ===
+
+    override fun getTaxReport(
+        request: GetTaxReportRequest,
+        responseObserver: StreamObserver<GetTaxReportResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            require(request.storeId.isNotBlank()) { "store_id is required" }
+            require(request.hasDateRange()) { "date_range is required" }
+            require(request.dateRange.start.isNotBlank()) { "date_range.start is required" }
+            require(request.dateRange.end.isNotBlank()) { "date_range.end is required" }
+
+            val items =
+                taxReportService.getTaxReport(
+                    storeId = request.storeId.toUUID(),
+                    startDate = Instant.parse(request.dateRange.start),
+                    endDate = Instant.parse(request.dateRange.end),
+                )
+            responseObserver.onNext(
+                GetTaxReportResponse
+                    .newBuilder()
+                    .addAllItems(
+                        items.map { item ->
+                            TaxReportItem
+                                .newBuilder()
+                                .setTaxRateName(item.taxRateName)
+                                .setTaxRatePercentage(item.taxRatePercentage)
+                                .setIsReduced(item.isReduced)
+                                .setTaxableAmount(item.taxableAmount)
+                                .setTaxAmount(item.taxAmount)
+                                .setTransactionCount(item.transactionCount)
+                                .build()
+                        },
+                    ).build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+
+    // === Staff Sales Report (#1029) ===
+
+    override fun getStaffSalesReport(
+        request: GetStaffSalesReportRequest,
+        responseObserver: StreamObserver<GetStaffSalesReportResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            require(request.storeId.isNotBlank()) { "store_id is required" }
+            require(request.hasDateRange()) { "date_range is required" }
+            require(request.dateRange.start.isNotBlank()) { "date_range.start is required" }
+            require(request.dateRange.end.isNotBlank()) { "date_range.end is required" }
+
+            val storeId = request.storeId.toUUID()
+            val startDate = Instant.parse(request.dateRange.start)
+            val endDate = Instant.parse(request.dateRange.end)
+
+            val aggregated = transactionRepository.aggregateStaffSales(storeId, startDate, endDate)
+
+            val orgId = requireNotNull(tenantHelper.organizationIdHolder.organizationId) { "organizationId is not set" }
+            val staffNameMap =
+                try {
+                    storeServiceClient.getStaffNameMap(orgId, storeId)
+                } catch (_: Exception) {
+                    emptyMap()
+                }
+
+            val items =
+                aggregated.map { row ->
+                    val staffId = row[0] as UUID
+                    val txCount = (row[1] as Long).toInt()
+                    val totalAmount = row[2] as Long
+                    val avgTx = if (txCount > 0) totalAmount / txCount else 0L
+                    val staffName = staffNameMap[staffId] ?: staffId.toString()
+
+                    StaffSalesItem
+                        .newBuilder()
+                        .setStaffId(staffId.toString())
+                        .setStaffName(staffName)
+                        .setTotalAmount(totalAmount)
+                        .setTransactionCount(txCount)
+                        .setAverageTransaction(avgTx)
+                        .build()
+                }
+
+            responseObserver.onNext(
+                GetStaffSalesReportResponse
+                    .newBuilder()
+                    .addAllItems(items)
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
     }
 
     private fun GiftCardEntity.toGiftCardProto(): openpos.pos.v1.GiftCard =
