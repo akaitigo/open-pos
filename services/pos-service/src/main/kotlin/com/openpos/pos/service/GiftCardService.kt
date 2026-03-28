@@ -7,6 +7,7 @@ import com.openpos.pos.repository.GiftCardRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
+import java.security.SecureRandom
 import java.time.Instant
 
 @ApplicationScoped
@@ -19,6 +20,8 @@ class GiftCardService {
 
     @Inject
     lateinit var organizationIdHolder: OrganizationIdHolder
+
+    private val secureRandom = SecureRandom()
 
     fun listAll(): List<GiftCardEntity> {
         tenantFilterService.enableFilter()
@@ -59,6 +62,7 @@ class GiftCardService {
         val card =
             requireNotNull(giftCardRepository.findByCode(code)) { "Gift card not found: $code" }
         require(card.status == "PENDING") { "Gift card is not in PENDING status: ${card.status}" }
+        checkNotExpired(card)
         card.status = "ACTIVE"
         giftCardRepository.persist(card)
         return card
@@ -74,6 +78,7 @@ class GiftCardService {
         val card =
             requireNotNull(giftCardRepository.findByCode(code)) { "Gift card not found: $code" }
         require(card.status == "ACTIVE") { "Gift card is not ACTIVE: ${card.status}" }
+        checkNotExpired(card)
         require(card.balance >= amount) { "Insufficient balance: ${card.balance} < $amount" }
         card.balance -= amount
         if (card.balance == 0L) {
@@ -90,10 +95,15 @@ class GiftCardService {
         }
     }
 
+    private fun checkNotExpired(card: GiftCardEntity) {
+        val expires = card.expiresAt ?: return
+        require(Instant.now().isBefore(expires)) { "Gift card has expired: ${card.code}" }
+    }
+
     private fun generateCode(): String {
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         return (1..16)
-            .map { chars.random() }
+            .map { chars[secureRandom.nextInt(chars.length)] }
             .chunked(4)
             .joinToString("-") { it.joinToString("") }
     }
