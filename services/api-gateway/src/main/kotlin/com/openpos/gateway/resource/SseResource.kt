@@ -33,8 +33,8 @@ class SseResource {
     @Inject
     lateinit var jwtParser: org.eclipse.microprofile.jwt.JsonWebToken
 
-    @ConfigProperty(name = "openpos.auth.enabled", defaultValue = "false")
-    var authEnabled: Boolean = false
+    @ConfigProperty(name = "openpos.auth.enabled", defaultValue = "true")
+    var authEnabled: Boolean = true
 
     @Inject
     lateinit var sessionJwtParser: io.smallrye.jwt.auth.principal.JWTParser
