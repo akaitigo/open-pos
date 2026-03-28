@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
@@ -42,6 +43,9 @@ class SyncResource {
     @Inject
     lateinit var grpc: GrpcClientHelper
 
+    @Inject
+    lateinit var tenantContext: TenantContext
+
     @ConfigProperty(name = "openpos.sync.max-unit-price", defaultValue = "10000000")
     var maxUnitPrice: Long = 10_000_000
 
@@ -54,6 +58,7 @@ class SyncResource {
     @POST
     @Path("/transactions")
     fun syncTransactions(body: SyncTransactionsBody): Map<String, Any> {
+        tenantContext.requireRole("OWNER", "MANAGER", "CASHIER")
         if (body.transactions.size > maxTransactions) {
             throw BadRequestException(
                 "Too many transactions: ${body.transactions.size} exceeds maximum of $maxTransactions",

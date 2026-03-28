@@ -1,6 +1,7 @@
 package com.openpos.gateway.resource
 
 import com.openpos.gateway.config.GrpcClientHelper
+import com.openpos.gateway.config.TenantContext
 import jakarta.ws.rs.BadRequestException
 import openpos.pos.v1.PosServiceGrpc
 import openpos.pos.v1.SyncOfflineTransactionsResponse
@@ -22,6 +23,7 @@ class SyncResourceTest {
         SyncResource().also { r ->
             ProductResourceTest.setField(r, "stub", stub)
             ProductResourceTest.setField(r, "grpc", grpc)
+            ProductResourceTest.setField(r, "tenantContext", TenantContext())
             ProductResourceTest.setField(r, "maxUnitPrice", 10_000_000L)
         }
 
