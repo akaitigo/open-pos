@@ -3,6 +3,7 @@ package com.openpos.store.grpc
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.openpos.store.config.DataMaskingUtil
+import com.openpos.store.entity.CustomerEntity
 import com.openpos.store.entity.DataProcessingConsentEntity
 import com.openpos.store.entity.OrganizationEntity
 import com.openpos.store.entity.StaffEntity
@@ -10,6 +11,7 @@ import com.openpos.store.entity.StampCardEntity
 import com.openpos.store.entity.StoreEntity
 import com.openpos.store.entity.TerminalEntity
 import com.openpos.store.service.AuditLogService
+import com.openpos.store.service.CustomerService
 import com.openpos.store.service.GdprService
 import com.openpos.store.service.OrganizationService
 import com.openpos.store.service.StaffService
@@ -21,6 +23,20 @@ import io.quarkus.grpc.GrpcService
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
 import openpos.common.v1.PaginationResponse
+import openpos.store.v1.CreateCustomerRequest
+import openpos.store.v1.CreateCustomerResponse
+import openpos.store.v1.Customer
+import openpos.store.v1.CustomerTier
+import openpos.store.v1.EarnPointsRequest
+import openpos.store.v1.EarnPointsResponse
+import openpos.store.v1.GetCustomerRequest
+import openpos.store.v1.GetCustomerResponse
+import openpos.store.v1.ListCustomersRequest
+import openpos.store.v1.ListCustomersResponse
+import openpos.store.v1.RedeemPointsRequest
+import openpos.store.v1.RedeemPointsResponse
+import openpos.store.v1.UpdateCustomerRequest
+import openpos.store.v1.UpdateCustomerResponse
 import openpos.store.v1.AnonymizeCustomerDataRequest
 import openpos.store.v1.AnonymizeCustomerDataResponse
 import openpos.store.v1.AnonymizeStaffDataRequest
@@ -94,6 +110,9 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
 
     @Inject
     lateinit var gdprService: GdprService
+
+    @Inject
+    lateinit var customerService: CustomerService
 
     @Inject
     lateinit var stampCardService: StampCardService
@@ -458,6 +477,141 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         responseObserver.onCompleted()
     }
 
+    // === Customer ===
+
+    override fun createCustomer(
+        request: CreateCustomerRequest,
+        responseObserver: io.grpc.stub.StreamObserver<CreateCustomerResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        val entity =
+            customerService.create(
+                name = request.name,
+                email = request.email.ifBlank { null },
+                phone = request.phone.ifBlank { null },
+                notes = request.notes.ifBlank { null },
+            )
+        responseObserver.onNext(
+            CreateCustomerResponse.newBuilder().setCustomer(entity.toCustomerProto()).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun getCustomer(
+        request: GetCustomerRequest,
+        responseObserver: io.grpc.stub.StreamObserver<GetCustomerResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val entity =
+            customerService.findById(request.id.toUUID())
+                ?: throw Status.NOT_FOUND.withDescription("Customer not found: ${request.id}").asRuntimeException()
+        responseObserver.onNext(
+            GetCustomerResponse.newBuilder().setCustomer(entity.toCustomerProto()).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun listCustomers(
+        request: ListCustomersRequest,
+        responseObserver: io.grpc.stub.StreamObserver<ListCustomersResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val page = if (request.hasPagination()) request.pagination.page - 1 else 0
+        val pageSize =
+            if (request.hasPagination() && request.pagination.pageSize > 0) {
+                request.pagination.pageSize.coerceAtMost(100)
+            } else {
+                20
+            }
+        val search = request.search.ifBlank { null }
+        val (customers, totalCount) = customerService.list(page, pageSize, search)
+        val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
+        responseObserver.onNext(
+            ListCustomersResponse
+                .newBuilder()
+                .addAllCustomers(customers.map { it.toCustomerProto() })
+                .setPagination(
+                    PaginationResponse
+                        .newBuilder()
+                        .setPage(page + 1)
+                        .setPageSize(pageSize)
+                        .setTotalCount(totalCount)
+                        .setTotalPages(totalPages)
+                        .build(),
+                ).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun updateCustomer(
+        request: UpdateCustomerRequest,
+        responseObserver: io.grpc.stub.StreamObserver<UpdateCustomerResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val entity =
+            customerService.update(
+                id = request.id.toUUID(),
+                name = request.name.ifBlank { null },
+                email = request.email.ifBlank { null },
+                phone = request.phone.ifBlank { null },
+                notes = request.notes.ifBlank { null },
+            ) ?: throw Status.NOT_FOUND.withDescription("Customer not found: ${request.id}").asRuntimeException()
+        responseObserver.onNext(
+            UpdateCustomerResponse.newBuilder().setCustomer(entity.toCustomerProto()).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun earnPoints(
+        request: EarnPointsRequest,
+        responseObserver: io.grpc.stub.StreamObserver<EarnPointsResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val customerId = request.customerId.toUUID()
+        val transactionId = request.transactionId.ifBlank { null }?.let { it.toUUID() }
+        try {
+            val earnedPoints = customerService.earnPoints(customerId, request.transactionTotal, transactionId)
+            val customer =
+                customerService.findById(customerId)
+                    ?: throw Status.NOT_FOUND.withDescription("Customer not found: ${request.customerId}").asRuntimeException()
+            responseObserver.onNext(
+                EarnPointsResponse
+                    .newBuilder()
+                    .setEarnedPoints(earnedPoints)
+                    .setCustomer(customer.toCustomerProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: IllegalArgumentException) {
+            throw Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
+        }
+    }
+
+    override fun redeemPoints(
+        request: RedeemPointsRequest,
+        responseObserver: io.grpc.stub.StreamObserver<RedeemPointsResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val customerId = request.customerId.toUUID()
+        val transactionId = request.transactionId.ifBlank { null }?.let { it.toUUID() }
+        try {
+            val success = customerService.redeemPoints(customerId, request.points, transactionId)
+            val customer =
+                customerService.findById(customerId)
+                    ?: throw Status.NOT_FOUND.withDescription("Customer not found: ${request.customerId}").asRuntimeException()
+            responseObserver.onNext(
+                RedeemPointsResponse
+                    .newBuilder()
+                    .setSuccess(success)
+                    .setCustomer(customer.toCustomerProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: IllegalArgumentException) {
+            throw Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
+        }
+    }
+
     // === GDPR / 個人情報保護 ===
 
     override fun deleteOrganizationData(
@@ -600,6 +754,31 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
     }
 
     // === Mapper Extensions ===
+
+    private fun CustomerEntity.toCustomerProto(): Customer =
+        Customer
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setName(name)
+            .setEmail(email.orEmpty())
+            .setPhone(phone.orEmpty())
+            .setPoints(points)
+            .setTier(tier.toProtoTier())
+            .setIsActive(isActive)
+            .setNotes(notes.orEmpty())
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .build()
+
+    private fun String.toProtoTier(): CustomerTier =
+        when (this) {
+            "REGULAR" -> CustomerTier.CUSTOMER_TIER_REGULAR
+            "SILVER" -> CustomerTier.CUSTOMER_TIER_SILVER
+            "GOLD" -> CustomerTier.CUSTOMER_TIER_GOLD
+            "VIP" -> CustomerTier.CUSTOMER_TIER_VIP
+            else -> CustomerTier.CUSTOMER_TIER_UNSPECIFIED
+        }
 
     private fun DataProcessingConsentEntity.toConsentProto(): DataProcessingConsent =
         DataProcessingConsent

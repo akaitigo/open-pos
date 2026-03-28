@@ -42,7 +42,7 @@ class CustomerServiceTest {
     @Test
     fun `create sets organizationId and default points to 0`() {
         // Arrange & Act
-        val result = service.create("テスト顧客", "test@example.com", "090-1234-5678")
+        val result = service.create("テスト顧客", "test@example.com", "090-1234-5678", null)
 
         // Assert
         assertNotNull(result)

@@ -58,6 +58,21 @@ service StoreService {
   // データ処理同意を取得する
   rpc GetConsent(GetConsentRequest) returns (GetConsentResponse);
 
+  // === 顧客管理（CRM） ===
+
+  // 顧客を作成する
+  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
+  // 顧客を取得する
+  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse);
+  // 顧客一覧を取得する（検索・ページネーション対応）
+  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse);
+  // 顧客を更新する
+  rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse);
+  // ポイントを付与する（取引金額に応じた自動計算）
+  rpc EarnPoints(EarnPointsRequest) returns (EarnPointsResponse);
+  // ポイントを利用する
+  rpc RedeemPoints(RedeemPointsRequest) returns (RedeemPointsResponse);
+
   // === スタンプカード ===
 
   // 顧客のスタンプカードを取得する
@@ -609,6 +624,93 @@ message GetConsentRequest {
 message GetConsentResponse {
   // 同意リスト
   repeated DataProcessingConsent consents = 1;
+}
+
+// === 顧客管理（CRM） ===
+
+enum CustomerTier {
+  CUSTOMER_TIER_UNSPECIFIED = 0;
+  CUSTOMER_TIER_REGULAR = 1;
+  CUSTOMER_TIER_SILVER = 2;
+  CUSTOMER_TIER_GOLD = 3;
+  CUSTOMER_TIER_VIP = 4;
+}
+
+message Customer {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string email = 4;
+  string phone = 5;
+  int64 points = 6;
+  CustomerTier tier = 7;
+  bool is_active = 8;
+  string notes = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message CreateCustomerRequest {
+  string name = 1;
+  string email = 2;
+  string phone = 3;
+  string notes = 4;
+}
+
+message CreateCustomerResponse {
+  Customer customer = 1;
+}
+
+message GetCustomerRequest {
+  string id = 1;
+}
+
+message GetCustomerResponse {
+  Customer customer = 1;
+}
+
+message ListCustomersRequest {
+  openpos.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListCustomersResponse {
+  repeated Customer customers = 1;
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateCustomerRequest {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  string phone = 4;
+  string notes = 5;
+}
+
+message UpdateCustomerResponse {
+  Customer customer = 1;
+}
+
+message EarnPointsRequest {
+  string customer_id = 1;
+  int64 transaction_total = 2;
+  string transaction_id = 3;
+}
+
+message EarnPointsResponse {
+  int64 earned_points = 1;
+  Customer customer = 2;
+}
+
+message RedeemPointsRequest {
+  string customer_id = 1;
+  int64 points = 2;
+  string transaction_id = 3;
+}
+
+message RedeemPointsResponse {
+  bool success = 1;
+  Customer customer = 2;
 }
 
 // === スタンプカード ===
