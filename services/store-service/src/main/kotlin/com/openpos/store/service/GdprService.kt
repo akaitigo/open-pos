@@ -1,16 +1,12 @@
 package com.openpos.store.service
 
 import com.openpos.store.entity.DataProcessingConsentEntity
-import com.openpos.store.repository.AttendanceRepository
 import com.openpos.store.repository.AuditLogRepository
 import com.openpos.store.repository.CustomerRepository
 import com.openpos.store.repository.DataProcessingConsentRepository
-import com.openpos.store.repository.FavoriteProductRepository
 import com.openpos.store.repository.GiftCardRepository
-import com.openpos.store.repository.NotificationRepository
 import com.openpos.store.repository.OrganizationRepository
 import com.openpos.store.repository.PointTransactionRepository
-import com.openpos.store.repository.ShiftRepository
 import com.openpos.store.repository.StaffRepository
 import com.openpos.store.repository.StoreRepository
 import com.openpos.store.repository.SubscriptionRepository
@@ -20,9 +16,9 @@ import com.openpos.store.repository.WebhookRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
+import org.jboss.logging.Logger
 import java.time.Instant
 import java.util.UUID
-import org.jboss.logging.Logger
 
 /**
  * GDPR / 個人情報保護サービス。
@@ -39,14 +35,6 @@ class GdprService {
     @Inject lateinit var customerRepository: CustomerRepository
 
     @Inject lateinit var terminalRepository: TerminalRepository
-
-    @Inject lateinit var attendanceRepository: AttendanceRepository
-
-    @Inject lateinit var shiftRepository: ShiftRepository
-
-    @Inject lateinit var notificationRepository: NotificationRepository
-
-    @Inject lateinit var favoriteProductRepository: FavoriteProductRepository
 
     @Inject lateinit var pointTransactionRepository: PointTransactionRepository
 
