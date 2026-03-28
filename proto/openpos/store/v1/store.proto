@@ -57,6 +57,17 @@ service StoreService {
   rpc RecordConsent(RecordConsentRequest) returns (RecordConsentResponse);
   // データ処理同意を取得する
   rpc GetConsent(GetConsentRequest) returns (GetConsentResponse);
+
+  // === スタンプカード ===
+
+  // 顧客のスタンプカードを取得する
+  rpc GetStampCard(GetStampCardRequest) returns (GetStampCardResponse);
+  // スタンプカードを発行する
+  rpc IssueStampCard(IssueStampCardRequest) returns (IssueStampCardResponse);
+  // スタンプを追加する
+  rpc AddStamp(AddStampRequest) returns (AddStampResponse);
+  // スタンプ報酬を交換する
+  rpc RedeemStampReward(RedeemStampRewardRequest) returns (RedeemStampRewardResponse);
 }
 
 // スタッフロール
@@ -598,4 +609,83 @@ message GetConsentRequest {
 message GetConsentResponse {
   // 同意リスト
   repeated DataProcessingConsent consents = 1;
+}
+
+// === スタンプカード ===
+
+// スタンプカード
+// 顧客のポイントカード（スタンプ式ロイヤリティプログラム）
+message StampCard {
+  // スタンプカードID
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 顧客ID
+  string customer_id = 3;
+  // 現在のスタンプ数
+  int32 stamp_count = 4;
+  // 最大スタンプ数（報酬獲得に必要な数）
+  int32 max_stamps = 5;
+  // 報酬の説明
+  string reward_description = 6;
+  // ステータス（ACTIVE, COMPLETED, EXPIRED）
+  string status = 7;
+  // 発行日時（ISO 8601）
+  string issued_at = 8;
+  // 作成日時（ISO 8601）
+  string created_at = 9;
+  // 更新日時（ISO 8601）
+  string updated_at = 10;
+}
+
+// スタンプカード取得リクエスト
+message GetStampCardRequest {
+  // 顧客ID（必須）
+  string customer_id = 1;
+}
+
+// スタンプカード取得レスポンス
+message GetStampCardResponse {
+  // スタンプカード
+  StampCard stamp_card = 1;
+}
+
+// スタンプカード発行リクエスト
+message IssueStampCardRequest {
+  // 顧客ID（必須）
+  string customer_id = 1;
+  // 最大スタンプ数（デフォルト10）
+  int32 max_stamps = 2;
+  // 報酬の説明
+  string reward_description = 3;
+}
+
+// スタンプカード発行レスポンス
+message IssueStampCardResponse {
+  // 発行されたスタンプカード
+  StampCard stamp_card = 1;
+}
+
+// スタンプ追加リクエスト
+message AddStampRequest {
+  // 顧客ID（必須）
+  string customer_id = 1;
+}
+
+// スタンプ追加レスポンス
+message AddStampResponse {
+  // 更新後のスタンプカード
+  StampCard stamp_card = 1;
+}
+
+// スタンプ報酬交換リクエスト
+message RedeemStampRewardRequest {
+  // 顧客ID（必須）
+  string customer_id = 1;
+}
+
+// スタンプ報酬交換レスポンス
+message RedeemStampRewardResponse {
+  // リセット後のスタンプカード
+  StampCard stamp_card = 1;
 }

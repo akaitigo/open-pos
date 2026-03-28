@@ -460,6 +460,22 @@ fun openpos.pos.v1.GiftCard.toMap(): Map<String, Any?> =
         "updatedAt" to updatedAt,
     )
 
+// === スタンプカード ===
+
+fun openpos.store.v1.StampCard.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "customerId" to customerId,
+        "stampCount" to stampCount,
+        "maxStamps" to maxStamps,
+        "rewardDescription" to rewardDescription.ifEmpty { null },
+        "status" to status,
+        "issuedAt" to issuedAt,
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
 // === ページネーション ===
 
 fun PaginationResponse.toMap(): Map<String, Any> =
