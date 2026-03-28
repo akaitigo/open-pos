@@ -6,16 +6,12 @@ import com.openpos.store.entity.DataProcessingConsentEntity
 import com.openpos.store.entity.OrganizationEntity
 import com.openpos.store.entity.StaffEntity
 import com.openpos.store.entity.StoreEntity
-import com.openpos.store.repository.AttendanceRepository
 import com.openpos.store.repository.AuditLogRepository
 import com.openpos.store.repository.CustomerRepository
 import com.openpos.store.repository.DataProcessingConsentRepository
-import com.openpos.store.repository.FavoriteProductRepository
 import com.openpos.store.repository.GiftCardRepository
-import com.openpos.store.repository.NotificationRepository
 import com.openpos.store.repository.OrganizationRepository
 import com.openpos.store.repository.PointTransactionRepository
-import com.openpos.store.repository.ShiftRepository
 import com.openpos.store.repository.StaffRepository
 import com.openpos.store.repository.StoreRepository
 import com.openpos.store.repository.SubscriptionRepository
@@ -45,10 +41,6 @@ class GdprServiceTest {
     private val staffRepository = mock<StaffRepository>()
     private val customerRepository = mock<CustomerRepository>()
     private val terminalRepository = mock<TerminalRepository>()
-    private val attendanceRepository = mock<AttendanceRepository>()
-    private val shiftRepository = mock<ShiftRepository>()
-    private val notificationRepository = mock<NotificationRepository>()
-    private val favoriteProductRepository = mock<FavoriteProductRepository>()
     private val pointTransactionRepository = mock<PointTransactionRepository>()
     private val giftCardRepository = mock<GiftCardRepository>()
     private val webhookRepository = mock<WebhookRepository>()
@@ -68,10 +60,6 @@ class GdprServiceTest {
                 this.staffRepository = this@GdprServiceTest.staffRepository
                 this.customerRepository = this@GdprServiceTest.customerRepository
                 this.terminalRepository = this@GdprServiceTest.terminalRepository
-                this.attendanceRepository = this@GdprServiceTest.attendanceRepository
-                this.shiftRepository = this@GdprServiceTest.shiftRepository
-                this.notificationRepository = this@GdprServiceTest.notificationRepository
-                this.favoriteProductRepository = this@GdprServiceTest.favoriteProductRepository
                 this.pointTransactionRepository = this@GdprServiceTest.pointTransactionRepository
                 this.giftCardRepository = this@GdprServiceTest.giftCardRepository
                 this.webhookRepository = this@GdprServiceTest.webhookRepository

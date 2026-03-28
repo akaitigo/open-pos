@@ -14,7 +14,6 @@ import org.junit.jupiter.params.provider.ValueSource
  *
  * 対象外:
  * - OrganizationEntity: テナントルート（自身が organization_id を持たない）
- * - PlanEntity: テナント横断マスタデータ
  */
 class RlsCoverageTest {
     @ParameterizedTest(name = "{0} には organizationFilter が定義されている")
@@ -24,11 +23,8 @@ class RlsCoverageTest {
             StaffEntity::class,
             TerminalEntity::class,
             CustomerEntity::class,
-            ShiftEntity::class,
-            AttendanceEntity::class,
             GiftCardEntity::class,
-            FavoriteProductEntity::class,
-            NotificationEntity::class,
+            StampCardEntity::class,
             PointTransactionEntity::class,
             WebhookEntity::class,
             SystemSettingEntity::class,
@@ -64,11 +60,8 @@ class RlsCoverageTest {
                 StaffEntity::class.java,
                 TerminalEntity::class.java,
                 CustomerEntity::class.java,
-                ShiftEntity::class.java,
-                AttendanceEntity::class.java,
                 GiftCardEntity::class.java,
-                FavoriteProductEntity::class.java,
-                NotificationEntity::class.java,
+                StampCardEntity::class.java,
                 PointTransactionEntity::class.java,
                 WebhookEntity::class.java,
                 SystemSettingEntity::class.java,
@@ -88,12 +81,9 @@ class RlsCoverageTest {
 
     @Test
     fun `テナント横断エンティティに organizationFilter が定義されていないことを確認する`() {
-        // OrganizationEntity と PlanEntity はテナント横断のため、
-        // BaseEntity を継承していないことを確認する。
         val crossTenantEntities =
             listOf(
                 OrganizationEntity::class.java,
-                PlanEntity::class.java,
             )
 
         for (entityClass in crossTenantEntities) {
