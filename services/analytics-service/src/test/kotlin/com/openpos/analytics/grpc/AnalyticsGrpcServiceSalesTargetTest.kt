@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -249,7 +250,7 @@ class AnalyticsGrpcServiceSalesTargetTest {
         fun `empty store_id passes null to service`() {
             // Arrange
             val entity = buildEntity(entityStoreId = null)
-            whenever(salesTargetService.upsert(any(), any(), any())).thenReturn(entity)
+            whenever(salesTargetService.upsert(anyOrNull(), any(), any())).thenReturn(entity)
 
             val observer = CapturingObserver<UpsertSalesTargetResponse>()
 
