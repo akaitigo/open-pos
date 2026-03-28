@@ -13,6 +13,7 @@ import com.openpos.pos.grpc.InvalidInputException
 import com.openpos.pos.grpc.ProductServiceClient
 import com.openpos.pos.grpc.ProductSnapshot
 import com.openpos.pos.grpc.ResourceNotFoundException
+import com.openpos.pos.grpc.TaxRateSnapshot
 import com.openpos.pos.repository.PaymentRepository
 import com.openpos.pos.repository.TaxSummaryRepository
 import com.openpos.pos.repository.TransactionDiscountRepository
@@ -723,6 +724,116 @@ class TransactionServiceUnitTest {
             val result = service.fetchProductSnapshot(productId, orgId)
 
             assertEquals("Test Product", result.name)
+        }
+    }
+
+    @Nested
+    inner class AddCustomItem {
+        private val standardTaxRate = TaxRateSnapshot(name = "Standard 10%", rate = "0.10", isReduced = false)
+        private val reducedTaxRate = TaxRateSnapshot(name = "Reduced 8%", rate = "0.08", isReduced = true)
+
+        @Test
+        fun `adds custom item to transaction`() {
+            val tx = createTransactionEntity()
+            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            val result = service.addCustomItem(tx.id, "Hand-made item", 50000, 1, standardTaxRate)
+            assertNotNull(result)
+            assertEquals("DRAFT", result.status)
+            verify(itemRepository).persist(any<TransactionItemEntity>())
+        }
+
+        @Test
+        fun `creates item with null productId and correct tax calculation`() {
+            val tx = createTransactionEntity()
+            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            service.addCustomItem(tx.id, "Custom item", 30000, 2, standardTaxRate)
+            verify(itemRepository).persist(
+                org.mockito.kotlin.argThat<TransactionItemEntity> { item ->
+                    item.productId == null && item.productName == "Custom item" && item.unitPrice == 30000L && item.quantity == 2 &&
+                        item.subtotal == 60000L &&
+                        item.taxAmount == 6000L &&
+                        item.total == 66000L
+                },
+            )
+        }
+
+        @Test
+        fun `supports reduced tax rate`() {
+            val tx = createTransactionEntity()
+            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            service.addCustomItem(tx.id, "Food item", 10000, 1, reducedTaxRate)
+            verify(itemRepository).persist(
+                org.mockito.kotlin.argThat<TransactionItemEntity> { item ->
+                    item.productId == null && item.taxRateName == "Reduced 8%" && item.taxRate == "0.08" && item.isReducedTax &&
+                        item.subtotal == 10000L &&
+                        item.taxAmount == 800L &&
+                        item.total == 10800L
+                },
+            )
+        }
+
+        @Test
+        fun `throws on zero quantity`() {
+            assertThrows(InvalidInputException::class.java) { service.addCustomItem(UUID.randomUUID(), "Item", 10000, 0, standardTaxRate) }
+        }
+
+        @Test
+        fun `throws on negative unit price`() {
+            assertThrows(InvalidInputException::class.java) { service.addCustomItem(UUID.randomUUID(), "Item", -1, 1, standardTaxRate) }
+        }
+
+        @Test
+        fun `throws on blank product name`() {
+            assertThrows(InvalidInputException::class.java) { service.addCustomItem(UUID.randomUUID(), "  ", 10000, 1, standardTaxRate) }
+        }
+
+        @Test
+        fun `throws when transaction not found`() {
+            whenever(transactionRepository.findById(any<UUID>())).thenReturn(null)
+            assertThrows(
+                ResourceNotFoundException::class.java,
+            ) { service.addCustomItem(UUID.randomUUID(), "Item", 10000, 1, standardTaxRate) }
+        }
+
+        @Test
+        fun `throws when transaction is not DRAFT`() {
+            val tx = createTransactionEntity().apply { this.status = "COMPLETED" }
+            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            assertThrows(BusinessPreconditionException::class.java) { service.addCustomItem(tx.id, "Item", 10000, 1, standardTaxRate) }
+        }
+
+        @Test
+        fun `allows zero unit price for complimentary items`() {
+            val tx = createTransactionEntity()
+            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
+            val result = service.addCustomItem(tx.id, "Free sample", 0, 1, standardTaxRate)
+            assertNotNull(result)
+            verify(itemRepository).persist(
+                org.mockito.kotlin.argThat<TransactionItemEntity> { item ->
+                    item.unitPrice == 0L &&
+                        item.subtotal == 0L &&
+                        item.taxAmount == 0L &&
+                        item.total == 0L
+                },
+            )
+        }
+
+        @Test
+        fun `fetchTaxRateSnapshot delegates to client`() {
+            val taxRateId = UUID.randomUUID()
+            whenever(productServiceClient.getTaxRateSnapshot(taxRateId, orgId)).thenReturn(standardTaxRate)
+            val result = service.fetchTaxRateSnapshot(taxRateId, orgId)
+            assertEquals("Standard 10%", result.name)
+            assertEquals("0.10", result.rate)
+            assertEquals(false, result.isReduced)
         }
     }
 

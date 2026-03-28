@@ -24,8 +24,8 @@ class TransactionItemEntity : BaseEntity() {
     @Column(name = "transaction_id", nullable = false)
     lateinit var transactionId: UUID
 
-    @Column(name = "product_id", nullable = false)
-    lateinit var productId: UUID
+    @Column(name = "product_id", nullable = true)
+    var productId: UUID? = null
 
     @Column(name = "product_name", nullable = false, length = 255)
     lateinit var productName: String

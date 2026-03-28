@@ -14,7 +14,9 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
@@ -24,6 +26,7 @@ class StockTransferServiceTest {
     private val stockTransferRepository = mock<StockTransferRepository>()
     private val tenantFilterService = mock<TenantFilterService>()
     private val organizationIdHolder = mock<OrganizationIdHolder>()
+    private val stockService = mock<StockService>()
 
     private val orgId = UUID.randomUUID()
 
@@ -34,6 +37,7 @@ class StockTransferServiceTest {
                 this.stockTransferRepository = this@StockTransferServiceTest.stockTransferRepository
                 this.tenantFilterService = this@StockTransferServiceTest.tenantFilterService
                 this.organizationIdHolder = this@StockTransferServiceTest.organizationIdHolder
+                this.stockService = this@StockTransferServiceTest.stockService
             }
         whenever(organizationIdHolder.organizationId).thenReturn(orgId)
     }
@@ -124,6 +128,47 @@ class StockTransferServiceTest {
     }
 
     @Nested
+    inner class ListByStoreId {
+        @Test
+        fun `returns filtered results by store`() {
+            val storeId = UUID.randomUUID()
+            val items =
+                listOf(
+                    StockTransferEntity().apply {
+                        id = UUID.randomUUID()
+                        organizationId = orgId
+                        fromStoreId = storeId
+                        toStoreId = UUID.randomUUID()
+                        this.items = "[]"
+                        status = "PENDING"
+                    },
+                )
+            whenever(stockTransferRepository.listByStoreId(eq(storeId), eq(null), any<Page>())).thenReturn(items)
+            whenever(stockTransferRepository.countByStoreId(eq(storeId), eq(null))).thenReturn(1L)
+
+            val (result, total) = service.listByStoreId(storeId, null, 0, 20)
+
+            assertEquals(1, result.size)
+            assertEquals(1L, total)
+            verify(tenantFilterService).enableFilter()
+        }
+
+        @Test
+        fun `returns filtered results by store and status`() {
+            val storeId = UUID.randomUUID()
+            whenever(
+                stockTransferRepository.listByStoreId(eq(storeId), eq("PENDING"), any<Page>()),
+            ).thenReturn(emptyList())
+            whenever(stockTransferRepository.countByStoreId(eq(storeId), eq("PENDING"))).thenReturn(0L)
+
+            val (result, total) = service.listByStoreId(storeId, "PENDING", 0, 20)
+
+            assertEquals(0, result.size)
+            assertEquals(0L, total)
+        }
+    }
+
+    @Nested
     inner class UpdateStatus {
         @Test
         fun `changes status`() {
@@ -153,6 +198,164 @@ class StockTransferServiceTest {
             val result = service.updateStatus(UUID.randomUUID(), "IN_TRANSIT")
 
             assertNull(result)
+        }
+    }
+
+    @Nested
+    inner class Complete {
+        private val fromStoreId = UUID.randomUUID()
+        private val toStoreId = UUID.randomUUID()
+        private val productId1 = UUID.randomUUID()
+        private val productId2 = UUID.randomUUID()
+
+        @Test
+        fun `completes transfer and adjusts stock for all items`() {
+            // Arrange
+            val transferId = UUID.randomUUID()
+            val itemsJson =
+                """[{"productId":"$productId1","quantity":5},{"productId":"$productId2","quantity":3}]"""
+            val entity =
+                StockTransferEntity().apply {
+                    id = transferId
+                    organizationId = orgId
+                    this.fromStoreId = this@Complete.fromStoreId
+                    this.toStoreId = this@Complete.toStoreId
+                    items = itemsJson
+                    status = "PENDING"
+                }
+            whenever(stockTransferRepository.findById(transferId)).thenReturn(entity)
+            doNothing().whenever(stockTransferRepository).persist(any<StockTransferEntity>())
+            whenever(stockService.adjustStock(any(), any(), any(), any(), any(), any())).thenReturn(mock())
+
+            // Act
+            val result = service.complete(transferId)
+
+            // Assert
+            assertEquals("COMPLETED", result.status)
+            // 2 items x 2 adjustments (source decrement + destination increment) = 4 calls
+            verify(stockService, times(4)).adjustStock(any(), any(), any(), any(), any(), any())
+            verify(stockService).adjustStock(
+                eq(fromStoreId),
+                eq(productId1),
+                eq(-5),
+                eq("TRANSFER"),
+                eq(transferId.toString()),
+                any(),
+            )
+            verify(stockService).adjustStock(
+                eq(toStoreId),
+                eq(productId1),
+                eq(5),
+                eq("TRANSFER"),
+                eq(transferId.toString()),
+                any(),
+            )
+        }
+
+        @Test
+        fun `throws when transfer not found`() {
+            whenever(stockTransferRepository.findById(any<UUID>())).thenReturn(null)
+
+            assertThrows(IllegalArgumentException::class.java) {
+                service.complete(UUID.randomUUID())
+            }
+        }
+
+        @Test
+        fun `throws when status is COMPLETED`() {
+            val transferId = UUID.randomUUID()
+            val entity =
+                StockTransferEntity().apply {
+                    id = transferId
+                    organizationId = orgId
+                    fromStoreId = this@Complete.fromStoreId
+                    toStoreId = this@Complete.toStoreId
+                    items = "[]"
+                    status = "COMPLETED"
+                }
+            whenever(stockTransferRepository.findById(transferId)).thenReturn(entity)
+
+            assertThrows(IllegalArgumentException::class.java) {
+                service.complete(transferId)
+            }
+        }
+
+        @Test
+        fun `throws when status is CANCELLED`() {
+            val transferId = UUID.randomUUID()
+            val entity =
+                StockTransferEntity().apply {
+                    id = transferId
+                    organizationId = orgId
+                    fromStoreId = this@Complete.fromStoreId
+                    toStoreId = this@Complete.toStoreId
+                    items = "[]"
+                    status = "CANCELLED"
+                }
+            whenever(stockTransferRepository.findById(transferId)).thenReturn(entity)
+
+            assertThrows(IllegalArgumentException::class.java) {
+                service.complete(transferId)
+            }
+        }
+
+        @Test
+        fun `allows completing IN_TRANSIT transfers`() {
+            val transferId = UUID.randomUUID()
+            val itemsJson = """[{"productId":"$productId1","quantity":2}]"""
+            val entity =
+                StockTransferEntity().apply {
+                    id = transferId
+                    organizationId = orgId
+                    this.fromStoreId = this@Complete.fromStoreId
+                    this.toStoreId = this@Complete.toStoreId
+                    items = itemsJson
+                    status = "IN_TRANSIT"
+                }
+            whenever(stockTransferRepository.findById(transferId)).thenReturn(entity)
+            doNothing().whenever(stockTransferRepository).persist(any<StockTransferEntity>())
+            whenever(stockService.adjustStock(any(), any(), any(), any(), any(), any())).thenReturn(mock())
+
+            val result = service.complete(transferId)
+
+            assertEquals("COMPLETED", result.status)
+        }
+    }
+
+    @Nested
+    inner class ParseItems {
+        @Test
+        fun `parses valid JSON items`() {
+            val productId = UUID.randomUUID()
+            val json = """[{"productId":"$productId","quantity":10}]"""
+
+            val result = service.parseItems(json)
+
+            assertEquals(1, result.size)
+            assertEquals(productId, result[0].productId)
+            assertEquals(10, result[0].quantity)
+        }
+
+        @Test
+        fun `parses multiple items`() {
+            val pid1 = UUID.randomUUID()
+            val pid2 = UUID.randomUUID()
+            val json = """[{"productId":"$pid1","quantity":5},{"productId":"$pid2","quantity":3}]"""
+
+            val result = service.parseItems(json)
+
+            assertEquals(2, result.size)
+            assertEquals(pid1, result[0].productId)
+            assertEquals(5, result[0].quantity)
+            assertEquals(pid2, result[1].productId)
+            assertEquals(3, result[1].quantity)
+        }
+
+        @Test
+        fun `returns empty list for empty array`() {
+            val result = service.parseItems("[]")
+
+            assertEquals(0, result.size)
         }
     }
 }

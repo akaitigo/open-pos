@@ -77,6 +77,9 @@ service PosService {
   // 予約をキャンセルする
   rpc CancelReservation(CancelReservationRequest) returns (CancelReservationResponse);
   // スタッフ別売上レポートを取得する
+  // 税率別レポートを取得する（確定申告用）
+  rpc GetTaxReport(GetTaxReportRequest) returns (GetTaxReportResponse);
+  // スタッフ別売上レポートを取得する
   rpc GetStaffSalesReport(GetStaffSalesReportRequest) returns (GetStaffSalesReportResponse);
 }
 

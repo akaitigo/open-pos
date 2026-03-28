@@ -16,8 +16,6 @@ import com.openpos.pos.service.JournalService
 import com.openpos.pos.service.OfflineItemInput
 import com.openpos.pos.service.PaymentInput
 import com.openpos.pos.service.SettlementService
-import com.openpos.pos.service.TaxReportService
-import com.openpos.pos.repository.TransactionRepository
 import com.openpos.pos.service.TransactionService
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -46,8 +44,8 @@ import openpos.pos.v1.GetReceiptRequest
 import openpos.pos.v1.GetReceiptResponse
 import openpos.pos.v1.GetSettlementRequest
 import openpos.pos.v1.GetSettlementResponse
-import openpos.pos.v1.GetTaxReportRequest
-import openpos.pos.v1.GetTaxReportResponse
+import openpos.pos.v1.GetStaffSalesReportRequest
+import openpos.pos.v1.GetStaffSalesReportResponse
 import openpos.pos.v1.GetTransactionRequest
 import openpos.pos.v1.GetTransactionResponse
 import openpos.pos.v1.JournalEntry
@@ -64,13 +62,10 @@ import openpos.pos.v1.Receipt
 import openpos.pos.v1.RemoveTransactionItemRequest
 import openpos.pos.v1.RemoveTransactionItemResponse
 import openpos.pos.v1.Settlement
+import openpos.pos.v1.StaffSalesItem
 import openpos.pos.v1.SyncOfflineTransactionsRequest
 import openpos.pos.v1.SyncOfflineTransactionsResponse
-import openpos.pos.v1.GetStaffSalesReportRequest
-import openpos.pos.v1.GetStaffSalesReportResponse
-import openpos.pos.v1.StaffSalesItem
 import openpos.pos.v1.SyncResult
-import openpos.pos.v1.TaxReportItem
 import openpos.pos.v1.TaxSummary
 import openpos.pos.v1.Transaction
 import openpos.pos.v1.TransactionDiscount
@@ -103,9 +98,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     lateinit var giftCardService: GiftCardService
 
     @Inject
-    lateinit var taxReportService: TaxReportService
-
-    @Inject
     lateinit var productServiceClient: ProductServiceClient
 
     @Inject
@@ -113,9 +105,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
 
     @Inject
     lateinit var storeServiceClient: StoreServiceClient
-
-    @Inject
-    lateinit var transactionRepository: TransactionRepository
 
     // === Create ===
 
@@ -1203,50 +1192,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         )
         responseObserver.onCompleted()
     }
-
-
-    // === Tax Report (#1031) ===
-
-    override fun getTaxReport(
-        request: GetTaxReportRequest,
-        responseObserver: StreamObserver<GetTaxReportResponse>,
-    ) {
-        tenantHelper.setupTenantContext()
-        try {
-            require(request.storeId.isNotBlank()) { "store_id is required" }
-            require(request.hasDateRange()) { "date_range is required" }
-            require(request.dateRange.start.isNotBlank()) { "date_range.start is required" }
-            require(request.dateRange.end.isNotBlank()) { "date_range.end is required" }
-
-            val items =
-                taxReportService.getTaxReport(
-                    storeId = request.storeId.toUUID(),
-                    startDate = Instant.parse(request.dateRange.start),
-                    endDate = Instant.parse(request.dateRange.end),
-                )
-            responseObserver.onNext(
-                GetTaxReportResponse
-                    .newBuilder()
-                    .addAllItems(
-                        items.map { item ->
-                            TaxReportItem
-                                .newBuilder()
-                                .setTaxRateName(item.taxRateName)
-                                .setTaxRatePercentage(item.taxRatePercentage)
-                                .setIsReduced(item.isReduced)
-                                .setTaxableAmount(item.taxableAmount)
-                                .setTaxAmount(item.taxAmount)
-                                .setTransactionCount(item.transactionCount)
-                                .build()
-                        },
-                    ).build(),
-            )
-            responseObserver.onCompleted()
-        } catch (e: Exception) {
-            throw mapToGrpcException(e)
-        }
-    }
-
 
     // === Staff Sales Report (#1029) ===
 
