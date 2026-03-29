@@ -1,6 +1,9 @@
 package com.openpos.gateway.resource
 
+import com.openpos.gateway.config.GrpcClientHelper
 import com.openpos.gateway.config.TenantContext
+import com.openpos.gateway.config.toMap
+import io.quarkus.grpc.GrpcClient
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
 import jakarta.ws.rs.DefaultValue
@@ -11,11 +14,16 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Response
+import openpos.pos.v1.CancelReservationRequest
+import openpos.pos.v1.CreateReservationRequest
+import openpos.pos.v1.FulfillReservationRequest
+import openpos.pos.v1.GetReservationRequest
+import openpos.pos.v1.ListReservationsRequest
+import openpos.pos.v1.PosServiceGrpc
 import org.eclipse.microprofile.faulttolerance.Timeout
 
 /**
  * 予約注文 REST リソース（#193）。
- * gRPC バックエンドが未整備のため全エンドポイントが 501 を返す。
  * RBAC: 予約一覧は全ロール、作成/履行/キャンセルは OWNER/MANAGER のみ。
  */
 @Path("/api/reservations")
@@ -23,13 +31,14 @@ import org.eclipse.microprofile.faulttolerance.Timeout
 @Timeout(30000)
 class ReservationResource {
     @Inject
-    lateinit var tenantContext: TenantContext
+    @GrpcClient("pos-service")
+    lateinit var stub: PosServiceGrpc.PosServiceBlockingStub
 
-    private fun notImplemented(): Response =
-        Response
-            .status(501)
-            .entity(mapOf("error" to "NOT_IMPLEMENTED", "message" to "Reservation API is not yet implemented"))
-            .build()
+    @Inject
+    lateinit var grpc: GrpcClientHelper
+
+    @Inject
+    lateinit var tenantContext: TenantContext
 
     @GET
     fun list(
@@ -37,33 +46,64 @@ class ReservationResource {
         @QueryParam("status") status: String?,
         @QueryParam("page") @DefaultValue("1") page: Int,
         @QueryParam("pageSize") @DefaultValue("20") pageSize: Int,
-    ): Response {
+    ): Map<String, Any?> {
         tenantContext.requireRole("OWNER", "MANAGER", "CASHIER")
-        return notImplemented()
+        val request =
+            ListReservationsRequest
+                .newBuilder()
+                .apply {
+                    storeId?.let { setStoreId(it) }
+                    status?.let { setStatus(it) }
+                }.build()
+        val response = grpc.withTenant(stub).listReservations(request)
+        return mapOf("data" to response.reservationsList.map { it.toMap() })
     }
 
     @POST
     fun create(body: CreateReservationBody): Response {
         tenantContext.requireRole("OWNER", "MANAGER")
-        return notImplemented()
+        val request =
+            CreateReservationRequest
+                .newBuilder()
+                .setStoreId(body.storeId)
+                .setCustomerName(body.customerName.orEmpty())
+                .setCustomerPhone(body.customerPhone.orEmpty())
+                .setItems(
+                    body.items
+                        .joinToString(",", "[", "]") { """{"productId":"${it.productId}","quantity":${it.quantity}}""" },
+                ).setReservedUntil(body.reservedUntil)
+                .setNote(body.note.orEmpty())
+                .build()
+        val response = grpc.withTenant(stub).createReservation(request)
+        return Response.status(Response.Status.CREATED).entity(response.reservation.toMap()).build()
     }
 
     @PUT
     @Path("/{id}/fulfill")
     fun fulfill(
         @PathParam("id") id: String,
-    ): Response {
+    ): Map<String, Any?> {
         tenantContext.requireRole("OWNER", "MANAGER")
-        return notImplemented()
+        val request = FulfillReservationRequest.newBuilder().setId(id).build()
+        return grpc
+            .withTenant(stub)
+            .fulfillReservation(request)
+            .reservation
+            .toMap()
     }
 
     @PUT
     @Path("/{id}/cancel")
     fun cancel(
         @PathParam("id") id: String,
-    ): Response {
+    ): Map<String, Any?> {
         tenantContext.requireRole("OWNER", "MANAGER")
-        return notImplemented()
+        val request = CancelReservationRequest.newBuilder().setId(id).build()
+        return grpc
+            .withTenant(stub)
+            .cancelReservation(request)
+            .reservation
+            .toMap()
     }
 }
 

@@ -1,11 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/lib/api'
-import { DailySalesResponseSchema, SalesSummarySchema, formatMoney } from '@shared-types/openpos'
+import {
+  DailySalesResponseSchema,
+  PaginatedStoresSchema,
+  SalesSummarySchema,
+  formatMoney,
+} from '@shared-types/openpos'
 import type { DailySales, SalesSummary } from '@shared-types/openpos'
 import { Printer } from 'lucide-react'
 
@@ -24,16 +29,27 @@ export function ReportsPage() {
   const [dailySales, setDailySales] = useState<DailySales[] | null>(null)
   const [summary, setSummary] = useState<SalesSummary | null>(null)
   const [loading, setLoading] = useState(false)
+  const [storeId, setStoreId] = useState<string | null>(null)
+
+  useEffect(() => {
+    api
+      .get('/api/stores', PaginatedStoresSchema, { params: { page: 1, pageSize: 1 } })
+      .then((r) => {
+        if (r.data[0]) setStoreId(r.data[0].id)
+      })
+      .catch(() => {})
+  }, [])
 
   async function handleGenerate() {
+    if (!storeId) return
     setLoading(true)
     try {
       const [dailyRes, summaryData] = await Promise.all([
         api.get('/api/analytics/daily-sales', DailySalesResponseSchema, {
-          params: { startDate, endDate },
+          params: { storeId, startDate, endDate },
         }),
         api.get('/api/analytics/summary', SalesSummarySchema, {
-          params: { startDate, endDate },
+          params: { storeId, startDate, endDate },
         }),
       ])
       setDailySales(dailyRes.data)

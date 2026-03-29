@@ -10,11 +10,13 @@ import com.openpos.pos.entity.TaxSummaryEntity
 import com.openpos.pos.entity.TransactionDiscountEntity
 import com.openpos.pos.entity.TransactionEntity
 import com.openpos.pos.entity.TransactionItemEntity
+import com.openpos.pos.service.DiscountReasonService
 import com.openpos.pos.service.DrawerService
 import com.openpos.pos.service.GiftCardService
 import com.openpos.pos.service.JournalService
 import com.openpos.pos.service.OfflineItemInput
 import com.openpos.pos.service.PaymentInput
+import com.openpos.pos.service.ReservationService
 import com.openpos.pos.service.SettlementService
 import com.openpos.pos.service.TransactionService
 import io.grpc.Status
@@ -96,6 +98,12 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
 
     @Inject
     lateinit var giftCardService: GiftCardService
+
+    @Inject
+    lateinit var discountReasonService: DiscountReasonService
+
+    @Inject
+    lateinit var reservationService: ReservationService
 
     @Inject
     lateinit var productServiceClient: ProductServiceClient
@@ -1249,6 +1257,211 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             throw mapToGrpcException(e)
         }
     }
+
+    // === DiscountReason (#1034) ===
+
+    override fun listDiscountReasons(
+        request: openpos.pos.v1.ListDiscountReasonsRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.ListDiscountReasonsResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val reasons = discountReasonService.listActive()
+            responseObserver.onNext(
+                openpos.pos.v1.ListDiscountReasonsResponse
+                    .newBuilder()
+                    .addAllDiscountReasons(reasons.map { it.toDiscountReasonProto() })
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    override fun createDiscountReason(
+        request: openpos.pos.v1.CreateDiscountReasonRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.CreateDiscountReasonResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val entity = discountReasonService.create(request.code, request.description)
+            responseObserver.onNext(
+                openpos.pos.v1.CreateDiscountReasonResponse
+                    .newBuilder()
+                    .setDiscountReason(entity.toDiscountReasonProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    override fun updateDiscountReason(
+        request: openpos.pos.v1.UpdateDiscountReasonRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.UpdateDiscountReasonResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val entity =
+                discountReasonService.update(
+                    id = request.id.toUUID(),
+                    description = request.description.ifBlank { null },
+                    isActive = if (request.hasIsActive()) request.isActive.value else null,
+                ) ?: throw Status.NOT_FOUND.withDescription("DiscountReason not found: ${request.id}").asRuntimeException()
+            responseObserver.onNext(
+                openpos.pos.v1.UpdateDiscountReasonResponse
+                    .newBuilder()
+                    .setDiscountReason(entity.toDiscountReasonProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    private fun com.openpos.pos.entity.DiscountReasonEntity.toDiscountReasonProto(): openpos.pos.v1.DiscountReason =
+        openpos.pos.v1.DiscountReason
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setCode(code)
+            .setDescription(description)
+            .setIsActive(isActive)
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .build()
+
+    // === Reservation (#1035) ===
+
+    override fun listReservations(
+        request: openpos.pos.v1.ListReservationsRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.ListReservationsResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val storeId = request.storeId.toUUID()
+            val status = request.status.ifBlank { null }
+            val (reservations, _) = reservationService.listByStoreId(storeId, status, 0, 100)
+            responseObserver.onNext(
+                openpos.pos.v1.ListReservationsResponse
+                    .newBuilder()
+                    .addAllReservations(reservations.map { it.toReservationProto() })
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    override fun createReservation(
+        request: openpos.pos.v1.CreateReservationRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.CreateReservationResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        try {
+            val entity =
+                reservationService.create(
+                    storeId = request.storeId.toUUID(),
+                    customerName = request.customerName.ifBlank { null },
+                    customerPhone = request.customerPhone.ifBlank { null },
+                    items = request.items,
+                    reservedUntil = Instant.parse(request.reservedUntil),
+                    note = request.note.ifBlank { null },
+                )
+            responseObserver.onNext(
+                openpos.pos.v1.CreateReservationResponse
+                    .newBuilder()
+                    .setReservation(entity.toReservationProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    override fun getReservation(
+        request: openpos.pos.v1.GetReservationRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.GetReservationResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val entity =
+                reservationService.findById(request.id.toUUID())
+                    ?: throw Status.NOT_FOUND.withDescription("Reservation not found: ${request.id}").asRuntimeException()
+            responseObserver.onNext(
+                openpos.pos.v1.GetReservationResponse
+                    .newBuilder()
+                    .setReservation(entity.toReservationProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    override fun fulfillReservation(
+        request: openpos.pos.v1.FulfillReservationRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.FulfillReservationResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val entity =
+                reservationService.fulfill(request.id.toUUID())
+                    ?: throw Status.NOT_FOUND.withDescription("Reservation not found: ${request.id}").asRuntimeException()
+            responseObserver.onNext(
+                openpos.pos.v1.FulfillReservationResponse
+                    .newBuilder()
+                    .setReservation(entity.toReservationProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    override fun cancelReservation(
+        request: openpos.pos.v1.CancelReservationRequest,
+        responseObserver: StreamObserver<openpos.pos.v1.CancelReservationResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        try {
+            val entity =
+                reservationService.cancel(request.id.toUUID())
+                    ?: throw Status.NOT_FOUND.withDescription("Reservation not found: ${request.id}").asRuntimeException()
+            responseObserver.onNext(
+                openpos.pos.v1.CancelReservationResponse
+                    .newBuilder()
+                    .setReservation(entity.toReservationProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    private fun com.openpos.pos.entity.ReservationEntity.toReservationProto(): openpos.pos.v1.Reservation =
+        openpos.pos.v1.Reservation
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setStoreId(storeId.toString())
+            .setCustomerName(customerName.orEmpty())
+            .setCustomerPhone(customerPhone.orEmpty())
+            .setItems(items)
+            .setReservedUntil(reservedUntil.toString())
+            .setStatus(status)
+            .setNote(note.orEmpty())
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .build()
 
     private fun GiftCardEntity.toGiftCardProto(): openpos.pos.v1.GiftCard =
         openpos.pos.v1.GiftCard

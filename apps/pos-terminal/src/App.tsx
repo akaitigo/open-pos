@@ -7,6 +7,9 @@ import { ProductsPage } from '@/routes/products'
 
 const HistoryPage = lazy(() => import('@/routes/history').then((m) => ({ default: m.HistoryPage })))
 const CartPage = lazy(() => import('@/routes/cart').then((m) => ({ default: m.CartPage })))
+const CallbackPage = lazy(() =>
+  import('@/routes/callback').then((m) => ({ default: m.CallbackPage })),
+)
 
 function RouteLoading() {
   return (
@@ -36,6 +39,14 @@ export function App() {
               element={
                 <Suspense fallback={<RouteLoading />}>
                   <HistoryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="callback"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <CallbackPage />
                 </Suspense>
               }
             />
