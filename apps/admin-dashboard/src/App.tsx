@@ -48,6 +48,9 @@ const ExportPage = lazy(() => import('@/routes/export').then((m) => ({ default: 
 const TerminalsPage = lazy(() =>
   import('@/routes/terminals').then((m) => ({ default: m.TerminalsPage })),
 )
+const CallbackPage = lazy(() =>
+  import('@/routes/callback').then((m) => ({ default: m.CallbackPage })),
+)
 const NotFoundPage = lazy(() =>
   import('@/routes/not-found').then((m) => ({ default: m.NotFoundPage })),
 )
@@ -200,6 +203,14 @@ export function App() {
               element={
                 <Suspense fallback={<RouteLoading />}>
                   <TerminalsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="callback"
+              element={
+                <Suspense fallback={<RouteLoading />}>
+                  <CallbackPage />
                 </Suspense>
               }
             />

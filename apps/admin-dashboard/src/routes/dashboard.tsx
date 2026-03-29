@@ -66,6 +66,38 @@ export function DashboardPage() {
             })
             .then((sr) => setStaffCount(sr.pagination.totalCount))
             .catch(() => {})
+
+          // 過去7日間の日次売上
+          api
+            .get('/api/analytics/daily-sales', DailySalesResponseSchema, {
+              params: {
+                storeId: firstStore.id,
+                startDate: daysAgoString(6),
+                endDate: todayString(),
+              },
+            })
+            .then((res) => setDailySales(res.data))
+            .catch(() => {})
+
+          // 今日のサマリー
+          api
+            .get('/api/analytics/summary', SalesSummarySchema, {
+              params: { storeId: firstStore.id, startDate: todayString(), endDate: todayString() },
+            })
+            .then(setTodaySummary)
+            .catch(() => {})
+
+          // 昨日のサマリー（前日比用）
+          api
+            .get('/api/analytics/summary', SalesSummarySchema, {
+              params: {
+                storeId: firstStore.id,
+                startDate: daysAgoString(1),
+                endDate: daysAgoString(1),
+              },
+            })
+            .then(setYesterdaySummary)
+            .catch(() => {})
         }
       })
       .catch(() => {})
@@ -75,30 +107,6 @@ export function DashboardPage() {
         params: { page: 1, pageSize: 1 },
       })
       .then((r) => setTransactionCount(r.pagination.totalCount))
-      .catch(() => {})
-
-    // 過去7日間の日次売上
-    api
-      .get('/api/analytics/daily-sales', DailySalesResponseSchema, {
-        params: { startDate: daysAgoString(6), endDate: todayString() },
-      })
-      .then((res) => setDailySales(res.data))
-      .catch(() => {})
-
-    // 今日のサマリー
-    api
-      .get('/api/analytics/summary', SalesSummarySchema, {
-        params: { startDate: todayString(), endDate: todayString() },
-      })
-      .then(setTodaySummary)
-      .catch(() => {})
-
-    // 昨日のサマリー（前日比用）
-    api
-      .get('/api/analytics/summary', SalesSummarySchema, {
-        params: { startDate: daysAgoString(1), endDate: daysAgoString(1) },
-      })
-      .then(setYesterdaySummary)
       .catch(() => {})
   }, [])
 

@@ -516,6 +516,52 @@ fun openpos.store.v1.StampCard.toMap(): Map<String, Any?> =
         "updatedAt" to updatedAt,
     )
 
+// === Supplier ===
+
+fun openpos.inventory.v1.Supplier.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "name" to name,
+        "contactPerson" to contactPerson.ifEmpty { null },
+        "email" to email.ifEmpty { null },
+        "phone" to phone.ifEmpty { null },
+        "address" to address.ifEmpty { null },
+        "isActive" to isActive,
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
+// === DiscountReason ===
+
+fun openpos.pos.v1.DiscountReason.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "code" to code,
+        "description" to description,
+        "isActive" to isActive,
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
+// === Reservation ===
+
+fun openpos.pos.v1.Reservation.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "storeId" to storeId,
+        "customerName" to customerName.ifEmpty { null },
+        "customerPhone" to customerPhone.ifEmpty { null },
+        "items" to items,
+        "reservedUntil" to reservedUntil,
+        "status" to status,
+        "note" to note.ifEmpty { null },
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
 // === ページネーション ===
 
 fun PaginationResponse.toMap(): Map<String, Any> =

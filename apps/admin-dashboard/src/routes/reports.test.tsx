@@ -73,6 +73,24 @@ describe('ReportsPage', () => {
     }
 
     mockApi.get.mockImplementation((path: string) => {
+      if (path === '/api/stores') {
+        return Promise.resolve({
+          data: [
+            {
+              id: 'store-1',
+              name: 'テスト店舗',
+              organizationId: 'org-1',
+              address: '',
+              phone: '',
+              timezone: 'Asia/Tokyo',
+              isActive: true,
+              createdAt: '2026-01-01',
+              updatedAt: '2026-01-01',
+            },
+          ],
+          pagination: { page: 1, pageSize: 1, totalCount: 1, totalPages: 1 },
+        })
+      }
       if (path.includes('daily-sales')) return Promise.resolve(mockDailySales)
       if (path.includes('summary')) return Promise.resolve(mockSummary)
       return Promise.resolve({ data: [] })
@@ -104,6 +122,24 @@ describe('ReportsPage', () => {
   it('データ表示後に印刷ボタンが表示される', async () => {
     const user = userEvent.setup()
     mockApi.get.mockImplementation((path: string) => {
+      if (path === '/api/stores') {
+        return Promise.resolve({
+          data: [
+            {
+              id: 'store-1',
+              name: 'テスト店舗',
+              organizationId: 'org-1',
+              address: '',
+              phone: '',
+              timezone: 'Asia/Tokyo',
+              isActive: true,
+              createdAt: '2026-01-01',
+              updatedAt: '2026-01-01',
+            },
+          ],
+          pagination: { page: 1, pageSize: 1, totalCount: 1, totalPages: 1 },
+        })
+      }
       if (path.includes('daily-sales'))
         return Promise.resolve({
           data: [

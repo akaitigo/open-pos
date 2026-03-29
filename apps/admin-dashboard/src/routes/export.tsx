@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/lib/api'
-import { DailySalesResponseSchema, formatMoney } from '@shared-types/openpos'
+import { DailySalesResponseSchema, PaginatedStoresSchema, formatMoney } from '@shared-types/openpos'
 import type { DailySales } from '@shared-types/openpos'
 import { Download } from 'lucide-react'
 
@@ -51,12 +51,23 @@ export function ExportPage() {
   const [endDate, setEndDate] = useState(todayString())
   const [previewData, setPreviewData] = useState<DailySales[] | null>(null)
   const [loading, setLoading] = useState(false)
+  const [storeId, setStoreId] = useState<string | null>(null)
+
+  useEffect(() => {
+    api
+      .get('/api/stores', PaginatedStoresSchema, { params: { page: 1, pageSize: 1 } })
+      .then((r) => {
+        if (r.data[0]) setStoreId(r.data[0].id)
+      })
+      .catch(() => {})
+  }, [])
 
   async function handlePreview() {
+    if (!storeId) return
     setLoading(true)
     try {
       const res = await api.get('/api/analytics/daily-sales', DailySalesResponseSchema, {
-        params: { startDate, endDate },
+        params: { storeId, startDate, endDate },
       })
       setPreviewData(res.data)
     } catch {
