@@ -26,6 +26,9 @@ class ProductSalesEntity : BaseEntity() {
     @Column(name = "product_name", nullable = false)
     var productName: String = ""
 
+    @Column(name = "category_name", nullable = false)
+    var categoryName: String = ""
+
     @Column(name = "quantity_sold", nullable = false)
     var quantitySold: Int = 0
 

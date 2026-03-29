@@ -136,7 +136,10 @@ class TransactionResource {
                 .setTransactionId(id)
                 .setProductId(body.productId)
                 .setQuantity(body.quantity)
-                .build()
+                .apply {
+                    body.customProductName?.let { setCustomProductName(it) }
+                    body.customProductPrice?.let { setCustomProductPrice(it) }
+                }.build()
         return grpc
             .withTenant(stub)
             .addTransactionItem(request)
@@ -309,8 +312,10 @@ data class CreateTransactionBody(
 )
 
 data class AddItemBody(
-    val productId: String,
+    val productId: String = "",
     val quantity: Int = 1,
+    val customProductName: String? = null,
+    val customProductPrice: Long? = null,
 )
 
 data class UpdateItemBody(

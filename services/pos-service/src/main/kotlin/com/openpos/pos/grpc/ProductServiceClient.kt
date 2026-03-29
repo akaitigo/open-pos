@@ -111,6 +111,33 @@ class ProductServiceClient {
         )
     }
 
+    @CircuitBreaker(requestVolumeThreshold = 10, failureRatio = 0.5, delay = 10000)
+    @Retry(maxRetries = 2, delay = 500)
+    fun getTaxRateSnapshot(
+        taxRateId: UUID,
+        organizationId: UUID,
+    ): TaxRateSnapshot {
+        val stub =
+            ProductServiceGrpc
+                .newBlockingStub(channel)
+                .withDeadlineAfter(GRPC_DEADLINE_SECONDS, TimeUnit.SECONDS)
+                .withInterceptors(TenantHeaderInterceptor(organizationId))
+
+        val taxRatesResponse = stub.listTaxRates(ListTaxRatesRequest.getDefaultInstance())
+        val matched: TaxRate =
+            taxRatesResponse.taxRatesList.firstOrNull { it.id == taxRateId.toString() }
+                ?: throw StatusRuntimeException(
+                    io.grpc.Status.NOT_FOUND
+                        .withDescription("Tax rate not found: $taxRateId"),
+                )
+
+        return TaxRateSnapshot(
+            name = matched.name,
+            rate = matched.rate,
+            isReduced = matched.isReduced,
+        )
+    }
+
     /**
      * クーポンコードを検証し、紐付く割引情報を取得する。
      */
@@ -313,4 +340,10 @@ data class DiscountInfo(
     val name: String,
     val discountType: String,
     val value: String,
+)
+
+data class TaxRateSnapshot(
+    val name: String,
+    val rate: String,
+    val isReduced: Boolean,
 )

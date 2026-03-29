@@ -180,4 +180,32 @@ class AnalyticsQueryService {
             )
         }
     }
+
+
+    data class CategorySalesItem(
+        val categoryName: String,
+        val totalAmount: Long,
+        val quantitySold: Int,
+        val transactionCount: Int,
+    )
+
+    fun getCategorySalesReport(
+        storeId: UUID,
+        startDate: LocalDate,
+        endDate: LocalDate,
+    ): List<CategorySalesItem> {
+        tenantFilterService.enableFilter()
+        val raw = productSalesRepository.findAggregatedByStoreAndDateRange(storeId, startDate, endDate)
+
+        return raw
+            .groupBy { it.categoryName.ifBlank { "\u672A\u5206\u985E" } }
+            .map { (categoryName, records) ->
+                CategorySalesItem(
+                    categoryName = categoryName,
+                    totalAmount = records.sumOf { it.totalAmount },
+                    quantitySold = records.sumOf { it.quantitySold },
+                    transactionCount = records.sumOf { it.transactionCount },
+                )
+            }.sortedByDescending { it.totalAmount }
+    }
 }

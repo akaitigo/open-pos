@@ -354,10 +354,14 @@ message ListTransactionsResponse {
 message AddTransactionItemRequest {
   // 取引ID（必須）
   string transaction_id = 1;
-  // 商品ID（必須）
+  // 商品ID（商品マスタ登録済みの場合。カスタム商品の場合は空文字）
   string product_id = 2;
   // 数量（1以上）
   int32 quantity = 3;
+  // カスタム商品名（商品マスタ未登録のアドホック商品用。設定時は product_id を空にする）
+  string custom_product_name = 4;
+  // カスタム商品価格（銭単位。custom_product_name 指定時に必須）
+  int64 custom_product_price = 5;
 }
 
 // 明細更新リクエスト

@@ -10,7 +10,9 @@ import io.grpc.MethodDescriptor
 import io.quarkus.grpc.GrpcClient
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import openpos.common.v1.PaginationRequest
 import openpos.store.v1.GetOrganizationRequest
+import openpos.store.v1.ListStaffRequest
 import openpos.store.v1.StoreServiceGrpc
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -47,6 +49,34 @@ class StoreServiceClient {
             )
         val invoiceNumber = response.organization.invoiceNumber
         return invoiceNumber.ifBlank { null }
+    }
+
+    fun getStaffNameMap(
+        organizationId: UUID,
+        storeId: UUID,
+    ): Map<UUID, String> {
+        val stub =
+            StoreServiceGrpc
+                .newBlockingStub(channel)
+                .withDeadlineAfter(GRPC_DEADLINE_SECONDS, TimeUnit.SECONDS)
+                .withInterceptors(TenantHeaderInterceptor(organizationId))
+
+        val response =
+            stub.listStaff(
+                ListStaffRequest
+                    .newBuilder()
+                    .setStoreId(storeId.toString())
+                    .setPagination(
+                        PaginationRequest
+                            .newBuilder()
+                            .setPage(1)
+                            .setPageSize(100)
+                            .build(),
+                    ).build(),
+            )
+        return response.staffList.associate { staff ->
+            UUID.fromString(staff.id) to staff.name
+        }
     }
 
     private class TenantHeaderInterceptor(
