@@ -35,6 +35,14 @@ service InventoryService {
   rpc CompleteStocktake(CompleteStocktakeRequest) returns (CompleteStocktakeResponse);
   // 棚卸しを取得する
   rpc GetStocktake(GetStocktakeRequest) returns (GetStocktakeResponse);
+  // 仕入先一覧を取得する
+  rpc ListSuppliers(ListSuppliersRequest) returns (ListSuppliersResponse);
+  // 仕入先を作成する
+  rpc CreateSupplier(CreateSupplierRequest) returns (CreateSupplierResponse);
+  // 仕入先を取得する
+  rpc GetSupplier(GetSupplierRequest) returns (GetSupplierResponse);
+  // 仕入先を更新する
+  rpc UpdateSupplier(UpdateSupplierRequest) returns (UpdateSupplierResponse);
 }
 
 // 在庫移動種別
@@ -410,4 +418,61 @@ message GetStocktakeRequest {
 message GetStocktakeResponse {
   // 棚卸し情報
   Stocktake stocktake = 1;
+}
+
+// === 仕入先 ===
+
+message Supplier {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string contact_person = 4;
+  string email = 5;
+  string phone = 6;
+  string address = 7;
+  bool is_active = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+message ListSuppliersRequest {
+  openpos.common.v1.PaginationRequest pagination = 1;
+}
+
+message ListSuppliersResponse {
+  repeated Supplier suppliers = 1;
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+message CreateSupplierRequest {
+  string name = 1;
+  string contact_person = 2;
+  string email = 3;
+  string phone = 4;
+  string address = 5;
+}
+
+message CreateSupplierResponse {
+  Supplier supplier = 1;
+}
+
+message GetSupplierRequest {
+  string id = 1;
+}
+
+message GetSupplierResponse {
+  Supplier supplier = 1;
+}
+
+message UpdateSupplierRequest {
+  string id = 1;
+  string name = 2;
+  string contact_person = 3;
+  string email = 4;
+  string phone = 5;
+  string address = 6;
+}
+
+message UpdateSupplierResponse {
+  Supplier supplier = 1;
 }

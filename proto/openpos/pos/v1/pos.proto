@@ -3,6 +3,7 @@ syntax = "proto3";
 // openpos.pos.v1 パッケージは POS 取引処理の型とサービスを提供します
 package openpos.pos.v1;
 
+import "google/protobuf/wrappers.proto";
 import "openpos/common/v1/common.proto";
 
 option java_multiple_files = true;
@@ -59,6 +60,22 @@ service PosService {
   rpc RedeemGiftCard(RedeemGiftCardRequest) returns (RedeemGiftCardResponse);
   // ギフトカードの残高を確認する
   rpc GetGiftCardBalance(GetGiftCardBalanceRequest) returns (GetGiftCardBalanceResponse);
+  // 値引き理由コード一覧を取得する
+  rpc ListDiscountReasons(ListDiscountReasonsRequest) returns (ListDiscountReasonsResponse);
+  // 値引き理由コードを作成する
+  rpc CreateDiscountReason(CreateDiscountReasonRequest) returns (CreateDiscountReasonResponse);
+  // 値引き理由コードを更新する
+  rpc UpdateDiscountReason(UpdateDiscountReasonRequest) returns (UpdateDiscountReasonResponse);
+  // 予約一覧を取得する
+  rpc ListReservations(ListReservationsRequest) returns (ListReservationsResponse);
+  // 予約を作成する
+  rpc CreateReservation(CreateReservationRequest) returns (CreateReservationResponse);
+  // 予約を取得する
+  rpc GetReservation(GetReservationRequest) returns (GetReservationResponse);
+  // 予約を履行する
+  rpc FulfillReservation(FulfillReservationRequest) returns (FulfillReservationResponse);
+  // 予約をキャンセルする
+  rpc CancelReservation(CancelReservationRequest) returns (CancelReservationResponse);
 }
 
 // 取引種別
@@ -795,4 +812,103 @@ message GetGiftCardBalanceResponse {
   int64 balance = 2;
   // ステータス
   string status = 3;
+}
+
+// === 値引き理由コード ===
+
+message DiscountReason {
+  string id = 1;
+  string organization_id = 2;
+  string code = 3;
+  string description = 4;
+  bool is_active = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message ListDiscountReasonsRequest {}
+
+message ListDiscountReasonsResponse {
+  repeated DiscountReason discount_reasons = 1;
+}
+
+message CreateDiscountReasonRequest {
+  string code = 1;
+  string description = 2;
+}
+
+message CreateDiscountReasonResponse {
+  DiscountReason discount_reason = 1;
+}
+
+message UpdateDiscountReasonRequest {
+  string id = 1;
+  string description = 2;
+  google.protobuf.BoolValue is_active = 3;
+}
+
+message UpdateDiscountReasonResponse {
+  DiscountReason discount_reason = 1;
+}
+
+// === 予約 ===
+
+message Reservation {
+  string id = 1;
+  string organization_id = 2;
+  string store_id = 3;
+  string customer_name = 4;
+  string customer_phone = 5;
+  string items = 6;
+  string reserved_until = 7;
+  string status = 8;
+  string note = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message ListReservationsRequest {
+  string store_id = 1;
+  string status = 2;
+}
+
+message ListReservationsResponse {
+  repeated Reservation reservations = 1;
+}
+
+message CreateReservationRequest {
+  string store_id = 1;
+  string customer_name = 2;
+  string customer_phone = 3;
+  string items = 4;
+  string reserved_until = 5;
+  string note = 6;
+}
+
+message CreateReservationResponse {
+  Reservation reservation = 1;
+}
+
+message GetReservationRequest {
+  string id = 1;
+}
+
+message GetReservationResponse {
+  Reservation reservation = 1;
+}
+
+message FulfillReservationRequest {
+  string id = 1;
+}
+
+message FulfillReservationResponse {
+  Reservation reservation = 1;
+}
+
+message CancelReservationRequest {
+  string id = 1;
+}
+
+message CancelReservationResponse {
+  Reservation reservation = 1;
 }
