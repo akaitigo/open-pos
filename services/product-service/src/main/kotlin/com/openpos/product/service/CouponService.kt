@@ -56,9 +56,10 @@ class CouponService {
                 "organizationId is not set"
             }
 
+        tenantFilterService.enableFilter()
         val discount =
             requireNotNull(discountRepository.findById(discountId)) {
-                "Discount not found: $discountId"
+                "Discount not found or belongs to another tenant: $discountId"
             }
         DiscountService.validateDiscountValue(discount.discountType, discount.value)
 

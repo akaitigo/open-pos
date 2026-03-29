@@ -3,8 +3,12 @@ package com.openpos.product.service
 import com.openpos.product.cache.ProductCacheService
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
+import com.openpos.product.entity.CategoryEntity
 import com.openpos.product.entity.ProductEntity
+import com.openpos.product.entity.TaxRateEntity
+import com.openpos.product.repository.CategoryRepository
 import com.openpos.product.repository.ProductRepository
+import com.openpos.product.repository.TaxRateRepository
 import io.quarkus.panache.common.Page
 import io.quarkus.test.InjectMock
 import io.quarkus.test.junit.QuarkusTest
@@ -40,6 +44,12 @@ class ProductServiceTest {
     lateinit var tenantFilterService: TenantFilterService
 
     @InjectMock
+    lateinit var categoryRepository: CategoryRepository
+
+    @InjectMock
+    lateinit var taxRateRepository: TaxRateRepository
+
+    @InjectMock
     lateinit var cacheService: ProductCacheService
 
     private val orgId = UUID.randomUUID()
@@ -53,6 +63,23 @@ class ProductServiceTest {
         doNothing().whenever(cacheService).invalidateProduct(any(), any(), anyOrNull())
         doNothing().whenever(cacheService).invalidateCategory(any(), any())
         doNothing().whenever(cacheService).invalidateAllCategoryLists(any())
+
+        // FK 検証: デフォルトで同一テナントのレコードとして返す
+        whenever(categoryRepository.findById(categoryId)).thenReturn(
+            CategoryEntity().apply {
+                this.id = categoryId
+                this.organizationId = orgId
+                this.name = "テストカテゴリ"
+            },
+        )
+        whenever(taxRateRepository.findById(taxRateId)).thenReturn(
+            TaxRateEntity().apply {
+                this.id = taxRateId
+                this.organizationId = orgId
+                this.name = "標準税率"
+                this.rate = java.math.BigDecimal("10.00")
+            },
+        )
     }
 
     // === create ===
@@ -161,6 +188,93 @@ class ProductServiceTest {
                     taxRateId = null,
                     imageUrl = null,
                     displayOrder = 0,
+                )
+            }
+        }
+    }
+
+    // === テナント分離 FK 検証 ===
+
+    @Nested
+    inner class TenantForeignKeyValidation {
+        @Test
+        fun `他テナントのcategoryIdで作成するとIllegalArgumentException`() {
+            // Arrange: categoryId が他テナント（テナントフィルタで null 返却）
+            val otherTenantCategoryId = UUID.randomUUID()
+            whenever(categoryRepository.findById(otherTenantCategoryId)).thenReturn(null)
+            doNothing().whenever(productRepository).persist(any<ProductEntity>())
+
+            // Act & Assert
+            assertThrows(IllegalArgumentException::class.java) {
+                productService.create(
+                    name = "テスト商品",
+                    description = null,
+                    barcode = null,
+                    sku = null,
+                    price = 10000L,
+                    categoryId = otherTenantCategoryId,
+                    taxRateId = null,
+                    imageUrl = null,
+                    displayOrder = 0,
+                )
+            }
+        }
+
+        @Test
+        fun `他テナントのtaxRateIdで作成するとIllegalArgumentException`() {
+            // Arrange: taxRateId が他テナント
+            val otherTenantTaxRateId = UUID.randomUUID()
+            whenever(taxRateRepository.findById(otherTenantTaxRateId)).thenReturn(null)
+            doNothing().whenever(productRepository).persist(any<ProductEntity>())
+
+            // Act & Assert
+            assertThrows(IllegalArgumentException::class.java) {
+                productService.create(
+                    name = "テスト商品",
+                    description = null,
+                    barcode = null,
+                    sku = null,
+                    price = 10000L,
+                    categoryId = null,
+                    taxRateId = otherTenantTaxRateId,
+                    imageUrl = null,
+                    displayOrder = 0,
+                )
+            }
+        }
+
+        @Test
+        fun `他テナントのcategoryIdで更新するとIllegalArgumentException`() {
+            // Arrange
+            val productId = UUID.randomUUID()
+            val entity =
+                ProductEntity().apply {
+                    this.id = productId
+                    this.organizationId = orgId
+                    this.name = "既存商品"
+                    this.price = 10000L
+                    this.displayOrder = 0
+                    this.isActive = true
+                }
+            whenever(productRepository.findById(productId)).thenReturn(entity)
+
+            val otherTenantCategoryId = UUID.randomUUID()
+            whenever(categoryRepository.findById(otherTenantCategoryId)).thenReturn(null)
+
+            // Act & Assert
+            assertThrows(IllegalArgumentException::class.java) {
+                productService.update(
+                    id = productId,
+                    name = null,
+                    description = null,
+                    barcode = null,
+                    sku = null,
+                    price = null,
+                    categoryId = otherTenantCategoryId,
+                    taxRateId = null,
+                    imageUrl = null,
+                    displayOrder = null,
+                    isActive = null,
                 )
             }
         }

@@ -3,7 +3,9 @@ package com.openpos.product.service
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.ProductEntity
+import com.openpos.product.repository.CategoryRepository
 import com.openpos.product.repository.ProductRepository
+import com.openpos.product.repository.TaxRateRepository
 import io.quarkus.panache.common.Page
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -18,6 +20,12 @@ import java.util.UUID
 class ProductService {
     @Inject
     lateinit var productRepository: ProductRepository
+
+    @Inject
+    lateinit var categoryRepository: CategoryRepository
+
+    @Inject
+    lateinit var taxRateRepository: TaxRateRepository
 
     @Inject
     lateinit var tenantFilterService: TenantFilterService
@@ -46,6 +54,9 @@ class ProductService {
             requireNotNull(organizationIdHolder.organizationId) {
                 "organizationId is not set"
             }
+
+        tenantFilterService.enableFilter()
+        validateForeignKeyOwnership(categoryId, taxRateId)
 
         val entity =
             ProductEntity().apply {
@@ -128,6 +139,8 @@ class ProductService {
         tenantFilterService.enableFilter()
         val entity = productRepository.findById(id) ?: return null
 
+        validateForeignKeyOwnership(categoryId, taxRateId)
+
         name?.let { entity.name = it }
         description?.let { entity.description = it }
         barcode?.let { entity.barcode = it }
@@ -158,5 +171,26 @@ class ProductService {
         entity.deletedAt = java.time.Instant.now()
         productRepository.persist(entity)
         return true
+    }
+
+    /**
+     * categoryId / taxRateId が現在のテナントに属するか検証する。
+     * テナントフィルタが有効な状態で findById を呼ぶことで、
+     * 他テナントのレコードは null になり検出できる。
+     */
+    private fun validateForeignKeyOwnership(
+        categoryId: UUID?,
+        taxRateId: UUID?,
+    ) {
+        categoryId?.let { id ->
+            requireNotNull(categoryRepository.findById(id)) {
+                "Category not found or belongs to another tenant: $id"
+            }
+        }
+        taxRateId?.let { id ->
+            requireNotNull(taxRateRepository.findById(id)) {
+                "TaxRate not found or belongs to another tenant: $id"
+            }
+        }
     }
 }
