@@ -427,7 +427,6 @@ message GetStocktakeResponse {
   // 棚卸し情報
   Stocktake stocktake = 1;
 }
-<<<<<<< HEAD
 
 // === 仕入先 ===
 
@@ -485,8 +484,6 @@ message UpdateSupplierRequest {
 message UpdateSupplierResponse {
   Supplier supplier = 1;
 }
-||||||| parent of c36b060 (feat: implement digital receipt email sending - Closes #1023)
-=======
 
 // === 在庫移動（店舗間移動 #145） ===
 
@@ -603,4 +600,3 @@ message CompleteStockTransferResponse {
   // 完了した在庫移動
   StockTransfer stock_transfer = 1;
 }
->>>>>>> c36b060 (feat: implement digital receipt email sending - Closes #1023)

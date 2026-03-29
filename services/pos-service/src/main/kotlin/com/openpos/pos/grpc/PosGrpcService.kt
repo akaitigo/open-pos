@@ -1210,7 +1210,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             val startDate = Instant.parse(request.dateRange.start)
             val endDate = Instant.parse(request.dateRange.end)
 
-            val aggregated = transactionRepository.aggregateStaffSales(storeId, startDate, endDate)
+            val aggregated = transactionService.aggregateStaffSales(storeId, startDate, endDate)
 
             val orgId = requireNotNull(tenantHelper.organizationIdHolder.organizationId) { "organizationId is not set" }
             val staffNameMap =

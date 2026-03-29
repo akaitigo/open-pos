@@ -910,6 +910,15 @@ class TransactionService {
         eventPublisher.publish("sale.completed", tx.organizationId, event)
     }
 
+    fun aggregateStaffSales(
+        storeId: java.util.UUID,
+        startDate: java.time.Instant,
+        endDate: java.time.Instant,
+    ): List<Array<Any>> {
+        tenantFilterService.enableFilter()
+        return transactionRepository.aggregateStaffSales(storeId, startDate, endDate)
+    }
+
     private fun publishSaleVoidedEvent(
         tx: TransactionEntity,
         items: List<TransactionItemEntity>,
