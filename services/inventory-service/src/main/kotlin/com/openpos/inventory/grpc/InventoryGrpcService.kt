@@ -539,4 +539,171 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
             openpos.inventory.v1.PurchaseOrderStatus.PURCHASE_ORDER_STATUS_CANCELLED -> "CANCELLED"
             else -> "DRAFT"
         }
+
+    // === StockTransfer RPCs (#145) ===
+
+    @Inject
+    lateinit var stockTransferService: com.openpos.inventory.service.StockTransferService
+
+    override fun createStockTransfer(
+        request: openpos.inventory.v1.CreateStockTransferRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.inventory.v1.CreateStockTransferResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        try {
+            require(request.itemsList.isNotEmpty()) { "items must not be empty" }
+            val itemsJson =
+                request.itemsList.joinToString(
+                    prefix = "[",
+                    postfix = "]",
+                ) { item ->
+                    """{"productId":"${item.productId}","quantity":${item.quantity}}"""
+                }
+            val entity =
+                stockTransferService.create(
+                    fromStoreId = request.fromStoreId.toUUID(),
+                    toStoreId = request.toStoreId.toUUID(),
+                    items = itemsJson,
+                    note = request.note.ifBlank { null },
+                )
+            responseObserver.onNext(
+                openpos.inventory.v1.CreateStockTransferResponse
+                    .newBuilder()
+                    .setStockTransfer(entity.toStockTransferProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    override fun getStockTransfer(
+        request: openpos.inventory.v1.GetStockTransferRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.inventory.v1.GetStockTransferResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val entity =
+            stockTransferService.findById(request.id.toUUID())
+                ?: throw Status.NOT_FOUND
+                    .withDescription("StockTransfer not found: ${request.id}")
+                    .asRuntimeException()
+        responseObserver.onNext(
+            openpos.inventory.v1.GetStockTransferResponse
+                .newBuilder()
+                .setStockTransfer(entity.toStockTransferProto())
+                .build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun listStockTransfers(
+        request: openpos.inventory.v1.ListStockTransfersRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.inventory.v1.ListStockTransfersResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val page = if (request.hasPagination()) request.pagination.page - 1 else 0
+        val pageSize =
+            if (request.hasPagination() && request.pagination.pageSize > 0) {
+                request.pagination.pageSize.coerceAtMost(100)
+            } else {
+                20
+            }
+        val statusFilter =
+            if (request.status != openpos.inventory.v1.StockTransferStatus.STOCK_TRANSFER_STATUS_UNSPECIFIED) {
+                request.status.toStockTransferDbValue()
+            } else {
+                null
+            }
+
+        val (transfers, totalCount) =
+            if (request.storeId.isNotBlank()) {
+                stockTransferService.listByStoreId(
+                    storeId = request.storeId.toUUID(),
+                    status = statusFilter,
+                    page = page,
+                    pageSize = pageSize,
+                )
+            } else {
+                stockTransferService.list(page = page, pageSize = pageSize)
+            }
+        val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
+        responseObserver.onNext(
+            openpos.inventory.v1.ListStockTransfersResponse
+                .newBuilder()
+                .addAllStockTransfers(transfers.map { it.toStockTransferProto() })
+                .setPagination(
+                    PaginationResponse
+                        .newBuilder()
+                        .setPage(page + 1)
+                        .setPageSize(pageSize)
+                        .setTotalCount(totalCount)
+                        .setTotalPages(totalPages)
+                        .build(),
+                ).build(),
+        )
+        responseObserver.onCompleted()
+    }
+
+    override fun completeStockTransfer(
+        request: openpos.inventory.v1.CompleteStockTransferRequest,
+        responseObserver: io.grpc.stub.StreamObserver<openpos.inventory.v1.CompleteStockTransferResponse>,
+    ) {
+        tenantHelper.setupTenantContextWithoutFilter()
+        try {
+            val entity = stockTransferService.complete(request.id.toUUID())
+            responseObserver.onNext(
+                openpos.inventory.v1.CompleteStockTransferResponse
+                    .newBuilder()
+                    .setStockTransfer(entity.toStockTransferProto())
+                    .build(),
+            )
+            responseObserver.onCompleted()
+        } catch (e: Exception) {
+            throw mapToGrpcException(e)
+        }
+    }
+
+    // === StockTransfer Mapper Extensions ===
+
+    private fun com.openpos.inventory.entity.StockTransferEntity.toStockTransferProto(): openpos.inventory.v1.StockTransfer {
+        val transferItems = stockTransferService.parseItems(items)
+        return openpos.inventory.v1.StockTransfer
+            .newBuilder()
+            .setId(id.toString())
+            .setOrganizationId(organizationId.toString())
+            .setFromStoreId(fromStoreId.toString())
+            .setToStoreId(toStoreId.toString())
+            .addAllItems(
+                transferItems.map { item ->
+                    openpos.inventory.v1.StockTransferItem
+                        .newBuilder()
+                        .setProductId(item.productId.toString())
+                        .setQuantity(item.quantity)
+                        .build()
+                },
+            ).setStatus(status.toProtoStockTransferStatus())
+            .setNote(note.orEmpty())
+            .setCreatedAt(createdAt.toString())
+            .setUpdatedAt(updatedAt.toString())
+            .build()
+    }
+
+    private fun String.toProtoStockTransferStatus(): openpos.inventory.v1.StockTransferStatus =
+        when (this) {
+            "PENDING" -> openpos.inventory.v1.StockTransferStatus.STOCK_TRANSFER_STATUS_PENDING
+            "IN_TRANSIT" -> openpos.inventory.v1.StockTransferStatus.STOCK_TRANSFER_STATUS_IN_TRANSIT
+            "COMPLETED" -> openpos.inventory.v1.StockTransferStatus.STOCK_TRANSFER_STATUS_COMPLETED
+            "CANCELLED" -> openpos.inventory.v1.StockTransferStatus.STOCK_TRANSFER_STATUS_CANCELLED
+            else -> openpos.inventory.v1.StockTransferStatus.STOCK_TRANSFER_STATUS_UNSPECIFIED
+        }
+
+    private fun openpos.inventory.v1.StockTransferStatus.toStockTransferDbValue(): String =
+        when (this) {
+            openpos.inventory.v1.StockTransferStatus.STOCK_TRANSFER_STATUS_PENDING -> "PENDING"
+            openpos.inventory.v1.StockTransferStatus.STOCK_TRANSFER_STATUS_IN_TRANSIT -> "IN_TRANSIT"
+            openpos.inventory.v1.StockTransferStatus.STOCK_TRANSFER_STATUS_COMPLETED -> "COMPLETED"
+            openpos.inventory.v1.StockTransferStatus.STOCK_TRANSFER_STATUS_CANCELLED -> "CANCELLED"
+            else -> "PENDING"
+        }
 }

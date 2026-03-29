@@ -117,7 +117,7 @@ class CustomerServiceUnitTest {
                 }
             whenever(customerRepository.findById(customerId)).thenReturn(entity)
 
-            val result = service.update(customerId, "New Name", null, "090-1111-1111")
+            val result = service.update(customerId, "New Name", null, "090-1111-1111", null)
 
             assertNotNull(result)
             assertEquals("New Name", result?.name)
@@ -130,9 +130,84 @@ class CustomerServiceUnitTest {
             val customerId = UUID.randomUUID()
             whenever(customerRepository.findById(customerId)).thenReturn(null)
 
-            val result = service.update(customerId, "New", null, null)
+            val result = service.update(customerId, "New", null, null, null)
 
             assertNull(result)
+        }
+    }
+
+    @Nested
+    inner class Create {
+        @Test
+        fun `creates customer with notes`() {
+            val result = service.create("Test Customer", "test@example.com", "090-1234-5678", "VIP顧客")
+
+            assertNotNull(result)
+            assertEquals("Test Customer", result.name)
+            assertEquals("VIP顧客", result.notes)
+            verify(customerRepository).persist(any<CustomerEntity>())
+        }
+    }
+
+    @Nested
+    inner class ListWithSearch {
+        @Test
+        fun `returns search results when search is provided`() {
+            val customers =
+                listOf(
+                    CustomerEntity().apply {
+                        id = UUID.randomUUID()
+                        organizationId = orgId
+                        name = "田中太郎"
+                    },
+                )
+            whenever(customerRepository.searchPaginated(any<String>(), any<Page>())).thenReturn(customers)
+            whenever(customerRepository.countBySearch(any<String>())).thenReturn(1L)
+
+            val (result, total) = service.list(0, 20, "田中")
+
+            assertEquals(1, result.size)
+            assertEquals(1L, total)
+        }
+
+        @Test
+        fun `uses regular list when search is blank`() {
+            val customers =
+                listOf(
+                    CustomerEntity().apply {
+                        id = UUID.randomUUID()
+                        organizationId = orgId
+                        name = "Customer A"
+                    },
+                )
+            whenever(customerRepository.listPaginated(any<Page>())).thenReturn(customers)
+            whenever(customerRepository.count()).thenReturn(5L)
+
+            val (result, total) = service.list(0, 20, "")
+
+            assertEquals(1, result.size)
+            assertEquals(5L, total)
+        }
+    }
+
+    @Nested
+    inner class UpdateWithNotes {
+        @Test
+        fun `updates notes field`() {
+            val customerId = UUID.randomUUID()
+            val entity =
+                CustomerEntity().apply {
+                    id = customerId
+                    organizationId = orgId
+                    name = "Test"
+                    notes = null
+                }
+            whenever(customerRepository.findById(customerId)).thenReturn(entity)
+
+            val result = service.update(customerId, null, null, null, "新しいメモ")
+
+            assertNotNull(result)
+            assertEquals("新しいメモ", result?.notes)
         }
     }
 

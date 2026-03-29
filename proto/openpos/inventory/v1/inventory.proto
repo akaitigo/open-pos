@@ -43,6 +43,14 @@ service InventoryService {
   rpc GetSupplier(GetSupplierRequest) returns (GetSupplierResponse);
   // 仕入先を更新する
   rpc UpdateSupplier(UpdateSupplierRequest) returns (UpdateSupplierResponse);
+  // 在庫移動を作成する（店舗間移動）
+  rpc CreateStockTransfer(CreateStockTransferRequest) returns (CreateStockTransferResponse);
+  // 在庫移動を取得する
+  rpc GetStockTransfer(GetStockTransferRequest) returns (GetStockTransferResponse);
+  // 在庫移動一覧を取得する（店舗IDフィルタ対応）
+  rpc ListStockTransfers(ListStockTransfersRequest) returns (ListStockTransfersResponse);
+  // 在庫移動を完了する（入荷確認して在庫を調整）
+  rpc CompleteStockTransfer(CompleteStockTransferRequest) returns (CompleteStockTransferResponse);
 }
 
 // 在庫移動種別
@@ -475,4 +483,120 @@ message UpdateSupplierRequest {
 
 message UpdateSupplierResponse {
   Supplier supplier = 1;
+}
+
+// === 在庫移動（店舗間移動 #145） ===
+
+// 在庫移動ステータス
+enum StockTransferStatus {
+  // 未指定
+  STOCK_TRANSFER_STATUS_UNSPECIFIED = 0;
+  // 保留中（作成直後）
+  STOCK_TRANSFER_STATUS_PENDING = 1;
+  // 移動中（出荷済み）
+  STOCK_TRANSFER_STATUS_IN_TRANSIT = 2;
+  // 完了（入荷確認済み、在庫反映済み）
+  STOCK_TRANSFER_STATUS_COMPLETED = 3;
+  // キャンセル
+  STOCK_TRANSFER_STATUS_CANCELLED = 4;
+}
+
+// 在庫移動
+// 店舗間の在庫移動を管理します
+message StockTransfer {
+  // 在庫移動ID（UUID）
+  string id = 1;
+  // 組織ID
+  string organization_id = 2;
+  // 移動元店舗ID
+  string from_store_id = 3;
+  // 移動先店舗ID
+  string to_store_id = 4;
+  // 移動明細リスト
+  repeated StockTransferItem items = 5;
+  // ステータス
+  StockTransferStatus status = 6;
+  // 備考
+  string note = 7;
+  // 作成日時（ISO 8601 形式）
+  string created_at = 8;
+  // 更新日時（ISO 8601 形式）
+  string updated_at = 9;
+}
+
+// 在庫移動明細
+message StockTransferItem {
+  // 商品ID
+  string product_id = 1;
+  // 移動数量
+  int32 quantity = 2;
+}
+
+// 在庫移動作成リクエスト
+message CreateStockTransferRequest {
+  // 移動元店舗ID（必須）
+  string from_store_id = 1;
+  // 移動先店舗ID（必須）
+  string to_store_id = 2;
+  // 移動明細リスト（1件以上必須）
+  repeated StockTransferItemInput items = 3;
+  // 備考
+  string note = 4;
+}
+
+// 在庫移動明細入力
+message StockTransferItemInput {
+  // 商品ID（必須）
+  string product_id = 1;
+  // 移動数量（1以上）
+  int32 quantity = 2;
+}
+
+// 在庫移動作成レスポンス
+message CreateStockTransferResponse {
+  // 作成された在庫移動
+  StockTransfer stock_transfer = 1;
+}
+
+// 在庫移動取得リクエスト
+message GetStockTransferRequest {
+  // 在庫移動ID（UUID、必須）
+  string id = 1;
+}
+
+// 在庫移動取得レスポンス
+message GetStockTransferResponse {
+  // 在庫移動情報
+  StockTransfer stock_transfer = 1;
+}
+
+// 在庫移動一覧取得リクエスト
+message ListStockTransfersRequest {
+  // 店舗IDフィルタ（省略時は全店舗、指定時は from_store_id または to_store_id に一致するもの）
+  string store_id = 1;
+  // ステータスフィルタ（省略時は全ステータス）
+  StockTransferStatus status = 2;
+  // ページネーション条件
+  openpos.common.v1.PaginationRequest pagination = 3;
+}
+
+// 在庫移動一覧取得レスポンス
+message ListStockTransfersResponse {
+  // 在庫移動リスト（作成日時降順）
+  repeated StockTransfer stock_transfers = 1;
+  // ページネーション情報
+  openpos.common.v1.PaginationResponse pagination = 2;
+}
+
+// 在庫移動完了リクエスト
+// ステータスを COMPLETED に変更し、移動先店舗の在庫を増加・移動元店舗の在庫を減少させる
+message CompleteStockTransferRequest {
+  // 在庫移動ID（UUID、必須）
+  string id = 1;
+}
+
+// 在庫移動完了レスポンス
+message CompleteStockTransferResponse {
+  // 完了した在庫移動
+  StockTransfer stock_transfer = 1;
 }

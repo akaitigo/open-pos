@@ -34,6 +34,10 @@ class CustomerEntity : BaseEntity() {
     @Column(name = "tier", nullable = false, length = 20)
     var tier: String = "REGULAR"
 
+    /** 顧客メモ（店舗スタッフ向けの自由記述） */
+    @Column(name = "notes", columnDefinition = "TEXT")
+    var notes: String? = null
+
     @Column(name = "is_active", nullable = false)
     var isActive: Boolean = true
 }

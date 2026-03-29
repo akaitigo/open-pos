@@ -33,6 +33,8 @@ service AnalyticsService {
   rpc UpsertSalesTarget(UpsertSalesTargetRequest) returns (UpsertSalesTargetResponse);
   // 売上目標を削除する
   rpc DeleteSalesTarget(DeleteSalesTargetRequest) returns (DeleteSalesTargetResponse);
+  // カテゴリ別売上レポートを取得する
+  rpc GetCategorySalesReport(GetCategorySalesReportRequest) returns (GetCategorySalesReportResponse);
 }
 
 // 日次売上
@@ -344,3 +346,33 @@ message DeleteSalesTargetRequest {
 
 // 売上目標削除レスポンス
 message DeleteSalesTargetResponse {}
+
+// === カテゴリ別売上レポート ===
+
+// カテゴリ別売上レポート取得リクエスト
+message GetCategorySalesReportRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 集計期間（必須）
+  openpos.common.v1.DateRange date_range = 2;
+}
+
+// カテゴリ別売上レポート取得レスポンス
+message GetCategorySalesReportResponse {
+  // カテゴリ別売上リスト
+  repeated CategorySalesItem items = 1;
+}
+
+// カテゴリ別売上項目
+message CategorySalesItem {
+  // カテゴリID（UUID、未分類の場合は空文字）
+  string category_id = 1;
+  // カテゴリ名
+  string category_name = 2;
+  // 売上合計（税込、銭単位）
+  int64 total_amount = 3;
+  // 販売数量
+  int32 quantity_sold = 4;
+  // 取引件数
+  int32 transaction_count = 5;
+}

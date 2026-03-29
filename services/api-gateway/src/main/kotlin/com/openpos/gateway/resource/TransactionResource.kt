@@ -134,9 +134,16 @@ class TransactionResource {
             AddTransactionItemRequest
                 .newBuilder()
                 .setTransactionId(id)
-                .setProductId(body.productId)
                 .setQuantity(body.quantity)
-                .build()
+                .apply {
+                    if (!body.customProductName.isNullOrBlank()) {
+                        setCustomProductName(body.customProductName)
+                        setCustomProductPrice(body.customProductPrice ?: 0)
+                        body.customTaxRateId?.let { setCustomTaxRateId(it) }
+                    } else {
+                        setProductId(body.productId)
+                    }
+                }.build()
         return grpc
             .withTenant(stub)
             .addTransactionItem(request)
@@ -309,8 +316,11 @@ data class CreateTransactionBody(
 )
 
 data class AddItemBody(
-    val productId: String,
+    val productId: String = "",
     val quantity: Int = 1,
+    val customProductName: String? = null,
+    val customProductPrice: Long? = null,
+    val customTaxRateId: String? = null,
 )
 
 data class UpdateItemBody(

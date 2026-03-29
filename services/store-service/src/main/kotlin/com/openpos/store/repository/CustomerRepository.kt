@@ -17,4 +17,21 @@ class CustomerRepository : PanacheRepositoryBase<CustomerEntity, UUID> {
     fun findAllByOrganizationId(organizationId: UUID): List<CustomerEntity> = find("organizationId = ?1", organizationId).list()
 
     fun findByIdForUpdate(id: UUID): CustomerEntity? = find("id = ?1", id).withLock(LockModeType.PESSIMISTIC_WRITE).firstResult()
+
+    fun searchPaginated(
+        search: String,
+        page: Page,
+    ): List<CustomerEntity> {
+        val pattern = "%${search.lowercase()}%"
+        return find(
+            "lower(name) like ?1 or lower(email) like ?1 or phone like ?1",
+            Sort.ascending("name"),
+            pattern,
+        ).page(page).list()
+    }
+
+    fun countBySearch(search: String): Long {
+        val pattern = "%${search.lowercase()}%"
+        return count("lower(name) like ?1 or lower(email) like ?1 or phone like ?1", pattern)
+    }
 }

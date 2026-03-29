@@ -39,6 +39,7 @@ class CustomerService {
         name: String,
         email: String?,
         phone: String?,
+        notes: String?,
     ): CustomerEntity {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
         val entity =
@@ -47,6 +48,7 @@ class CustomerService {
                 this.name = name
                 this.email = email
                 this.phone = phone
+                this.notes = notes
             }
         customerRepository.persist(entity)
         return entity
@@ -73,10 +75,16 @@ class CustomerService {
     fun list(
         page: Int,
         pageSize: Int,
+        search: String? = null,
     ): Pair<List<CustomerEntity>, Long> {
         tenantFilterService.enableFilter()
-        val customers = customerRepository.listPaginated(Page.of(page, pageSize))
-        val total = customerRepository.count()
+        if (search.isNullOrBlank()) {
+            val customers = customerRepository.listPaginated(Page.of(page, pageSize))
+            val total = customerRepository.count()
+            return Pair(customers, total)
+        }
+        val customers = customerRepository.searchPaginated(search, Page.of(page, pageSize))
+        val total = customerRepository.countBySearch(search)
         return Pair(customers, total)
     }
 
@@ -97,12 +105,14 @@ class CustomerService {
         name: String?,
         email: String?,
         phone: String?,
+        notes: String?,
     ): CustomerEntity? {
         tenantFilterService.enableFilter()
         val entity = customerRepository.findById(id) ?: return null
         name?.let { entity.name = it }
         email?.let { entity.email = it }
         phone?.let { entity.phone = it }
+        notes?.let { entity.notes = it }
         customerRepository.persist(entity)
         return entity
     }

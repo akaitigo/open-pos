@@ -1,0 +1,129 @@
+package com.openpos.analytics.service
+
+import com.openpos.analytics.config.OrganizationIdHolder
+import com.openpos.analytics.config.TenantFilterService
+import com.openpos.analytics.entity.ProductSalesEntity
+import com.openpos.analytics.repository.DailySalesRepository
+import com.openpos.analytics.repository.ProductSalesRepository
+import io.quarkus.test.InjectMock
+import io.quarkus.test.junit.QuarkusTest
+import jakarta.inject.Inject
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.whenever
+import java.time.LocalDate
+import java.util.UUID
+
+@QuarkusTest
+class CategorySalesReportTest {
+    @Inject
+    lateinit var analyticsQueryService: AnalyticsQueryService
+
+    @InjectMock
+    lateinit var productSalesRepository: ProductSalesRepository
+
+    @InjectMock
+    lateinit var dailySalesRepository: DailySalesRepository
+
+    @InjectMock
+    lateinit var tenantFilterService: TenantFilterService
+
+    @Inject
+    lateinit var organizationIdHolder: OrganizationIdHolder
+
+    private val orgId = UUID.randomUUID()
+    private val storeId = UUID.randomUUID()
+    private val startDate = LocalDate.of(2026, 3, 1)
+    private val endDate = LocalDate.of(2026, 3, 31)
+
+    @BeforeEach
+    fun setUp() {
+        organizationIdHolder.organizationId = orgId
+        doNothing().whenever(tenantFilterService).enableFilter()
+    }
+
+    @Nested
+    inner class GetCategorySalesReport {
+        @Test
+        fun `returns category sales grouped by category name`() {
+            // Arrange
+            val records =
+                listOf(
+                    createEntity(UUID.randomUUID(), "Coffee", "Beverages", 100, 500000),
+                    createEntity(UUID.randomUUID(), "Tea", "Beverages", 50, 200000),
+                    createEntity(UUID.randomUUID(), "Cake", "Food", 30, 300000),
+                )
+            whenever(productSalesRepository.findAggregatedByStoreAndDateRange(storeId, startDate, endDate))
+                .thenReturn(records)
+
+            // Act
+            val result = analyticsQueryService.getCategorySalesReport(storeId, startDate, endDate)
+
+            // Assert
+            assertEquals(2, result.size)
+            assertEquals("Beverages", result[0].categoryName)
+            assertEquals(700000L, result[0].totalAmount)
+            assertEquals(150, result[0].quantitySold)
+            assertEquals("Food", result[1].categoryName)
+            assertEquals(300000L, result[1].totalAmount)
+        }
+
+        @Test
+        fun `groups uncategorized products under default name`() {
+            // Arrange
+            val records =
+                listOf(
+                    createEntity(UUID.randomUUID(), "Product A", "", 10, 100000),
+                    createEntity(UUID.randomUUID(), "Product B", "", 20, 200000),
+                )
+            whenever(productSalesRepository.findAggregatedByStoreAndDateRange(storeId, startDate, endDate))
+                .thenReturn(records)
+
+            // Act
+            val result = analyticsQueryService.getCategorySalesReport(storeId, startDate, endDate)
+
+            // Assert
+            assertEquals(1, result.size)
+            assertEquals(300000L, result[0].totalAmount)
+            assertEquals(30, result[0].quantitySold)
+        }
+
+        @Test
+        fun `returns empty list when no data`() {
+            // Arrange
+            whenever(productSalesRepository.findAggregatedByStoreAndDateRange(storeId, startDate, endDate))
+                .thenReturn(emptyList())
+
+            // Act
+            val result = analyticsQueryService.getCategorySalesReport(storeId, startDate, endDate)
+
+            // Assert
+            assertTrue(result.isEmpty())
+        }
+    }
+
+    private fun createEntity(
+        productId: UUID,
+        name: String,
+        categoryName: String,
+        qty: Int,
+        amount: Long,
+    ): ProductSalesEntity =
+        ProductSalesEntity().apply {
+            id = UUID.randomUUID()
+            organizationId = orgId
+            storeId = this@CategorySalesReportTest.storeId
+            this.productId = productId
+            productName = name
+            this.categoryName = categoryName
+            date = startDate
+            quantitySold = qty
+            totalAmount = amount
+            costAmount = 0
+            transactionCount = qty
+        }
+}

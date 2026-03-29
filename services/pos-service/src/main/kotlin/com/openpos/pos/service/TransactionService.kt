@@ -17,6 +17,7 @@ import com.openpos.pos.grpc.InvalidInputException
 import com.openpos.pos.grpc.ProductServiceClient
 import com.openpos.pos.grpc.ProductSnapshot
 import com.openpos.pos.grpc.ResourceNotFoundException
+import com.openpos.pos.grpc.TaxRateSnapshot
 import com.openpos.pos.repository.PaymentRepository
 import com.openpos.pos.repository.TaxSummaryRepository
 import com.openpos.pos.repository.TransactionDiscountRepository
@@ -149,6 +150,11 @@ class TransactionService {
         organizationId: UUID,
     ): ProductSnapshot = productServiceClient.getProductSnapshot(productId, organizationId)
 
+    fun fetchTaxRateSnapshot(
+        taxRateId: UUID,
+        organizationId: UUID,
+    ): TaxRateSnapshot = productServiceClient.getTaxRateSnapshot(taxRateId, organizationId)
+
     /**
      * 取引に商品を追加する。
      *
@@ -208,6 +214,43 @@ class TransactionService {
                 }
             itemRepository.persist(item)
         }
+
+        recalculateTransactionTotals(tx)
+        return tx
+    }
+
+    @Transactional
+    fun addCustomItem(
+        transactionId: UUID,
+        productName: String,
+        unitPrice: Long,
+        quantity: Int,
+        taxRateSnapshot: TaxRateSnapshot,
+    ): TransactionEntity {
+        if (quantity <= 0) throw InvalidInputException("quantity must be positive")
+        if (unitPrice < 0) throw InvalidInputException("unit price must not be negative")
+        if (productName.isBlank()) throw InvalidInputException("custom product name must not be blank")
+
+        val tx = getWritableTransaction(transactionId)
+        val orgId = tx.organizationId
+
+        val taxResult = taxCalculationService.calculateItemTax(unitPrice, quantity, taxRateSnapshot.rate)
+        val item =
+            TransactionItemEntity().apply {
+                this.organizationId = orgId
+                this.transactionId = transactionId
+                this.productId = null
+                this.productName = productName
+                this.unitPrice = unitPrice
+                this.quantity = quantity
+                this.taxRateName = taxRateSnapshot.name
+                this.taxRate = taxRateSnapshot.rate
+                this.isReducedTax = taxRateSnapshot.isReduced
+                this.subtotal = taxResult.subtotal
+                this.taxAmount = taxResult.taxAmount
+                this.total = taxResult.total
+            }
+        itemRepository.persist(item)
 
         recalculateTransactionTotals(tx)
         return tx
@@ -821,7 +864,8 @@ class TransactionService {
                 append(tx.discountTotal)
                 append(tx.total)
                 items.sortedBy { it.id }.forEach { item ->
-                    append(item.productId)
+                    append(item.productId?.toString().orEmpty())
+                    append(item.productName)
                     append(item.quantity)
                     append(item.unitPrice)
                     append(item.subtotal)
@@ -844,7 +888,7 @@ class TransactionService {
                 items =
                     items.map { item ->
                         SaleItemDto(
-                            productId = item.productId.toString(),
+                            productId = item.productId?.toString().orEmpty(),
                             productName = item.productName,
                             quantity = item.quantity,
                             unitPrice = item.unitPrice,
@@ -866,6 +910,15 @@ class TransactionService {
         eventPublisher.publish("sale.completed", tx.organizationId, event)
     }
 
+    fun aggregateStaffSales(
+        storeId: java.util.UUID,
+        startDate: java.time.Instant,
+        endDate: java.time.Instant,
+    ): List<Array<Any>> {
+        tenantFilterService.enableFilter()
+        return transactionRepository.aggregateStaffSales(storeId, startDate, endDate)
+    }
+
     private fun publishSaleVoidedEvent(
         tx: TransactionEntity,
         items: List<TransactionItemEntity>,
@@ -878,7 +931,7 @@ class TransactionService {
                 items =
                     items.map { item ->
                         SaleItemDto(
-                            productId = item.productId.toString(),
+                            productId = item.productId?.toString().orEmpty(),
                             productName = item.productName,
                             quantity = item.quantity,
                             unitPrice = item.unitPrice,

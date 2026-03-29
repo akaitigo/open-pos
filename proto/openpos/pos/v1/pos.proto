@@ -76,6 +76,11 @@ service PosService {
   rpc FulfillReservation(FulfillReservationRequest) returns (FulfillReservationResponse);
   // 予約をキャンセルする
   rpc CancelReservation(CancelReservationRequest) returns (CancelReservationResponse);
+  // スタッフ別売上レポートを取得する
+  // 税率別レポートを取得する（確定申告用）
+  rpc GetTaxReport(GetTaxReportRequest) returns (GetTaxReportResponse);
+  // スタッフ別売上レポートを取得する
+  rpc GetStaffSalesReport(GetStaffSalesReportRequest) returns (GetStaffSalesReportResponse);
 }
 
 // 取引種別
@@ -351,13 +356,22 @@ message ListTransactionsResponse {
 }
 
 // 明細追加リクエスト
+// 通常の商品追加（product_id 指定）またはアドホック商品（custom_product_name 指定）を選択可能。
+// custom_product_name が設定されている場合、product_id は無視され、
+// 商品マスタを参照せずに直接明細を作成します。
 message AddTransactionItemRequest {
   // 取引ID（必須）
   string transaction_id = 1;
-  // 商品ID（必須）
+  // 商品ID（通常の商品追加時に必須、アドホック商品の場合は省略可）
   string product_id = 2;
   // 数量（1以上）
   int32 quantity = 3;
+  // アドホック商品名（設定時はカスタム商品として扱う）
+  string custom_product_name = 4;
+  // アドホック商品単価（銭単位、custom_product_name 設定時に必須）
+  int64 custom_product_price = 5;
+  // アドホック商品の税率ID（custom_product_name 設定時に必須、税率マスタの UUID）
+  string custom_tax_rate_id = 6;
 }
 
 // 明細更新リクエスト
@@ -911,4 +925,69 @@ message CancelReservationRequest {
 
 message CancelReservationResponse {
   Reservation reservation = 1;
+}
+
+// === スタッフ別売上レポート ===
+
+// スタッフ別売上レポート取得リクエスト
+message GetStaffSalesReportRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 日付範囲（必須）
+  openpos.common.v1.DateRange date_range = 2;
+}
+
+// スタッフ別売上レポート取得レスポンス
+message GetStaffSalesReportResponse {
+  // スタッフ別売上リスト
+  repeated StaffSalesItem items = 1;
+}
+
+// スタッフ別売上項目
+message StaffSalesItem {
+  // スタッフID（UUID）
+  string staff_id = 1;
+  // スタッフ名
+  string staff_name = 2;
+  // 売上合計（税込、銭単位）
+  int64 total_amount = 3;
+  // 取引件数
+  int32 transaction_count = 4;
+  // 平均取引額（銭単位）
+  int64 average_transaction = 5;
+}
+
+// === 税率別レポート（確定申告用） ===
+
+// 税率別レポート取得リクエスト
+// 指定期間内の確定済み取引から税率ごとの課税対象額・税額を集計します
+message GetTaxReportRequest {
+  // 店舗ID（必須）
+  string store_id = 1;
+  // 日付範囲（必須）
+  openpos.common.v1.DateRange date_range = 2;
+}
+
+// 税率別レポート取得レスポンス
+message GetTaxReportResponse {
+  // 税率別集計リスト
+  repeated TaxReportItem items = 1;
+}
+
+// 税率別レポート項目
+// 指定期間内の確定済み取引における税率ごとの課税対象額・税額・取引数を集計します
+// 金額フィールドはすべて銭単位（10000 = 100円）です
+message TaxReportItem {
+  // 税率名（例: "標準税率10%"）
+  string tax_rate_name = 1;
+  // 税率値（例: "0.10"）
+  string tax_rate_percentage = 2;
+  // 軽減税率フラグ
+  bool is_reduced = 3;
+  // 課税対象額合計（税抜、銭単位）
+  int64 taxable_amount = 4;
+  // 税額合計（銭単位）
+  int64 tax_amount = 5;
+  // 対象取引数
+  int32 transaction_count = 6;
 }

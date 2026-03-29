@@ -12,6 +12,7 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.QueryParam
 import openpos.analytics.v1.AnalyticsServiceGrpc
 import openpos.analytics.v1.GetAbcAnalysisRequest
+import openpos.analytics.v1.GetCategorySalesReportRequest
 import openpos.analytics.v1.GetDailySalesRequest
 import openpos.analytics.v1.GetGrossProfitReportRequest
 import openpos.analytics.v1.GetHourlySalesRequest
@@ -179,5 +180,40 @@ class AnalyticsResource {
                 .build()
         val response = grpc.withTenant(stub).getSalesForecast(request)
         return mapOf("data" to response.dataPointsList.map { it.toMap() })
+    }
+
+
+    @GET
+    @Path("/category-sales")
+    fun getCategorySalesReport(
+        @QueryParam("storeId") storeId: String,
+        @QueryParam("startDate") startDate: String,
+        @QueryParam("endDate") endDate: String,
+    ): Map<String, Any> {
+        tenantContext.requireRole("OWNER", "MANAGER")
+        val request =
+            GetCategorySalesReportRequest
+                .newBuilder()
+                .setStoreId(storeId)
+                .setDateRange(
+                    DateRange
+                        .newBuilder()
+                        .setStart(startDate)
+                        .setEnd(endDate)
+                        .build(),
+                ).build()
+        val response = grpc.withTenant(stub).getCategorySalesReport(request)
+        return mapOf(
+            "data" to
+                response.itemsList.map { item ->
+                    mapOf(
+                        "categoryId" to item.categoryId.ifEmpty { null },
+                        "categoryName" to item.categoryName,
+                        "totalAmount" to item.totalAmount,
+                        "quantitySold" to item.quantitySold,
+                        "transactionCount" to item.transactionCount,
+                    )
+                },
+        )
     }
 }

@@ -476,6 +476,30 @@ fun openpos.pos.v1.GiftCard.toMap(): Map<String, Any?> =
         "updatedAt" to updatedAt,
     )
 
+// === 顧客（CRM） ===
+
+fun openpos.store.v1.Customer.toMap(): Map<String, Any?> =
+    mapOf(
+        "id" to id,
+        "organizationId" to organizationId,
+        "name" to name,
+        "email" to email.ifEmpty { null },
+        "phone" to phone.ifEmpty { null },
+        "points" to points,
+        "tier" to
+            when (tier) {
+                openpos.store.v1.CustomerTier.CUSTOMER_TIER_REGULAR -> "REGULAR"
+                openpos.store.v1.CustomerTier.CUSTOMER_TIER_SILVER -> "SILVER"
+                openpos.store.v1.CustomerTier.CUSTOMER_TIER_GOLD -> "GOLD"
+                openpos.store.v1.CustomerTier.CUSTOMER_TIER_VIP -> "VIP"
+                else -> "UNSPECIFIED"
+            },
+        "isActive" to isActive,
+        "notes" to notes.ifEmpty { null },
+        "createdAt" to createdAt,
+        "updatedAt" to updatedAt,
+    )
+
 // === スタンプカード ===
 
 fun openpos.store.v1.StampCard.toMap(): Map<String, Any?> =

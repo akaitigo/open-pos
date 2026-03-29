@@ -18,6 +18,8 @@ class StockTransferService {
 
     @Inject lateinit var organizationIdHolder: OrganizationIdHolder
 
+    @Inject lateinit var stockService: StockService
+
     @Transactional
     fun create(
         fromStoreId: UUID,
@@ -55,6 +57,18 @@ class StockTransferService {
         return Pair(items, total)
     }
 
+    fun listByStoreId(
+        storeId: UUID,
+        status: String?,
+        page: Int,
+        pageSize: Int,
+    ): Pair<List<StockTransferEntity>, Long> {
+        tenantFilterService.enableFilter()
+        val items = stockTransferRepository.listByStoreId(storeId, status, Page.of(page, pageSize))
+        val total = stockTransferRepository.countByStoreId(storeId, status)
+        return Pair(items, total)
+    }
+
     @Transactional
     fun updateStatus(
         id: UUID,
@@ -66,4 +80,68 @@ class StockTransferService {
         stockTransferRepository.persist(entity)
         return entity
     }
+
+    /**
+     * 在庫移動を完了する。
+     * ステータスを COMPLETED に変更し、移動元店舗から在庫を減少、移動先店舗に在庫を増加させる。
+     */
+    @Transactional
+    fun complete(id: UUID): StockTransferEntity {
+        tenantFilterService.enableFilter()
+        val entity =
+            stockTransferRepository.findById(id)
+                ?: throw IllegalArgumentException("StockTransfer not found: $id")
+        require(entity.status == "PENDING" || entity.status == "IN_TRANSIT") {
+            "Cannot complete transfer with status: ${entity.status}"
+        }
+
+        val transferItems = parseItems(entity.items)
+        for (item in transferItems) {
+            // 移動元: 在庫を減少
+            stockService.adjustStock(
+                storeId = entity.fromStoreId,
+                productId = item.productId,
+                quantityChange = -item.quantity,
+                movementType = "TRANSFER",
+                referenceId = entity.id.toString(),
+                note = "Stock transfer to store ${entity.toStoreId}",
+            )
+            // 移動先: 在庫を増加
+            stockService.adjustStock(
+                storeId = entity.toStoreId,
+                productId = item.productId,
+                quantityChange = item.quantity,
+                movementType = "TRANSFER",
+                referenceId = entity.id.toString(),
+                note = "Stock transfer from store ${entity.fromStoreId}",
+            )
+        }
+
+        entity.status = "COMPLETED"
+        stockTransferRepository.persist(entity)
+        return entity
+    }
+
+    /**
+     * items JSON 文字列から TransferItem リストをパースする。
+     * 形式: [{"productId":"uuid","quantity":10}, ...]
+     */
+    internal fun parseItems(json: String): List<TransferItem> {
+        val items = mutableListOf<TransferItem>()
+        val regex = Regex(""""productId"\s*:\s*"([^"]+)"\s*,\s*"quantity"\s*:\s*(\d+)""")
+        for (match in regex.findAll(json)) {
+            items.add(
+                TransferItem(
+                    productId = UUID.fromString(match.groupValues[1]),
+                    quantity = match.groupValues[2].toInt(),
+                ),
+            )
+        }
+        return items
+    }
 }
+
+data class TransferItem(
+    val productId: UUID,
+    val quantity: Int,
+)

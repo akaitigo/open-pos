@@ -16,7 +16,10 @@ import openpos.analytics.v1.AnalyticsServiceGrpc
 import openpos.analytics.v1.DailySales
 import openpos.analytics.v1.DeleteSalesTargetRequest
 import openpos.analytics.v1.DeleteSalesTargetResponse
+import openpos.analytics.v1.CategorySalesItem
 import openpos.analytics.v1.GetAbcAnalysisRequest
+import openpos.analytics.v1.GetCategorySalesReportRequest
+import openpos.analytics.v1.GetCategorySalesReportResponse
 import openpos.analytics.v1.GetAbcAnalysisResponse
 import openpos.analytics.v1.GetDailySalesRequest
 import openpos.analytics.v1.GetDailySalesResponse
@@ -450,6 +453,35 @@ class AnalyticsGrpcService : AnalyticsServiceGrpc.AnalyticsServiceImplBase() {
             .setCreatedAt(createdAt.toString())
             .setUpdatedAt(updatedAt.toString())
             .build()
+
+    // === Category Sales Report (#1030) ===
+
+    override fun getCategorySalesReport(
+        request: GetCategorySalesReportRequest,
+        responseObserver: StreamObserver<GetCategorySalesReportResponse>,
+    ) {
+        tenantHelper.setupTenantContext()
+        val storeId = request.storeId.toUUID()
+        val (startDate, endDate) = request.dateRange.toDates()
+        val items = analyticsQueryService.getCategorySalesReport(storeId, startDate, endDate)
+
+        responseObserver.onNext(
+            GetCategorySalesReportResponse
+                .newBuilder()
+                .addAllItems(
+                    items.map { item ->
+                        CategorySalesItem
+                            .newBuilder()
+                            .setCategoryName(item.categoryName)
+                            .setTotalAmount(item.totalAmount)
+                            .setQuantitySold(item.quantitySold)
+                            .setTransactionCount(item.transactionCount)
+                            .build()
+                    },
+                ).build(),
+        )
+        responseObserver.onCompleted()
+    }
 
     private fun String.toUUID(): UUID =
         try {
