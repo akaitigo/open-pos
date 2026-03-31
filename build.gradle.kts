@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.Delete
+
 plugins {
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.allopen) apply false
@@ -28,11 +30,25 @@ subprojects {
         }
 
         afterEvaluate {
+            val deleteStaleRunnerJars =
+                tasks.register<Delete>("deleteStaleRunnerJars") {
+                    delete(
+                        fileTree(layout.buildDirectory) {
+                            include("${project.name}-*-runner.jar")
+                            exclude("${project.name}-${project.version}-runner.jar")
+                        },
+                    )
+                }
+
             dependencies {
                 "implementation"(rootProject.libs.quarkus.logging.json)
                 "testImplementation"(rootProject.libs.testcontainers)
                 "testImplementation"(rootProject.libs.testcontainers.postgresql)
                 "testImplementation"(rootProject.libs.testcontainers.junit.jupiter)
+            }
+
+            tasks.matching { it.name == "quarkusBuild" }.configureEach {
+                dependsOn(deleteStaleRunnerJars)
             }
 
             apply(plugin = "jacoco")
