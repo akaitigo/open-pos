@@ -22,16 +22,20 @@ class StockEventProcessor {
         payload: SaleCompletedPayload,
     ) {
         organizationIdHolder.organizationId = organizationId
-        val storeId = UUID.fromString(payload.storeId)
-        for (item in payload.items) {
-            stockService.adjustStock(
-                storeId = storeId,
-                productId = UUID.fromString(item.productId),
-                quantityChange = -item.quantity,
-                movementType = "SALE",
-                referenceId = payload.transactionId,
-                note = null,
-            )
+        try {
+            val storeId = UUID.fromString(payload.storeId)
+            for (item in payload.items) {
+                stockService.adjustStock(
+                    storeId = storeId,
+                    productId = UUID.fromString(item.productId),
+                    quantityChange = -item.quantity,
+                    movementType = "SALE",
+                    referenceId = payload.transactionId,
+                    note = null,
+                )
+            }
+        } finally {
+            organizationIdHolder.clear()
         }
     }
 
@@ -40,16 +44,20 @@ class StockEventProcessor {
         payload: SaleVoidedPayload,
     ) {
         organizationIdHolder.organizationId = organizationId
-        val storeId = UUID.fromString(payload.storeId)
-        for (item in payload.items) {
-            stockService.adjustStock(
-                storeId = storeId,
-                productId = UUID.fromString(item.productId),
-                quantityChange = item.quantity,
-                movementType = "RETURN",
-                referenceId = payload.voidTransactionId,
-                note = "Void of transaction ${payload.originalTransactionId}",
-            )
+        try {
+            val storeId = UUID.fromString(payload.storeId)
+            for (item in payload.items) {
+                stockService.adjustStock(
+                    storeId = storeId,
+                    productId = UUID.fromString(item.productId),
+                    quantityChange = item.quantity,
+                    movementType = "RETURN",
+                    referenceId = payload.voidTransactionId,
+                    note = "Void of transaction ${payload.originalTransactionId}",
+                )
+            }
+        } finally {
+            organizationIdHolder.clear()
         }
     }
 }

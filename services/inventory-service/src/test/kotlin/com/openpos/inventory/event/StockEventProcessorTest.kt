@@ -1,11 +1,14 @@
 package com.openpos.inventory.event
 
+import com.openpos.inventory.config.OrganizationIdHolder
 import com.openpos.inventory.entity.StockEntity
 import com.openpos.inventory.service.StockService
 import io.quarkus.test.InjectMock
 import io.quarkus.test.junit.QuarkusTest
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
@@ -20,6 +23,9 @@ class StockEventProcessorTest {
     @Inject
     lateinit var stockEventProcessor: StockEventProcessor
 
+    @Inject
+    lateinit var organizationIdHolder: OrganizationIdHolder
+
     @InjectMock
     lateinit var stockService: StockService
 
@@ -27,6 +33,11 @@ class StockEventProcessorTest {
     private val storeId = UUID.randomUUID()
     private val productId1 = UUID.randomUUID()
     private val productId2 = UUID.randomUUID()
+
+    @BeforeEach
+    fun setUp() {
+        organizationIdHolder.clear()
+    }
 
     @Test
     fun `processSaleCompleted decreases stock for each item`() {
@@ -68,6 +79,7 @@ class StockEventProcessorTest {
             referenceId = eq("txn-001"),
             note = eq(null),
         )
+        assertNull(organizationIdHolder.organizationId)
     }
 
     @Test
@@ -108,5 +120,6 @@ class StockEventProcessorTest {
             referenceId = eq("void-001"),
             note = eq("Void of transaction txn-001"),
         )
+        assertNull(organizationIdHolder.organizationId)
     }
 }
