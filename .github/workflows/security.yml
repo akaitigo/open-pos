@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0
       - name: Cache gitleaks
         id: cache-gitleaks
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v4
         with:
           path: /usr/local/bin/gitleaks
           key: gitleaks-${{ env.GITLEAKS_VERSION }}-linux-x64
@@ -150,7 +150,7 @@ jobs:
             -f infra/docker/Dockerfile.service .
       - name: Cache Trivy
         id: cache-trivy
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v4
         with:
           path: /usr/local/bin/trivy
           key: trivy-${{ env.TRIVY_VERSION }}-linux-x64
