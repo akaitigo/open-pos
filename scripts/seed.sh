@@ -671,6 +671,7 @@ ensure_store_inventory_target() {
   local store_name="$1"
   local store_id="$2"
   local note="$3"
+  local reference_prefix="$4"
   local stocks_json=""
   local barcode=""
   local product_id=""
@@ -697,7 +698,7 @@ ensure_store_inventory_target() {
         --arg storeId "$store_id" \
         --arg productId "$product_id" \
         --arg note "$note" \
-        --arg referenceId "stock-$barcode" \
+        --arg referenceId "${reference_prefix}-$barcode" \
         --argjson quantityChange "$quantity_change" \
         '{storeId: $storeId, productId: $productId, quantityChange: $quantityChange, movementType: "ADJUSTMENT", referenceId: $referenceId, note: $note}'
     )"
@@ -709,12 +710,13 @@ ensure_store_inventory_target() {
 
 ensure_inventory_targets() {
   local note="$1"
+  local reference_prefix="$2"
   local store_name=""
 
   section "Ensuring inventory"
 
   for store_name in "${STORE_KEYS[@]}"; do
-    ensure_store_inventory_target "$store_name" "${STORE_IDS[$store_name]}" "$note"
+    ensure_store_inventory_target "$store_name" "${STORE_IDS[$store_name]}" "$note" "$reference_prefix"
   done
 }
 
@@ -1059,7 +1061,8 @@ settle_inventory_after_transactions() {
       ensure_store_inventory_target \
         "$store_name" \
         "${STORE_IDS[$store_name]}" \
-        "開発シード在庫を$TARGET_STOCK_QUANTITYに正規化 (pass $pass)"
+        "開発シード在庫を${TARGET_STOCK_QUANTITY}に正規化 (pass $pass)" \
+        "seed-post${pass}"
     done
   done
 }
@@ -1133,7 +1136,7 @@ ensure_stores
 ensure_terminals
 ensure_staff
 ensure_products
-ensure_inventory_targets "開発シード初期在庫を投入"
+ensure_inventory_targets "開発シード初期在庫を投入" "seed-init"
 ensure_sample_transactions
 settle_inventory_after_transactions
 write_runtime_config
