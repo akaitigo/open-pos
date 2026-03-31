@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
+import io.smallrye.common.annotation.Blocking
 import io.vertx.core.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -14,6 +16,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.lang.reflect.Method
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
@@ -155,6 +158,17 @@ class EventConsumerTest {
     @Nested
     inner class OnSaleCompleted {
         @Test
+        fun `onSaleCompletedはblockingで実行される`() {
+            val method: Method =
+                EventConsumer::class.java.getDeclaredMethod(
+                    "onSaleCompleted",
+                    IncomingRabbitMQMessage::class.java,
+                )
+
+            assertTrue(method.isAnnotationPresent(Blocking::class.java))
+        }
+
+        @Test
         fun `正常なJSONでprocessSaleCompletedが呼ばれる`() {
             // Arrange
             val json = buildSaleCompletedJson()
@@ -201,6 +215,17 @@ class EventConsumerTest {
 
     @Nested
     inner class OnSaleVoided {
+        @Test
+        fun `onSaleVoidedはblockingで実行される`() {
+            val method: Method =
+                EventConsumer::class.java.getDeclaredMethod(
+                    "onSaleVoided",
+                    IncomingRabbitMQMessage::class.java,
+                )
+
+            assertTrue(method.isAnnotationPresent(Blocking::class.java))
+        }
+
         @Test
         fun `正常なJSONでprocessSaleVoidedが呼ばれる`() {
             // Arrange
