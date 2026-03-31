@@ -12,6 +12,9 @@ RABBITMQ_PORT="${RABBITMQ_PORT:-15672}"
 RABBITMQ_USER="${RABBITMQ_USER:-openpos}"
 RABBITMQ_PASS="${RABBITMQ_PASS:-openpos_dev}"
 REDIS_URL="${REDIS_URL:-redis://:openpos_dev@localhost:16379}"
+DB_URL="${DB_URL:-jdbc:postgresql://localhost:15432/openpos}"
+DB_USER="${DB_USER:-openpos}"
+DB_PASSWORD="${DB_PASSWORD:-openpos_dev}"
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -123,7 +126,11 @@ start_service() {
   local log_file="$LOG_DIR/$name.log"
 
   if [[ ! -f "$jar" ]]; then
-    echo "Missing runner jar: $jar" >&2
+    jar="$(find "$ROOT_DIR/services/$name/build" -maxdepth 1 -type f -name "$name-*-runner.jar" | head -n 1 || true)"
+  fi
+
+  if [[ -z "$jar" || ! -f "$jar" ]]; then
+    echo "Missing runner jar for $name under $ROOT_DIR/services/$name/build" >&2
     exit 1
   fi
 
@@ -143,6 +150,7 @@ start_service() {
 
 if [[ "$SKIP_BUILD" -eq 0 ]]; then
   "$ROOT_DIR/gradlew" \
+    :services:analytics-service:quarkusBuild \
     :services:product-service:quarkusBuild \
     :services:store-service:quarkusBuild \
     :services:pos-service:quarkusBuild \
@@ -154,11 +162,29 @@ fi
 ensure_rabbitmq_user
 
 start_service \
+  analytics-service \
+  "http://localhost:8085/q/health/live" \
+  QUARKUS_HTTP_PORT=8085 \
+  QUARKUS_GRPC_SERVER_PORT=9005 \
+  QUARKUS_OTEL_ENABLED=false \
+  QUARKUS_FLYWAY_MIGRATE_AT_START=true \
+  DB_URL="$DB_URL" \
+  DB_USER="$DB_USER" \
+  DB_PASSWORD="$DB_PASSWORD" \
+  REDIS_URL="$REDIS_URL" \
+  RABBITMQ_HOST="$RABBITMQ_HOST" \
+  RABBITMQ_PORT="$RABBITMQ_PORT" \
+  RABBITMQ_USER="$RABBITMQ_USER" \
+  RABBITMQ_PASS="$RABBITMQ_PASS"
+start_service \
   product-service \
   "http://localhost:8081/q/health/live" \
   QUARKUS_HTTP_PORT=8081 \
   QUARKUS_GRPC_SERVER_PORT=9001 \
   QUARKUS_OTEL_ENABLED=false \
+  DB_URL="$DB_URL" \
+  DB_USER="$DB_USER" \
+  DB_PASSWORD="$DB_PASSWORD" \
   REDIS_URL="$REDIS_URL" \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
   RABBITMQ_PORT="$RABBITMQ_PORT" \
@@ -170,6 +196,9 @@ start_service \
   QUARKUS_HTTP_PORT=8082 \
   QUARKUS_GRPC_SERVER_PORT=9002 \
   QUARKUS_OTEL_ENABLED=false \
+  DB_URL="$DB_URL" \
+  DB_USER="$DB_USER" \
+  DB_PASSWORD="$DB_PASSWORD" \
   REDIS_URL="$REDIS_URL" \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
   RABBITMQ_PORT="$RABBITMQ_PORT" \
@@ -181,6 +210,9 @@ start_service \
   QUARKUS_HTTP_PORT=8083 \
   QUARKUS_GRPC_SERVER_PORT=9003 \
   QUARKUS_OTEL_ENABLED=false \
+  DB_URL="$DB_URL" \
+  DB_USER="$DB_USER" \
+  DB_PASSWORD="$DB_PASSWORD" \
   REDIS_URL="$REDIS_URL" \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
   RABBITMQ_PORT="$RABBITMQ_PORT" \
@@ -192,6 +224,9 @@ start_service \
   QUARKUS_HTTP_PORT=8084 \
   QUARKUS_GRPC_SERVER_PORT=9004 \
   QUARKUS_OTEL_ENABLED=false \
+  DB_URL="$DB_URL" \
+  DB_USER="$DB_USER" \
+  DB_PASSWORD="$DB_PASSWORD" \
   REDIS_URL="$REDIS_URL" \
   RABBITMQ_HOST="$RABBITMQ_HOST" \
   RABBITMQ_PORT="$RABBITMQ_PORT" \
@@ -211,7 +246,9 @@ start_service \
   POS_SERVICE_HOST=localhost \
   POS_SERVICE_PORT=9003 \
   INVENTORY_SERVICE_HOST=localhost \
-  INVENTORY_SERVICE_PORT=9004
+  INVENTORY_SERVICE_PORT=9004 \
+  ANALYTICS_SERVICE_HOST=localhost \
+  ANALYTICS_SERVICE_PORT=9005
 
 cat <<EOF
 Local backend is running.
