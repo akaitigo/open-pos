@@ -10,6 +10,7 @@ import io.grpc.ServerInterceptor
 import io.grpc.Status
 import io.quarkus.grpc.GlobalInterceptor
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
 import org.jboss.logging.Logger
 import java.util.UUID
 
@@ -23,6 +24,9 @@ import java.util.UUID
 @ApplicationScoped
 @GlobalInterceptor
 class OrganizationIdInterceptor : ServerInterceptor {
+    @Inject
+    lateinit var organizationIdHolder: OrganizationIdHolder
+
     companion object {
         private val LOG: Logger = Logger.getLogger(OrganizationIdInterceptor::class.java)
 
@@ -106,13 +110,15 @@ class OrganizationIdInterceptor : ServerInterceptor {
                 .withValue(ORGANIZATION_ID_CTX_KEY, orgId)
                 .withValue(REQUEST_ID_CTX_KEY, requestId)
         val delegate = Contexts.interceptCall(ctx, call, headers, next)
-        return MdcCleanupListener(delegate)
+        return MdcCleanupListener(delegate, organizationIdHolder)
     }
 
     private class MdcCleanupListener<ReqT>(
         delegate: ServerCall.Listener<ReqT>,
+        private val organizationIdHolder: OrganizationIdHolder,
     ) : SimpleForwardingServerCallListener<ReqT>(delegate) {
         private fun cleanupMdc() {
+            organizationIdHolder.clear()
             org.jboss.logging.MDC
                 .remove("requestId")
             org.jboss.logging.MDC
