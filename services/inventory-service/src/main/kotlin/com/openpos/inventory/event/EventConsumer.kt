@@ -1,11 +1,14 @@
 package com.openpos.inventory.event
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.smallrye.common.annotation.Blocking
 import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
+import io.vertx.core.json.JsonObject
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.jboss.logging.Logger
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 import java.util.concurrent.CompletionStage
 
@@ -27,10 +30,11 @@ class EventConsumer {
 
     private val log = Logger.getLogger(EventConsumer::class.java)
 
+    @Blocking
     @Incoming("sale-completed")
     fun onSaleCompleted(message: IncomingRabbitMQMessage<*>): CompletionStage<Void> =
         try {
-            val body = message.payload.toString()
+            val body = payloadAsString(message.payload)
             val envelope = objectMapper.readValue(body, EventEnvelopeDto::class.java)
             val eventId = UUID.fromString(envelope.eventId)
 
@@ -47,10 +51,11 @@ class EventConsumer {
             message.nack(e)
         }
 
+    @Blocking
     @Incoming("sale-voided")
     fun onSaleVoided(message: IncomingRabbitMQMessage<*>): CompletionStage<Void> =
         try {
-            val body = message.payload.toString()
+            val body = payloadAsString(message.payload)
             val envelope = objectMapper.readValue(body, EventEnvelopeDto::class.java)
             val eventId = UUID.fromString(envelope.eventId)
 
@@ -65,5 +70,14 @@ class EventConsumer {
         } catch (e: Exception) {
             log.errorf(e, "Failed to process sale-voided event, sending nack")
             message.nack(e)
+        }
+
+    private fun payloadAsString(payload: Any?): String =
+        when (payload) {
+            null -> throw IllegalArgumentException("RabbitMQ payload is null")
+            is String -> payload
+            is ByteArray -> String(payload, StandardCharsets.UTF_8)
+            is JsonObject -> payload.encode()
+            else -> objectMapper.writeValueAsString(payload)
         }
 }

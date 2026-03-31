@@ -3,6 +3,7 @@ package com.openpos.inventory.event
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
 import io.smallrye.reactive.messaging.rabbitmq.OutgoingRabbitMQMetadata
+import io.vertx.core.json.JsonObject
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.eclipse.microprofile.reactive.messaging.Channel
@@ -11,6 +12,7 @@ import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.eclipse.microprofile.reactive.messaging.Message
 import org.eclipse.microprofile.reactive.messaging.Metadata
 import org.jboss.logging.Logger
+import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletionStage
 
 /**
@@ -44,9 +46,9 @@ class DeadLetterQueueConsumer {
     }
 
     @Incoming("dlq-inventory-sale-completed")
-    fun onDlqSaleCompleted(message: IncomingRabbitMQMessage<String>): CompletionStage<Void> =
+    fun onDlqSaleCompleted(message: IncomingRabbitMQMessage<*>): CompletionStage<Void> =
         try {
-            val body = message.payload
+            val body = payloadAsString(message.payload)
             handleDeadLetter(body, "inventory.sale-completed") { retryMessage, delayMs ->
                 val metadata =
                     OutgoingRabbitMQMetadata
@@ -64,9 +66,9 @@ class DeadLetterQueueConsumer {
         }
 
     @Incoming("dlq-inventory-sale-voided")
-    fun onDlqSaleVoided(message: IncomingRabbitMQMessage<String>): CompletionStage<Void> =
+    fun onDlqSaleVoided(message: IncomingRabbitMQMessage<*>): CompletionStage<Void> =
         try {
-            val body = message.payload
+            val body = payloadAsString(message.payload)
             handleDeadLetter(body, "inventory.sale-voided") { retryMessage, delayMs ->
                 val metadata =
                     OutgoingRabbitMQMetadata
@@ -81,6 +83,15 @@ class DeadLetterQueueConsumer {
         } catch (e: Exception) {
             log.errorf(e, "Failed to process DLQ sale-voided message, sending nack")
             message.nack(e)
+        }
+
+    private fun payloadAsString(payload: Any?): String =
+        when (payload) {
+            null -> throw IllegalArgumentException("RabbitMQ payload is null")
+            is String -> payload
+            is ByteArray -> String(payload, StandardCharsets.UTF_8)
+            is JsonObject -> payload.encode()
+            else -> objectMapper.writeValueAsString(payload)
         }
 
     private fun handleDeadLetter(
