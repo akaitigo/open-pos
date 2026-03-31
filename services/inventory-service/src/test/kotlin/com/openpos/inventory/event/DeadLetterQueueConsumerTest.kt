@@ -3,6 +3,7 @@ package com.openpos.inventory.event
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.smallrye.reactive.messaging.rabbitmq.IncomingRabbitMQMessage
 import io.smallrye.reactive.messaging.rabbitmq.OutgoingRabbitMQMetadata
+import io.vertx.core.json.JsonObject
 import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Message
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -38,8 +39,8 @@ class DeadLetterQueueConsumerTest {
         }
 
     @Suppress("UNCHECKED_CAST")
-    private fun mockMessage(body: String): IncomingRabbitMQMessage<String> {
-        val message = mock<IncomingRabbitMQMessage<String>>()
+    private fun mockMessage(body: Any): IncomingRabbitMQMessage<*> {
+        val message = mock<IncomingRabbitMQMessage<Any>>()
         whenever(message.payload).thenReturn(body)
         whenever(message.ack()).thenReturn(CompletableFuture.completedFuture(null))
         whenever(message.nack(any<Throwable>())).thenReturn(CompletableFuture.completedFuture(null))
@@ -103,6 +104,20 @@ class DeadLetterQueueConsumerTest {
         }
 
         @Test
+        fun `JsonObjectペイロードでもリトライできる`() {
+            val body = JsonObject(buildMessageBody(retryCount = 0))
+            val message = mockMessage(body)
+
+            consumer.onDlqSaleCompleted(message)
+
+            val captor = argumentCaptor<Message<String>>()
+            verify(saleCompletedRetryEmitter).send(captor.capture())
+            val sentBody = objectMapper.readValue(captor.firstValue.payload, Map::class.java)
+            assertTrue(sentBody["retryCount"] == 1)
+            verify(message).ack()
+        }
+
+        @Test
         fun `最大リトライ回数到達後は再送しない`() {
             // Arrange
             val body = buildMessageBody(retryCount = 3)
@@ -153,6 +168,17 @@ class DeadLetterQueueConsumerTest {
             consumer.onDlqSaleVoided(message)
 
             // Assert
+            verify(saleVoidedRetryEmitter).send(any<Message<String>>())
+            verify(message).ack()
+        }
+
+        @Test
+        fun `JsonObjectペイロードでもsaleVoidedRetryEmitterに再送する`() {
+            val body = JsonObject(buildMessageBody(retryCount = 0))
+            val message = mockMessage(body)
+
+            consumer.onDlqSaleVoided(message)
+
             verify(saleVoidedRetryEmitter).send(any<Message<String>>())
             verify(message).ack()
         }
