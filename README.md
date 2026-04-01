@@ -104,7 +104,7 @@ pnpm demo:assets
 
 | カテゴリ | 技術 |
 | --- | --- |
-| バックエンド | Kotlin 2.3 / Quarkus 3.32 / GraalVM CE 21 / Gradle 9 |
+| バックエンド | Kotlin 2.3 / Quarkus 3.34 / GraalVM CE 21 / Gradle 9.4 |
 | フロントエンド | React 19 / TypeScript / Vite 7 / Tailwind CSS + shadcn/ui |
 | データベース | PostgreSQL 17（スキーマ分離、Flyway マイグレーション） |
 | キャッシュ | Redis 7（Lettuce、cache-aside パターン） |
