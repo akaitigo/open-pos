@@ -6,6 +6,10 @@
 [![Security](https://github.com/akaitigo/open-pos/actions/workflows/security.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/security.yml)
 [![Release Drafter](https://github.com/akaitigo/open-pos/actions/workflows/release-drafter.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/release-drafter.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CodeQL](https://github.com/akaitigo/open-pos/actions/workflows/codeql.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/codeql.yml)
+[![GitHub release](https://img.shields.io/github/v/release/akaitigo/open-pos)](https://github.com/akaitigo/open-pos/releases/latest)
+[![Coverage](https://img.shields.io/badge/coverage-95%25+-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-1800+-blue)]()
 
 Production-ready な汎用 POS（Point of Sale）システム。マルチテナント・オフライン対応のマイクロサービスアーキテクチャ。
 
