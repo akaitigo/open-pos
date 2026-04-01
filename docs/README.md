@@ -24,6 +24,7 @@ This directory contains the project design, runbooks, product requirements, and 
 - [architecture/data-model.md](architecture/data-model.md): key entities and storage model
 - [architecture/event-driven.md](architecture/event-driven.md): messaging and event flow
 - [architecture/offline-strategy.md](architecture/offline-strategy.md): offline sync design
+- [architecture/sequence-diagrams.md](architecture/sequence-diagrams.md): key flow sequence diagrams (POS checkout, offline sync, PIN auth)
 
 ## Requirements and Planning
 
