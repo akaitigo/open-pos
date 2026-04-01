@@ -125,6 +125,7 @@ jobs:
     env:
       TRIVY_VERSION: '0.69.3'
     strategy:
+      fail-fast: false
       matrix:
         service:
           - api-gateway
@@ -163,6 +164,7 @@ jobs:
           install trivy /usr/local/bin/trivy
           trivy version
       - name: Run Trivy scan
+        id: trivy
         env:
           SERVICE_NAME: ${{ matrix.service }}
         run: |
@@ -170,8 +172,31 @@ jobs:
             --severity HIGH,CRITICAL \
             --exit-code 1 \
             --ignore-unfixed \
+            --format json \
+            --output "trivy-${SERVICE_NAME}.json" \
+            "openpos-${SERVICE_NAME}:scan" || echo "vulnerabilities_found=true" >> "$GITHUB_OUTPUT"
+      - name: Display scan results
+        if: always()
+        env:
+          SERVICE_NAME: ${{ matrix.service }}
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
             --format table \
-            "openpos-${SERVICE_NAME}:scan"
+            "openpos-${SERVICE_NAME}:scan" || true
+      - name: Upload Trivy report
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: trivy-report-${{ matrix.service }}
+          path: trivy-${{ matrix.service }}.json
+          retention-days: 90
+          if-no-files-found: ignore
+      - name: Warn on vulnerabilities
+        if: steps.trivy.outputs.vulnerabilities_found == 'true'
+        run: |
+          echo "::warning::Trivy detected HIGH/CRITICAL vulnerabilities in ${{ matrix.service }}. Review the uploaded trivy-report artifact."
 
   sbom:
     name: SBOM Generation
