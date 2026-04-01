@@ -14,6 +14,7 @@ This directory contains the project design, runbooks, product requirements, and 
 - [runbook/local-dev.md](runbook/local-dev.md): supported local modes, runtime config outputs, and troubleshooting
 - [guides/contributing.md](guides/contributing.md): ブランチ戦略とコミット規約
 - [guides/branching-strategy.md](guides/branching-strategy.md): branch and PR conventions
+- [guides/performance-testing.md](guides/performance-testing.md): パフォーマンステスト計画（k6、SLO検証、CI統合）
 - [runbook/release.md](runbook/release.md): release checklist
 - [runbook/labels.md](runbook/labels.md): label taxonomy and PR auto-labeling rules
 
