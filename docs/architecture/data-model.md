@@ -46,6 +46,17 @@ erDiagram
         VARCHAR role "OWNER / MANAGER / CASHIER"
         VARCHAR pin_hash
     }
+    audit_logs {
+        UUID id PK
+        UUID organization_id
+        UUID staff_id FK
+        VARCHAR action
+        VARCHAR entity_type
+        VARCHAR entity_id
+        JSONB details
+        VARCHAR ip_address
+        TIMESTAMPTZ created_at
+    }
 ```
 
 ### organizations
@@ -94,6 +105,19 @@ erDiagram
 | pin_hash | VARCHAR(255) | |
 | pin_failed_count | INT | DEFAULT 0 |
 | pin_locked_until | TIMESTAMPTZ | |
+
+### audit_logs
+| カラム | 型 | 制約 |
+|--------|-----|------|
+| id | UUID | PK |
+| organization_id | UUID | NOT NULL |
+| staff_id | UUID | |
+| action | VARCHAR(50) | NOT NULL |
+| entity_type | VARCHAR(50) | NOT NULL |
+| entity_id | VARCHAR(255) | |
+| details | JSONB | NOT NULL DEFAULT '{}' |
+| ip_address | VARCHAR(45) | |
+| created_at | TIMESTAMPTZ | NOT NULL |
 
 ## product_schema
 
@@ -217,9 +241,9 @@ erDiagram
 erDiagram
     transactions ||--o{ transaction_items : "contains"
     transactions ||--o{ payments : "paid by"
-    transactions ||--o{ transaction_tax_summaries : "tax breakdown"
+    transactions ||--o{ tax_summaries : "tax breakdown"
+    transactions ||--o{ transaction_discounts : "discounted by"
     transactions ||--o| receipts : "receipt"
-    transactions ||--o| transactions : "return of"
 
     transactions {
         UUID id PK
@@ -227,41 +251,69 @@ erDiagram
         UUID store_id
         UUID terminal_id
         UUID staff_id
-        UUID client_id UK "idempotency key"
+        VARCHAR client_id UK "offline idempotency"
         VARCHAR transaction_number UK
-        VARCHAR status "PENDING / COMPLETED / VOIDED / RETURNED"
-        BIGINT gross_amount
-        BIGINT discount_amount
-        BIGINT net_amount
-        BIGINT tax_amount
-        UUID original_transaction_id FK "return ref"
+        VARCHAR type "SALE / RETURN / VOID"
+        VARCHAR status "DRAFT / COMPLETED / VOIDED"
+        BIGINT subtotal
+        BIGINT tax_total
+        BIGINT discount_total
+        BIGINT total
+        BIGINT change_amount
+        VARCHAR table_number
+        UUID customer_id
+        TIMESTAMPTZ completed_at
+        BOOLEAN deleted "soft delete"
+        VARCHAR content_hash "SHA-256"
+        VARCHAR idempotency_key
+        BIGINT version "optimistic lock"
     }
     transaction_items {
         UUID id PK
+        UUID organization_id
         UUID transaction_id FK
         UUID product_id
         VARCHAR product_name "snapshot"
         BIGINT unit_price "snapshot"
-        DECIMAL tax_rate "snapshot"
+        VARCHAR tax_rate_name "snapshot"
+        VARCHAR tax_rate "snapshot"
+        BOOLEAN is_reduced_tax
         INT quantity
         BIGINT subtotal
-        BIGINT discount_amount
+        BIGINT tax_amount
+        BIGINT total
     }
     payments {
         UUID id PK
+        UUID organization_id
         UUID transaction_id FK
-        VARCHAR payment_method "CASH / CREDIT_CARD / QR"
+        VARCHAR method "CASH / CREDIT_CARD / QR_CODE"
         BIGINT amount
-        BIGINT received_amount
-        BIGINT change_amount
+        BIGINT received "cash only"
+        BIGINT change "cash only"
+        VARCHAR reference "gateway token etc."
+        BOOLEAN deleted "soft delete"
     }
-    transaction_tax_summaries {
+    tax_summaries {
         UUID id PK
+        UUID organization_id
         UUID transaction_id FK
-        UUID tax_rate_id FK
-        DECIMAL tax_rate "snapshot"
+        VARCHAR tax_rate_name
+        VARCHAR tax_rate
+        BOOLEAN is_reduced
         BIGINT taxable_amount
         BIGINT tax_amount
+    }
+    transaction_discounts {
+        UUID id PK
+        UUID organization_id
+        UUID transaction_id FK
+        UUID discount_id FK
+        VARCHAR name
+        VARCHAR discount_type "PERCENTAGE / FIXED_AMOUNT"
+        VARCHAR value
+        BIGINT amount
+        UUID transaction_item_id FK "NULL = transaction-level"
     }
     receipts {
         UUID id PK
@@ -279,15 +331,22 @@ erDiagram
 | store_id | UUID | NOT NULL |
 | terminal_id | UUID | NOT NULL |
 | staff_id | UUID | NOT NULL |
-| client_id | UUID | UNIQUE（冪等性） |
-| transaction_number | VARCHAR(50) | UNIQUE |
-| status | VARCHAR(20) | `PENDING`/`COMPLETED`/`VOIDED`/`RETURNED` |
-| gross_amount | BIGINT | NOT NULL |
-| discount_amount | BIGINT | DEFAULT 0 |
-| net_amount | BIGINT | NOT NULL |
-| tax_amount | BIGINT | NOT NULL |
-| voided_at | TIMESTAMPTZ | |
-| original_transaction_id | UUID | FK → transactions（返品元） |
+| transaction_number | VARCHAR(30) | NOT NULL |
+| type | VARCHAR(20) | `SALE`/`RETURN`/`VOID` DEFAULT 'SALE' |
+| status | VARCHAR(20) | `DRAFT`/`COMPLETED`/`VOIDED` DEFAULT 'DRAFT' |
+| client_id | VARCHAR(36) | UNIQUE per org（オフライン冪等性） |
+| subtotal | BIGINT | NOT NULL DEFAULT 0 |
+| tax_total | BIGINT | NOT NULL DEFAULT 0 |
+| discount_total | BIGINT | NOT NULL DEFAULT 0 |
+| total | BIGINT | NOT NULL DEFAULT 0 |
+| change_amount | BIGINT | NOT NULL DEFAULT 0 |
+| table_number | VARCHAR(20) | |
+| customer_id | UUID | |
+| completed_at | TIMESTAMPTZ | |
+| deleted | BOOLEAN | NOT NULL DEFAULT false（論理削除） |
+| content_hash | VARCHAR(64) | SHA-256（電子帳簿保存法 真正性） |
+| idempotency_key | VARCHAR(128) | UNIQUE（finalize 重複防止） |
+| version | BIGINT | NOT NULL DEFAULT 0（楽観的ロック） |
 
 ### transaction_items
 | カラム | 型 | 制約 |
@@ -295,13 +354,16 @@ erDiagram
 | id | UUID | PK |
 | organization_id | UUID | NOT NULL |
 | transaction_id | UUID | FK → transactions |
-| product_id | UUID | NOT NULL |
-| product_name | VARCHAR(255) | スナップショット |
-| unit_price | BIGINT | スナップショット |
-| tax_rate | DECIMAL(5,4) | スナップショット |
-| quantity | INT | NOT NULL |
+| product_id | UUID | |
+| product_name | VARCHAR(255) | NOT NULL スナップショット |
+| unit_price | BIGINT | NOT NULL スナップショット |
+| quantity | INT | NOT NULL DEFAULT 1 |
+| tax_rate_name | VARCHAR(50) | NOT NULL スナップショット |
+| tax_rate | VARCHAR(10) | NOT NULL スナップショット |
+| is_reduced_tax | BOOLEAN | NOT NULL DEFAULT false |
 | subtotal | BIGINT | NOT NULL |
-| discount_amount | BIGINT | DEFAULT 0 |
+| tax_amount | BIGINT | NOT NULL |
+| total | BIGINT | NOT NULL |
 
 ### payments
 | カラム | 型 | 制約 |
@@ -309,22 +371,37 @@ erDiagram
 | id | UUID | PK |
 | organization_id | UUID | NOT NULL |
 | transaction_id | UUID | FK → transactions |
-| payment_method | VARCHAR(20) | `CASH`/`CREDIT_CARD`/`QR` |
+| method | VARCHAR(20) | `CASH`/`CREDIT_CARD`/`QR_CODE` |
 | amount | BIGINT | NOT NULL |
-| received_amount | BIGINT | 現金のみ |
-| change_amount | BIGINT | 現金のみ |
-| external_ref | VARCHAR(255) | カード承認番号等 |
+| received | BIGINT | 現金のみ |
+| change | BIGINT | 現金のみ |
+| reference | VARCHAR(255) | 決済ゲートウェイトークン等 |
+| deleted | BOOLEAN | NOT NULL DEFAULT false（論理削除） |
 
-### transaction_tax_summaries
+### tax_summaries
 | カラム | 型 | 制約 |
 |--------|-----|------|
 | id | UUID | PK |
 | organization_id | UUID | NOT NULL |
 | transaction_id | UUID | FK → transactions |
-| tax_rate_id | UUID | FK → tax_rates |
-| tax_rate | DECIMAL(5,4) | スナップショット |
-| taxable_amount | BIGINT | 課税対象金額 |
-| tax_amount | BIGINT | 税額 |
+| tax_rate_name | VARCHAR(50) | NOT NULL |
+| tax_rate | VARCHAR(10) | NOT NULL |
+| is_reduced | BOOLEAN | NOT NULL DEFAULT false |
+| taxable_amount | BIGINT | NOT NULL 課税対象金額 |
+| tax_amount | BIGINT | NOT NULL 税額 |
+
+### transaction_discounts
+| カラム | 型 | 制約 |
+|--------|-----|------|
+| id | UUID | PK |
+| organization_id | UUID | NOT NULL |
+| transaction_id | UUID | FK → transactions |
+| discount_id | UUID | FK → discounts |
+| name | VARCHAR(100) | NOT NULL |
+| discount_type | VARCHAR(20) | `PERCENTAGE`/`FIXED_AMOUNT` |
+| value | VARCHAR(50) | NOT NULL |
+| amount | BIGINT | NOT NULL |
+| transaction_item_id | UUID | NULL で取引全体への割引 |
 
 ### receipts
 | カラム | 型 | 制約 |
@@ -340,13 +417,26 @@ erDiagram
 ```mermaid
 erDiagram
     stocks ||--o{ stock_movements : "tracked by"
+    purchase_orders ||--o{ purchase_order_items : "contains"
+
     purchase_orders {
         UUID id PK
         UUID organization_id
         UUID store_id
         VARCHAR status "DRAFT / ORDERED / RECEIVED / CANCELLED"
+        VARCHAR supplier_name
+        TEXT note
         TIMESTAMPTZ ordered_at
         TIMESTAMPTZ received_at
+    }
+    purchase_order_items {
+        UUID id PK
+        UUID organization_id
+        UUID purchase_order_id FK
+        UUID product_id
+        INT ordered_quantity
+        INT received_quantity
+        BIGINT unit_cost
     }
     stocks {
         UUID id PK
@@ -397,9 +487,21 @@ erDiagram
 | organization_id | UUID | NOT NULL |
 | store_id | UUID | NOT NULL |
 | status | VARCHAR(20) | `DRAFT`/`ORDERED`/`RECEIVED`/`CANCELLED` |
+| supplier_name | VARCHAR(255) | NOT NULL |
+| note | TEXT | |
 | ordered_at | TIMESTAMPTZ | |
 | received_at | TIMESTAMPTZ | |
-| note | TEXT | |
+
+### purchase_order_items
+| カラム | 型 | 制約 |
+|--------|-----|------|
+| id | UUID | PK |
+| organization_id | UUID | NOT NULL |
+| purchase_order_id | UUID | FK → purchase_orders |
+| product_id | UUID | NOT NULL |
+| ordered_quantity | INT | NOT NULL |
+| received_quantity | INT | NOT NULL DEFAULT 0 |
+| unit_cost | BIGINT | NOT NULL DEFAULT 0 |
 
 ## analytics_schema
 
