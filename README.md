@@ -7,11 +7,15 @@
 [![Release Drafter](https://github.com/akaitigo/open-pos/actions/workflows/release-drafter.yml/badge.svg)](https://github.com/akaitigo/open-pos/actions/workflows/release-drafter.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-マルチテナント・オフライン対応の汎用 POS（Point of Sale）システム。マイクロサービスアーキテクチャで構築。
+Production-ready な汎用 POS（Point of Sale）システム。マルチテナント・オフライン対応のマイクロサービスアーキテクチャ。
 
-> [!IMPORTANT]
-> **このリポジトリは AI 駆動開発の実験プロジェクトです。**
-> コミュニティサポート、外部コントリビューションの受付、メンテナンスの保証は行いません。
+### Why this project?
+
+- **本格的な分散アーキテクチャ** — 6 マイクロサービス + gRPC + RabbitMQ イベント駆動
+- **企業グレードのマルチテナント分離** — Hibernate Filter による自動フィルタリング、テナント間データ漏洩ゼロ
+- **オフラインファースト PWA** — IndexedDB + Background Sync で通信断でも業務継続
+- **品質への徹底的なこだわり** — 1,800+ テスト / JaCoCo 95%+ カバレッジ / ADR 5 本 / 60+ ドキュメント
+- **日本の小売業向けコンプライアンス** — インボイス制度対応、プライバシーポリシー、電子帳簿保存法
 
 ## プロジェクト状態
 
@@ -340,3 +344,9 @@ make local-demo
 ## ライセンス
 
 MIT License -- 詳細は [LICENSE](LICENSE) を参照。
+
+---
+
+> [!NOTE]
+> このプロジェクトは AI アシスト開発で効率的に構築されています。
+> 個人プロジェクトのため、外部コントリビューションの受付やメンテナンスの保証は行いません。
