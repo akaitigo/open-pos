@@ -5,6 +5,49 @@
 
 ## store_schema
 
+```mermaid
+erDiagram
+    organizations ||--o{ stores : "has"
+    organizations ||--o{ terminals : "has"
+    organizations ||--o{ staff : "has"
+    stores ||--o{ terminals : "placed in"
+    stores ||--o{ staff : "works at"
+
+    organizations {
+        UUID id PK
+        VARCHAR name
+        VARCHAR business_type "RETAIL / RESTAURANT / OTHER"
+        VARCHAR invoice_number UK
+        VARCHAR plan
+        TIMESTAMPTZ deleted_at
+    }
+    stores {
+        UUID id PK
+        UUID organization_id FK
+        VARCHAR code UK
+        VARCHAR name
+        JSONB settings
+        BOOLEAN is_active
+    }
+    terminals {
+        UUID id PK
+        UUID organization_id FK
+        UUID store_id FK
+        VARCHAR terminal_code UK
+        TIMESTAMPTZ last_sync_at
+        BOOLEAN is_active
+    }
+    staff {
+        UUID id PK
+        UUID organization_id FK
+        UUID store_id FK
+        VARCHAR hydra_subject UK
+        VARCHAR name
+        VARCHAR role "OWNER / MANAGER / CASHIER"
+        VARCHAR pin_hash
+    }
+```
+
 ### organizations
 | カラム | 型 | 制約 |
 |--------|-----|------|
@@ -53,6 +96,59 @@
 | pin_locked_until | TIMESTAMPTZ | |
 
 ## product_schema
+
+```mermaid
+erDiagram
+    categories ||--o{ categories : "parent"
+    categories ||--o{ products : "contains"
+    tax_rates ||--o{ products : "applied to"
+    discounts ||--o{ coupons : "linked to"
+
+    categories {
+        UUID id PK
+        UUID organization_id
+        UUID parent_id FK "NULL = root"
+        VARCHAR name
+        VARCHAR color
+        INT display_order
+    }
+    tax_rates {
+        UUID id PK
+        UUID organization_id
+        VARCHAR name
+        DECIMAL rate
+        VARCHAR tax_type "STANDARD / REDUCED"
+        BOOLEAN is_active
+    }
+    products {
+        UUID id PK
+        UUID organization_id
+        UUID category_id FK
+        UUID tax_rate_id FK
+        VARCHAR name
+        VARCHAR barcode UK
+        VARCHAR sku UK
+        BIGINT price
+        BOOLEAN is_active
+    }
+    discounts {
+        UUID id PK
+        UUID organization_id
+        VARCHAR name
+        VARCHAR discount_type "PERCENTAGE / FIXED_AMOUNT"
+        BIGINT value
+        VARCHAR applies_to "TRANSACTION / PRODUCT"
+        BOOLEAN is_active
+    }
+    coupons {
+        UUID id PK
+        UUID organization_id
+        UUID discount_id FK
+        VARCHAR code UK
+        INT max_uses
+        INT used_count
+    }
+```
 
 ### categories
 | カラム | 型 | 制約 |
@@ -116,6 +212,64 @@
 | valid_until | TIMESTAMPTZ | |
 
 ## pos_schema
+
+```mermaid
+erDiagram
+    transactions ||--o{ transaction_items : "contains"
+    transactions ||--o{ payments : "paid by"
+    transactions ||--o{ transaction_tax_summaries : "tax breakdown"
+    transactions ||--o| receipts : "receipt"
+    transactions ||--o| transactions : "return of"
+
+    transactions {
+        UUID id PK
+        UUID organization_id
+        UUID store_id
+        UUID terminal_id
+        UUID staff_id
+        UUID client_id UK "idempotency key"
+        VARCHAR transaction_number UK
+        VARCHAR status "PENDING / COMPLETED / VOIDED / RETURNED"
+        BIGINT gross_amount
+        BIGINT discount_amount
+        BIGINT net_amount
+        BIGINT tax_amount
+        UUID original_transaction_id FK "return ref"
+    }
+    transaction_items {
+        UUID id PK
+        UUID transaction_id FK
+        UUID product_id
+        VARCHAR product_name "snapshot"
+        BIGINT unit_price "snapshot"
+        DECIMAL tax_rate "snapshot"
+        INT quantity
+        BIGINT subtotal
+        BIGINT discount_amount
+    }
+    payments {
+        UUID id PK
+        UUID transaction_id FK
+        VARCHAR payment_method "CASH / CREDIT_CARD / QR"
+        BIGINT amount
+        BIGINT received_amount
+        BIGINT change_amount
+    }
+    transaction_tax_summaries {
+        UUID id PK
+        UUID transaction_id FK
+        UUID tax_rate_id FK
+        DECIMAL tax_rate "snapshot"
+        BIGINT taxable_amount
+        BIGINT tax_amount
+    }
+    receipts {
+        UUID id PK
+        UUID transaction_id FK
+        TEXT pdf_url
+        TIMESTAMPTZ generated_at
+    }
+```
 
 ### transactions
 | カラム | 型 | 制約 |
@@ -183,6 +337,36 @@
 
 ## inventory_schema
 
+```mermaid
+erDiagram
+    stocks ||--o{ stock_movements : "tracked by"
+    purchase_orders {
+        UUID id PK
+        UUID organization_id
+        UUID store_id
+        VARCHAR status "DRAFT / ORDERED / RECEIVED / CANCELLED"
+        TIMESTAMPTZ ordered_at
+        TIMESTAMPTZ received_at
+    }
+    stocks {
+        UUID id PK
+        UUID organization_id
+        UUID store_id
+        UUID product_id
+        INT quantity
+        INT alert_threshold
+        BIGINT version "optimistic lock"
+    }
+    stock_movements {
+        UUID id PK
+        UUID organization_id
+        UUID stock_id FK
+        VARCHAR movement_type "SALE / RETURN / RECEIPT / ADJUSTMENT / TRANSFER"
+        INT quantity_delta
+        UUID reference_id "transaction ID etc."
+    }
+```
+
 ### stocks
 | カラム | 型 | 制約 |
 |--------|-----|------|
@@ -218,6 +402,42 @@
 | note | TEXT | |
 
 ## analytics_schema
+
+```mermaid
+erDiagram
+    daily_sales {
+        UUID id PK
+        UUID organization_id
+        UUID store_id
+        DATE date
+        BIGINT gross_amount
+        BIGINT net_amount
+        BIGINT tax_amount
+        INT transaction_count
+        BIGINT cash_amount
+        BIGINT card_amount
+        BIGINT qr_amount
+    }
+    product_sales {
+        UUID id PK
+        UUID organization_id
+        UUID store_id
+        UUID product_id
+        DATE date
+        INT quantity_sold
+        BIGINT gross_amount
+        BIGINT net_amount
+    }
+    hourly_sales {
+        UUID id PK
+        UUID organization_id
+        UUID store_id
+        DATE date
+        SMALLINT hour "0-23"
+        INT transaction_count
+        BIGINT net_amount
+    }
+```
 
 ### daily_sales
 | カラム | 型 | 制約 |
