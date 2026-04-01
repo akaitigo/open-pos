@@ -49,6 +49,8 @@ This directory contains the project design, runbooks, product requirements, and 
 ## Compliance
 
 - [compliance/invoice-compliance.md](compliance/invoice-compliance.md): Japanese Qualified Invoice System (インボイス制度) requirements
+- [compliance/e-books-act.md](compliance/e-books-act.md): 電子帳簿保存法 対応ガイド
+- [compliance/pci-dss.md](compliance/pci-dss.md): PCI DSS 対応ガイド
 
 ## Historical Research and Audits
 
