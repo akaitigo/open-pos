@@ -110,7 +110,7 @@ async function capturePosCheckoutVideo(browser) {
   await dismissToastIfVisible(page)
   await page.getByRole('button', { name: /お会計/ }).click()
   await sleep(500)
-  await page.getByRole('button', { name: 'ぴったり' }).click()
+  await page.getByTestId('checkout-exact-btn').click()
   await sleep(300)
   await page.getByRole('button', { name: 'お会計を確定' }).click()
   await page.getByRole('dialog').filter({ hasText: 'レシート' }).waitFor()
