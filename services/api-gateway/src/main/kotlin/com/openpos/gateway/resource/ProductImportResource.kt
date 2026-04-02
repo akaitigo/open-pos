@@ -57,6 +57,7 @@ class ProductImportResource {
         val results = mutableListOf<Map<String, Any?>>()
         var successCount = 0
         var errorCount = 0
+        var skippedCount = 0
 
         BufferedReader(
             InputStreamReader(file.uploadedFile().toFile().inputStream(), StandardCharsets.UTF_8),
@@ -87,13 +88,38 @@ class ProductImportResource {
             var lineNumber = 1
             reader.forEachLine { line ->
                 lineNumber++
+                if (line.isBlank()) {
+                    skippedCount++
+                    results.add(mapOf("line" to lineNumber, "status" to "skipped", "message" to "Empty line"))
+                    return@forEachLine
+                }
                 try {
                     val fields = parseCsvLine(line)
+                    val name = fields.getOrElse(nameIdx) { "" }
+                    if (name.isBlank()) {
+                        skippedCount++
+                        results.add(
+                            mapOf("line" to lineNumber, "status" to "skipped", "message" to "Empty product name"),
+                        )
+                        return@forEachLine
+                    }
+                    val price = fields.getOrElse(priceIdx) { "0" }.toLongOrNull() ?: 0L
+                    if (price <= 0) {
+                        skippedCount++
+                        results.add(
+                            mapOf(
+                                "line" to lineNumber,
+                                "status" to "skipped",
+                                "message" to "Price must be positive, got: $price",
+                            ),
+                        )
+                        return@forEachLine
+                    }
                     val request =
                         CreateProductRequest
                             .newBuilder()
-                            .setName(fields.getOrElse(nameIdx) { "" })
-                            .setPrice(fields.getOrElse(priceIdx) { "0" }.toLong())
+                            .setName(name)
+                            .setPrice(price)
                             .apply {
                                 if (barcodeIdx >= 0) {
                                     fields.getOrNull(barcodeIdx)?.takeIf { it.isNotBlank() }?.let { setBarcode(it) }
@@ -127,9 +153,10 @@ class ProductImportResource {
         return Response
             .ok(
                 mapOf(
-                    "totalProcessed" to (successCount + errorCount),
+                    "totalProcessed" to (successCount + errorCount + skippedCount),
                     "success" to successCount,
                     "errors" to errorCount,
+                    "skipped" to skippedCount,
                     "details" to results,
                 ),
             ).build()
@@ -141,12 +168,18 @@ class ProductImportResource {
         var inQuotes = false
         for (ch in line) {
             when {
-                ch == '"' -> inQuotes = !inQuotes
+                ch == '"' -> {
+                    inQuotes = !inQuotes
+                }
+
                 ch == ',' && !inQuotes -> {
                     fields.add(current.toString().trim())
                     current.clear()
                 }
-                else -> current.append(ch)
+
+                else -> {
+                    current.append(ch)
+                }
             }
         }
         fields.add(current.toString().trim())

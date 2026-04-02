@@ -48,9 +48,16 @@ class StockTransferServiceTest {
         fun `sets PENDING status`() {
             val fromStore = UUID.randomUUID()
             val toStore = UUID.randomUUID()
+            val productId = UUID.randomUUID()
             doNothing().whenever(stockTransferRepository).persist(any<StockTransferEntity>())
 
-            val result = service.create(fromStore, toStore, """[{"productId":"abc","quantity":10}]""", "転送テスト")
+            val result =
+                service.create(
+                    fromStore,
+                    toStore,
+                    """[{"productId":"$productId","quantity":10}]""",
+                    "転送テスト",
+                )
 
             assertNotNull(result)
             assertEquals(fromStore, result.fromStoreId)
@@ -64,6 +71,48 @@ class StockTransferServiceTest {
             val sameId = UUID.randomUUID()
             assertThrows(IllegalArgumentException::class.java) {
                 service.create(sameId, sameId, "[]", null)
+            }
+        }
+
+        @Test
+        fun `throws when item quantity is zero`() {
+            val fromStore = UUID.randomUUID()
+            val toStore = UUID.randomUUID()
+            val productId = UUID.randomUUID()
+            val itemsJson = """[{"productId":"$productId","quantity":0}]"""
+
+            val exception =
+                assertThrows(IllegalArgumentException::class.java) {
+                    service.create(fromStore, toStore, itemsJson, null)
+                }
+            assertEquals(true, exception.message?.contains("non-positive"))
+        }
+
+        @Test
+        fun `throws when item quantity is negative`() {
+            val fromStore = UUID.randomUUID()
+            val toStore = UUID.randomUUID()
+            val productId = UUID.randomUUID()
+            val itemsJson = """[{"productId":"$productId","quantity":-5}]"""
+
+            val exception =
+                assertThrows(IllegalArgumentException::class.java) {
+                    service.create(fromStore, toStore, itemsJson, null)
+                }
+            assertEquals(true, exception.message?.contains("non-positive"))
+        }
+
+        @Test
+        fun `throws when one of multiple items has non-positive quantity`() {
+            val fromStore = UUID.randomUUID()
+            val toStore = UUID.randomUUID()
+            val pid1 = UUID.randomUUID()
+            val pid2 = UUID.randomUUID()
+            val itemsJson =
+                """[{"productId":"$pid1","quantity":5},{"productId":"$pid2","quantity":-1}]"""
+
+            assertThrows(IllegalArgumentException::class.java) {
+                service.create(fromStore, toStore, itemsJson, null)
             }
         }
     }
@@ -381,6 +430,29 @@ class StockTransferServiceTest {
             val result = service.parseItems("[]")
 
             assertEquals(0, result.size)
+        }
+
+        @Test
+        fun `parses negative quantity`() {
+            val productId = UUID.randomUUID()
+            val json = """[{"productId":"$productId","quantity":-3}]"""
+
+            val result = service.parseItems(json)
+
+            assertEquals(1, result.size)
+            assertEquals(productId, result[0].productId)
+            assertEquals(-3, result[0].quantity)
+        }
+
+        @Test
+        fun `parses zero quantity`() {
+            val productId = UUID.randomUUID()
+            val json = """[{"productId":"$productId","quantity":0}]"""
+
+            val result = service.parseItems(json)
+
+            assertEquals(1, result.size)
+            assertEquals(0, result[0].quantity)
         }
     }
 }
