@@ -78,8 +78,8 @@ class TransactionRepository : PanacheRepositoryBase<TransactionEntity, UUID> {
                 FROM TransactionEntity t
                 WHERE t.storeId = :storeId
                   AND t.status = 'COMPLETED'
-                  AND t.createdAt >= :startDate
-                  AND t.createdAt <= :endDate
+                  AND t.completedAt >= :startDate
+                  AND t.completedAt <= :endDate
                 GROUP BY t.staffId
                 """.trimIndent(),
                 Array::class.java,

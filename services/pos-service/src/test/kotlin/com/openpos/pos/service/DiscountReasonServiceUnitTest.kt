@@ -120,4 +120,36 @@ class DiscountReasonServiceUnitTest {
             assertEquals("PROMO", result[0].code)
         }
     }
+
+    @Nested
+    inner class ListAll {
+        @Test
+        fun `returns all reasons including inactive`() {
+            val active =
+                DiscountReasonEntity().apply {
+                    this.id = UUID.randomUUID()
+                    this.organizationId = orgId
+                    this.code = "PROMO"
+                    this.description = "キャンペーン"
+                    this.isActive = true
+                }
+            val inactive =
+                DiscountReasonEntity().apply {
+                    this.id = UUID.randomUUID()
+                    this.organizationId = orgId
+                    this.code = "OLD_PROMO"
+                    this.description = "旧キャンペーン"
+                    this.isActive = false
+                }
+            whenever(discountReasonRepository.findAllOrdered()).thenReturn(listOf(active, inactive))
+
+            val result = service.listAll()
+
+            assertEquals(2, result.size)
+            assertEquals("PROMO", result[0].code)
+            assertEquals(true, result[0].isActive)
+            assertEquals("OLD_PROMO", result[1].code)
+            assertEquals(false, result[1].isActive)
+        }
+    }
 }

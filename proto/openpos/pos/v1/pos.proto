@@ -840,7 +840,10 @@ message DiscountReason {
   string updated_at = 7;
 }
 
-message ListDiscountReasonsRequest {}
+message ListDiscountReasonsRequest {
+  // When true, include inactive (disabled) discount reasons in the response.
+  bool include_inactive = 1;
+}
 
 message ListDiscountReasonsResponse {
   repeated DiscountReason discount_reasons = 1;

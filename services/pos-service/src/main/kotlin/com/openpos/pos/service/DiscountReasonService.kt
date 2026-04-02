@@ -29,6 +29,11 @@ class DiscountReasonService {
         return discountReasonRepository.findActive()
     }
 
+    fun listAll(): List<DiscountReasonEntity> {
+        tenantFilterService.enableFilter()
+        return discountReasonRepository.findAllOrdered()
+    }
+
     @Transactional
     fun create(
         code: String,
