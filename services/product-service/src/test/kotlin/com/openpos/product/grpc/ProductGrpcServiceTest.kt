@@ -6,16 +6,20 @@ import com.google.protobuf.Int64Value
 import com.openpos.product.entity.CouponEntity
 import com.openpos.product.entity.DiscountEntity
 import com.openpos.product.entity.ProductEntity
+import com.openpos.product.entity.ProductVariantEntity
 import com.openpos.product.entity.TaxRateEntity
 import com.openpos.product.service.CategoryService
 import com.openpos.product.service.CouponService
 import com.openpos.product.service.CouponValidationResult
 import com.openpos.product.service.DiscountService
 import com.openpos.product.service.ProductService
+import com.openpos.product.service.ProductVariantService
 import com.openpos.product.service.TaxRateService
+import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import openpos.product.v1.CreateProductRequest
 import openpos.product.v1.DiscountType
+import openpos.product.v1.GetProductByBarcodeRequest
 import openpos.product.v1.ListCouponsRequest
 import openpos.product.v1.UpdateDiscountRequest
 import openpos.product.v1.UpdateProductRequest
@@ -44,6 +48,7 @@ class ProductGrpcServiceTest {
     private val taxRateService = mock<TaxRateService>()
     private val discountService = mock<DiscountService>()
     private val couponService = mock<CouponService>()
+    private val productVariantService = mock<ProductVariantService>()
     private val tenantHelper = mock<GrpcTenantHelper>()
 
     @BeforeEach
@@ -55,6 +60,7 @@ class ProductGrpcServiceTest {
                 this.taxRateService = this@ProductGrpcServiceTest.taxRateService
                 this.discountService = this@ProductGrpcServiceTest.discountService
                 this.couponService = this@ProductGrpcServiceTest.couponService
+                this.productVariantService = this@ProductGrpcServiceTest.productVariantService
                 this.tenantHelper = this@ProductGrpcServiceTest.tenantHelper
             }
     }
@@ -391,6 +397,99 @@ class ProductGrpcServiceTest {
         assertEquals(0, observer.value?.couponsCount)
         assertTrue(observer.completed)
     }
+
+    @Test
+    fun `getProductByBarcode returns product when parent product barcode matches`() {
+        val productId = UUID.randomUUID()
+        val product = productEntity(productId)
+        whenever(productService.findByBarcode("4901234567890")).thenReturn(product)
+        whenever(productVariantService.listByProductId(productId)).thenReturn(emptyList())
+
+        val observer = CapturingObserver<openpos.product.v1.GetProductByBarcodeResponse>()
+
+        grpcService.getProductByBarcode(
+            GetProductByBarcodeRequest.newBuilder().setBarcode("4901234567890").build(),
+            observer,
+        )
+
+        verify(tenantHelper).setupTenantContext()
+        verify(productService).findByBarcode("4901234567890")
+        assertNotNull(observer.value)
+        assertEquals(productId.toString(), observer.value?.product?.id)
+        assertTrue(observer.completed)
+    }
+
+    @Test
+    fun `getProductByBarcode falls back to variant barcode and returns parent product`() {
+        val productId = UUID.randomUUID()
+        val variantId = UUID.randomUUID()
+        val product = productEntity(productId)
+        val variant = productVariantEntity(variantId, productId)
+
+        whenever(productService.findByBarcode("4901234567891")).thenReturn(null)
+        whenever(productVariantService.findByBarcode("4901234567891")).thenReturn(variant)
+        whenever(productService.findById(productId)).thenReturn(product)
+        whenever(productVariantService.listByProductId(productId)).thenReturn(listOf(variant))
+
+        val observer = CapturingObserver<openpos.product.v1.GetProductByBarcodeResponse>()
+
+        grpcService.getProductByBarcode(
+            GetProductByBarcodeRequest.newBuilder().setBarcode("4901234567891").build(),
+            observer,
+        )
+
+        verify(tenantHelper).setupTenantContext()
+        verify(productService).findByBarcode("4901234567891")
+        verify(productVariantService).findByBarcode("4901234567891")
+        verify(productService).findById(productId)
+        assertNotNull(observer.value)
+        assertEquals(productId.toString(), observer.value?.product?.id)
+        assertEquals(1, observer.value?.product?.variantsCount)
+        assertEquals(
+            variantId.toString(),
+            observer.value
+                ?.product
+                ?.variantsList
+                ?.get(0)
+                ?.id,
+        )
+        assertTrue(observer.completed)
+    }
+
+    @Test
+    fun `getProductByBarcode throws NOT_FOUND when neither product nor variant matches`() {
+        whenever(productService.findByBarcode("0000000000000")).thenReturn(null)
+        whenever(productVariantService.findByBarcode("0000000000000")).thenReturn(null)
+
+        val observer = CapturingObserver<openpos.product.v1.GetProductByBarcodeResponse>()
+
+        val exception =
+            org.junit.jupiter.api.assertThrows<io.grpc.StatusRuntimeException> {
+                grpcService.getProductByBarcode(
+                    GetProductByBarcodeRequest.newBuilder().setBarcode("0000000000000").build(),
+                    observer,
+                )
+            }
+
+        assertEquals(Status.NOT_FOUND.code, exception.status.code)
+        assertTrue(requireNotNull(exception.status.description).contains("0000000000000"))
+    }
+
+    private fun productVariantEntity(
+        variantId: UUID,
+        productId: UUID,
+    ): ProductVariantEntity =
+        ProductVariantEntity().apply {
+            id = variantId
+            organizationId = UUID.randomUUID()
+            this.productId = productId
+            name = "Lサイズ"
+            sku = "COFFEE-L"
+            barcode = "4901234567891"
+            price = 580L
+            isActive = true
+            displayOrder = 0
+        }
 
     private fun productEntity(productId: UUID): ProductEntity =
         ProductEntity().apply {

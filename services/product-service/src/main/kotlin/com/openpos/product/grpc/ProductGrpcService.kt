@@ -231,8 +231,12 @@ class ProductGrpcService : ProductServiceGrpc.ProductServiceImplBase() {
         responseObserver: io.grpc.stub.StreamObserver<GetProductByBarcodeResponse>,
     ) {
         tenantHelper.setupTenantContext()
+        // 親商品のバーコードで検索し、見つからなければバリアントのバーコードでフォールバック検索
         val entity =
             productService.findByBarcode(request.barcode)
+                ?: productVariantService.findByBarcode(request.barcode)?.let { variant ->
+                    productService.findById(variant.productId)
+                }
                 ?: throw Status.NOT_FOUND.withDescription("Product not found for barcode: ${request.barcode}").asRuntimeException()
         val variants = productVariantService.listByProductId(entity.id)
         responseObserver.onNext(
