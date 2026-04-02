@@ -194,6 +194,11 @@ class AnalyticsQueryService {
     /**
      * カテゴリ別売上レポートを取得する。
      * category_id + category_name の組でグループ化し、同名の異なるカテゴリを区別する (#1141)。
+     *
+     * transactionCount は概算値: product_sales テーブルは日別×商品別の粒度で
+     * transaction_id を持たないため、正確なユニークトランザクション数は算出不可。
+     * 日別の最大 transactionCount を合計することで、同カテゴリ内の商品数による
+     * 水増しを防止している (#1148)。
      */
     fun getCategorySalesReport(
         storeId: UUID,
@@ -206,12 +211,18 @@ class AnalyticsQueryService {
         return raw
             .groupBy { Pair(it.categoryId, it.categoryName.ifBlank { "\u672A\u5206\u985E" }) }
             .map { (key, records) ->
+                // 日別にグループ化し、各日の最大 transactionCount を合計する（概算値）
+                val estimatedTxCount =
+                    records
+                        .groupBy { it.date }
+                        .values
+                        .sumOf { dayRecords -> dayRecords.maxOf { it.transactionCount } }
                 CategorySalesItem(
                     categoryId = key.first,
                     categoryName = key.second,
                     totalAmount = records.sumOf { it.totalAmount },
                     quantitySold = records.sumOf { it.quantitySold },
-                    transactionCount = records.sumOf { it.transactionCount },
+                    transactionCount = estimatedTxCount,
                 )
             }.sortedByDescending { it.totalAmount }
     }

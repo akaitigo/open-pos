@@ -1218,7 +1218,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
 
             val storeId = request.storeId.toUUID()
             val startDate = parseInstantOrDate(request.dateRange.start)
-            val endDate = parseInstantOrDate(request.dateRange.end)
+            val endDate = parseInstantOrDateExclusive(request.dateRange.end)
 
             val aggregated = transactionService.aggregateStaffSales(storeId, startDate, endDate)
 
@@ -1488,11 +1488,28 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     /**
      * Instant 形式（ISO-8601）または日付文字列（YYYY-MM-DD）をパースして Instant を返す。
      * 日付文字列の場合は UTC の開始時刻（00:00:00Z）に変換する。
+     * startDate のパースに使用する（包含的下限）。
      */
     private fun parseInstantOrDate(value: String): Instant =
         try {
             Instant.parse(value)
         } catch (_: java.time.format.DateTimeParseException) {
             LocalDate.parse(value).atStartOfDay(ZoneOffset.UTC).toInstant()
+        }
+
+    /**
+     * endDate 用のパース関数。
+     * 日付文字列（YYYY-MM-DD）の場合は翌日の開始時刻に変換し、排他的上限として使用する。
+     * Instant 形式の場合はそのまま返す（呼び出し元が排他的上限として扱う）。
+     */
+    private fun parseInstantOrDateExclusive(value: String): Instant =
+        try {
+            Instant.parse(value)
+        } catch (_: java.time.format.DateTimeParseException) {
+            LocalDate
+                .parse(value)
+                .plusDays(1)
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
         }
 }
