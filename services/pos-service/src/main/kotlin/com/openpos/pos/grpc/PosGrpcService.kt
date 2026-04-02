@@ -1266,7 +1266,12 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         try {
-            val reasons = discountReasonService.listActive()
+            val reasons =
+                if (request.includeInactive) {
+                    discountReasonService.listAll()
+                } else {
+                    discountReasonService.listActive()
+                }
             responseObserver.onNext(
                 openpos.pos.v1.ListDiscountReasonsResponse
                     .newBuilder()

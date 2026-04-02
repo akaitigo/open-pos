@@ -9,5 +9,7 @@ import java.util.UUID
 class DiscountReasonRepository : PanacheRepositoryBase<DiscountReasonEntity, UUID> {
     fun findActive(): List<DiscountReasonEntity> = list("isActive = true")
 
+    fun findAllOrdered(): List<DiscountReasonEntity> = list("ORDER BY createdAt DESC")
+
     fun findByCode(code: String): DiscountReasonEntity? = find("code = ?1", code).firstResult()
 }
