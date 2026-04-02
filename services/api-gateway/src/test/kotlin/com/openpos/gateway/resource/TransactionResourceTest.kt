@@ -5,6 +5,7 @@ import com.openpos.gateway.config.GrpcClientHelper
 import com.openpos.gateway.config.TenantContext
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
+import jakarta.ws.rs.BadRequestException
 import openpos.common.v1.PaginationResponse
 import openpos.pos.v1.CreateTransactionResponse
 import openpos.pos.v1.FinalizeTransactionResponse
@@ -17,6 +18,7 @@ import openpos.pos.v1.TransactionStatus
 import openpos.pos.v1.TransactionType
 import openpos.pos.v1.VoidTransactionResponse
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -291,6 +293,48 @@ class TransactionResourceTest {
             assertThrows<StatusRuntimeException> {
                 resource.get("nonexistent")
             }
+        }
+    }
+
+    @Nested
+    inner class AddItemValidation {
+        @Test
+        fun `カスタムアイテムでprice=nullなら400`() {
+            // Arrange
+            val body = AddItemBody(customProductName = "手書き商品", customProductPrice = null)
+
+            // Act & Assert
+            val ex =
+                assertThrows<BadRequestException> {
+                    resource.addItem(txId, body)
+                }
+            assertTrue(ex.message?.contains("customProductPrice must be positive") == true)
+        }
+
+        @Test
+        fun `カスタムアイテムでprice=0なら400`() {
+            // Arrange
+            val body = AddItemBody(customProductName = "手書き商品", customProductPrice = 0)
+
+            // Act & Assert
+            val ex =
+                assertThrows<BadRequestException> {
+                    resource.addItem(txId, body)
+                }
+            assertTrue(ex.message?.contains("customProductPrice must be positive") == true)
+        }
+
+        @Test
+        fun `カスタムアイテムでprice負数なら400`() {
+            // Arrange
+            val body = AddItemBody(customProductName = "手書き商品", customProductPrice = -100)
+
+            // Act & Assert
+            val ex =
+                assertThrows<BadRequestException> {
+                    resource.addItem(txId, body)
+                }
+            assertTrue(ex.message?.contains("customProductPrice must be positive") == true)
         }
     }
 }

@@ -5,15 +5,22 @@ import com.google.protobuf.BoolValue
 import com.openpos.store.entity.StaffEntity
 import com.openpos.store.entity.StoreEntity
 import com.openpos.store.service.AuditLogService
+import com.openpos.store.service.CustomerService
 import com.openpos.store.service.StaffService
 import com.openpos.store.service.StoreService
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import io.grpc.stub.StreamObserver
+import openpos.store.v1.RedeemPointsRequest
+import openpos.store.v1.RedeemPointsResponse
 import openpos.store.v1.UpdateStaffRequest
 import openpos.store.v1.UpdateStoreRequest
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
@@ -26,6 +33,7 @@ class StoreGrpcServiceTest {
     private lateinit var grpcService: StoreGrpcService
     private val storeService = mock<StoreService>()
     private val staffService = mock<StaffService>()
+    private val customerService = mock<CustomerService>()
     private val auditLogService = mock<AuditLogService>()
     private val tenantHelper = mock<GrpcTenantHelper>()
 
@@ -35,10 +43,51 @@ class StoreGrpcServiceTest {
             StoreGrpcService().apply {
                 this.storeService = this@StoreGrpcServiceTest.storeService
                 this.staffService = this@StoreGrpcServiceTest.staffService
+                this.customerService = this@StoreGrpcServiceTest.customerService
                 this.auditLogService = this@StoreGrpcServiceTest.auditLogService
                 this.tenantHelper = this@StoreGrpcServiceTest.tenantHelper
                 this.objectMapper = ObjectMapper()
             }
+    }
+
+    @Test
+    fun `redeemPoints rejects negative points with INVALID_ARGUMENT`() {
+        // Arrange
+        val request =
+            RedeemPointsRequest
+                .newBuilder()
+                .setCustomerId(UUID.randomUUID().toString())
+                .setPoints(-10)
+                .build()
+        val observer = CapturingObserver<RedeemPointsResponse>()
+
+        // Act & Assert
+        val ex =
+            assertThrows<StatusRuntimeException> {
+                grpcService.redeemPoints(request, observer)
+            }
+        assertEquals(Status.INVALID_ARGUMENT.code, ex.status.code)
+        assertTrue(ex.message?.contains("points must be positive") == true)
+    }
+
+    @Test
+    fun `redeemPoints rejects zero points with INVALID_ARGUMENT`() {
+        // Arrange
+        val request =
+            RedeemPointsRequest
+                .newBuilder()
+                .setCustomerId(UUID.randomUUID().toString())
+                .setPoints(0)
+                .build()
+        val observer = CapturingObserver<RedeemPointsResponse>()
+
+        // Act & Assert
+        val ex =
+            assertThrows<StatusRuntimeException> {
+                grpcService.redeemPoints(request, observer)
+            }
+        assertEquals(Status.INVALID_ARGUMENT.code, ex.status.code)
+        assertTrue(ex.message?.contains("points must be positive") == true)
     }
 
     @Test

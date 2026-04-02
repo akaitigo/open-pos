@@ -66,8 +66,8 @@ class AccountingResource {
                 .setDateRange(
                     DateRange
                         .newBuilder()
-                        .setStart(normalizeStart(date))
-                        .setEnd(normalizeEnd(date))
+                        .setStart(date)
+                        .setEnd(date)
                         .build(),
                 ).build()
         val response = grpc.withTenant(analyticsStub).getDailySales(request)
