@@ -2,7 +2,9 @@ package com.openpos.product.service
 
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
+import com.openpos.product.entity.ProductEntity
 import com.openpos.product.entity.ProductVariantEntity
+import com.openpos.product.repository.ProductRepository
 import com.openpos.product.repository.ProductVariantRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -22,6 +24,7 @@ import java.util.UUID
 class ProductVariantServiceUnitTest {
     private lateinit var service: ProductVariantService
     private lateinit var variantRepository: ProductVariantRepository
+    private lateinit var productRepository: ProductRepository
     private lateinit var tenantFilterService: TenantFilterService
     private lateinit var organizationIdHolder: OrganizationIdHolder
 
@@ -31,17 +34,28 @@ class ProductVariantServiceUnitTest {
     @BeforeEach
     fun setUp() {
         variantRepository = mock()
+        productRepository = mock()
         tenantFilterService = mock()
         organizationIdHolder = OrganizationIdHolder()
 
         service = ProductVariantService()
         service.variantRepository = variantRepository
+        service.productRepository = productRepository
         service.tenantFilterService = tenantFilterService
         service.organizationIdHolder = organizationIdHolder
 
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
         doNothing().whenever(variantRepository).persist(any<ProductVariantEntity>())
+
+        // デフォルト: 親商品がテナント内に存在する
+        whenever(productRepository.findById(productId)).thenReturn(
+            ProductEntity().apply {
+                id = productId
+                organizationId = orgId
+                name = "テスト商品"
+            },
+        )
     }
 
     @Nested
@@ -101,6 +115,43 @@ class ProductVariantServiceUnitTest {
             assertThrows<IllegalArgumentException> {
                 service.create(productId, "Lサイズ", null, null, 10000L, 0)
             }
+        }
+
+        @Test
+        fun `throws when productId belongs to another tenant`() {
+            // Arrange — テナントフィルタ有効時に他テナントの product は null が返る
+            val otherTenantProductId = UUID.randomUUID()
+            whenever(productRepository.findById(otherTenantProductId)).thenReturn(null)
+
+            // Act & Assert
+            val exception =
+                assertThrows<IllegalArgumentException> {
+                    service.create(otherTenantProductId, "不正バリアント", null, null, 10000L, 0)
+                }
+            assertTrue(exception.message?.contains("Product not found or belongs to another tenant") == true)
+            verify(tenantFilterService).enableFilter()
+        }
+
+        @Test
+        fun `throws when productId does not exist`() {
+            // Arrange — 存在しない productId
+            val nonExistentProductId = UUID.randomUUID()
+            whenever(productRepository.findById(nonExistentProductId)).thenReturn(null)
+
+            // Act & Assert
+            assertThrows<IllegalArgumentException> {
+                service.create(nonExistentProductId, "存在しない商品のバリアント", null, null, 5000L, 0)
+            }
+        }
+
+        @Test
+        fun `enables tenant filter before validating parent product`() {
+            // Arrange & Act
+            service.create(productId, "フィルタ確認用", null, null, 10000L, 0)
+
+            // Assert — テナントフィルタが有効化されていることを確認
+            verify(tenantFilterService).enableFilter()
+            verify(productRepository).findById(productId)
         }
     }
 
