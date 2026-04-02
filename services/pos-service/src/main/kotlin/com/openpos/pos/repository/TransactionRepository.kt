@@ -56,7 +56,7 @@ class TransactionRepository : PanacheRepositoryBase<TransactionEntity, UUID> {
         endDate: Instant,
     ): List<UUID> =
         find(
-            "storeId = :storeId AND status = :status AND completedAt >= :startDate AND completedAt <= :endDate",
+            "storeId = :storeId AND status = :status AND completedAt >= :startDate AND completedAt < :endDate",
             mapOf(
                 "storeId" to storeId,
                 "status" to "COMPLETED",
@@ -79,7 +79,7 @@ class TransactionRepository : PanacheRepositoryBase<TransactionEntity, UUID> {
                 WHERE t.storeId = :storeId
                   AND t.status = 'COMPLETED'
                   AND t.completedAt >= :startDate
-                  AND t.completedAt <= :endDate
+                  AND t.completedAt < :endDate
                 GROUP BY t.staffId
                 """.trimIndent(),
                 Array::class.java,

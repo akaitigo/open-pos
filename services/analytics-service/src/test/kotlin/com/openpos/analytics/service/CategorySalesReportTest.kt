@@ -122,6 +122,72 @@ class CategorySalesReportTest {
         }
 
         @Test
+        fun `transactionCount uses daily max to avoid inflation from multiple products`() {
+            // Arrange: 2 products in same category on same day — transactionCount should be max, not sum
+            val catId = UUID.randomUUID()
+            val records =
+                listOf(
+                    createEntity(UUID.randomUUID(), "Coffee", catId, "Beverages", 100, 500000),
+                    createEntity(UUID.randomUUID(), "Tea", catId, "Beverages", 50, 200000),
+                )
+            whenever(productSalesRepository.findAggregatedByStoreAndDateRange(storeId, startDate, endDate))
+                .thenReturn(records)
+
+            // Act
+            val result = analyticsQueryService.getCategorySalesReport(storeId, startDate, endDate)
+
+            // Assert: transactionCount = max(100, 50) = 100, not sum(100 + 50) = 150
+            assertEquals(1, result.size)
+            assertEquals(100, result[0].transactionCount)
+            assertEquals(150, result[0].quantitySold) // quantitySold is still summed
+        }
+
+        @Test
+        fun `transactionCount sums daily max across multiple days`() {
+            // Arrange: same category, different days
+            val catId = UUID.randomUUID()
+            val day1Product =
+                ProductSalesEntity().apply {
+                    id = UUID.randomUUID()
+                    organizationId = orgId
+                    storeId = this@CategorySalesReportTest.storeId
+                    productId = UUID.randomUUID()
+                    productName = "Coffee"
+                    categoryId = catId
+                    categoryName = "Beverages"
+                    date = LocalDate.of(2026, 3, 1)
+                    quantitySold = 10
+                    totalAmount = 100000
+                    costAmount = 0
+                    transactionCount = 8
+                }
+            val day2Product =
+                ProductSalesEntity().apply {
+                    id = UUID.randomUUID()
+                    organizationId = orgId
+                    storeId = this@CategorySalesReportTest.storeId
+                    productId = UUID.randomUUID()
+                    productName = "Tea"
+                    categoryId = catId
+                    categoryName = "Beverages"
+                    date = LocalDate.of(2026, 3, 2)
+                    quantitySold = 5
+                    totalAmount = 50000
+                    costAmount = 0
+                    transactionCount = 3
+                }
+            whenever(productSalesRepository.findAggregatedByStoreAndDateRange(storeId, startDate, endDate))
+                .thenReturn(listOf(day1Product, day2Product))
+
+            // Act
+            val result = analyticsQueryService.getCategorySalesReport(storeId, startDate, endDate)
+
+            // Assert: transactionCount = max(8) + max(3) = 11
+            assertEquals(1, result.size)
+            assertEquals(11, result[0].transactionCount)
+        }
+
+        @Test
         fun `returns empty list when no data`() {
             // Arrange
             whenever(productSalesRepository.findAggregatedByStoreAndDateRange(storeId, startDate, endDate))
