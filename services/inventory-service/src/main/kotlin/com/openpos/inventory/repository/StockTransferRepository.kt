@@ -9,7 +9,25 @@ import java.util.UUID
 
 @ApplicationScoped
 class StockTransferRepository : PanacheRepositoryBase<StockTransferEntity, UUID> {
-    fun listPaginated(page: Page): List<StockTransferEntity> = findAll(Sort.descending("createdAt")).page(page).list()
+    fun listPaginated(
+        status: String?,
+        page: Page,
+    ): List<StockTransferEntity> {
+        val query =
+            if (status != null) {
+                find("status = ?1", Sort.descending("createdAt"), status)
+            } else {
+                findAll(Sort.descending("createdAt"))
+            }
+        return query.page(page).list()
+    }
+
+    fun countByStatus(status: String?): Long =
+        if (status != null) {
+            count("status = ?1", status)
+        } else {
+            count()
+        }
 
     fun listByStoreId(
         storeId: UUID,
