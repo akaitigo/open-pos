@@ -24,6 +24,14 @@ export function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <Routes>
+          <Route
+            path="callback"
+            element={
+              <Suspense fallback={<RouteLoading />}>
+                <CallbackPage />
+              </Suspense>
+            }
+          />
           <Route element={<Layout />}>
             <Route index element={<ProductsPage />} />
             <Route
@@ -39,14 +47,6 @@ export function App() {
               element={
                 <Suspense fallback={<RouteLoading />}>
                   <HistoryPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="callback"
-              element={
-                <Suspense fallback={<RouteLoading />}>
-                  <CallbackPage />
                 </Suspense>
               }
             />
