@@ -23,43 +23,39 @@ import io.quarkus.grpc.GrpcService
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
 import openpos.common.v1.PaginationResponse
-import openpos.store.v1.CreateCustomerRequest
-import openpos.store.v1.CreateCustomerResponse
-import openpos.store.v1.Customer
-import openpos.store.v1.CustomerTier
-import openpos.store.v1.EarnPointsRequest
-import openpos.store.v1.EarnPointsResponse
-import openpos.store.v1.GetCustomerRequest
-import openpos.store.v1.GetCustomerResponse
-import openpos.store.v1.ListCustomersRequest
-import openpos.store.v1.ListCustomersResponse
-import openpos.store.v1.RedeemPointsRequest
-import openpos.store.v1.RedeemPointsResponse
-import openpos.store.v1.UpdateCustomerRequest
-import openpos.store.v1.UpdateCustomerResponse
 import openpos.store.v1.AnonymizeCustomerDataRequest
 import openpos.store.v1.AnonymizeCustomerDataResponse
 import openpos.store.v1.AnonymizeStaffDataRequest
 import openpos.store.v1.AnonymizeStaffDataResponse
 import openpos.store.v1.AuthenticateByPinRequest
 import openpos.store.v1.AuthenticateByPinResponse
+import openpos.store.v1.CreateCustomerRequest
+import openpos.store.v1.CreateCustomerResponse
 import openpos.store.v1.CreateOrganizationRequest
 import openpos.store.v1.CreateOrganizationResponse
 import openpos.store.v1.CreateStaffRequest
 import openpos.store.v1.CreateStaffResponse
 import openpos.store.v1.CreateStoreRequest
 import openpos.store.v1.CreateStoreResponse
+import openpos.store.v1.Customer
+import openpos.store.v1.CustomerTier
 import openpos.store.v1.DataProcessingConsent
 import openpos.store.v1.DeleteOrganizationDataRequest
 import openpos.store.v1.DeleteOrganizationDataResponse
+import openpos.store.v1.EarnPointsRequest
+import openpos.store.v1.EarnPointsResponse
 import openpos.store.v1.GetConsentRequest
 import openpos.store.v1.GetConsentResponse
+import openpos.store.v1.GetCustomerRequest
+import openpos.store.v1.GetCustomerResponse
 import openpos.store.v1.GetOrganizationRequest
 import openpos.store.v1.GetOrganizationResponse
 import openpos.store.v1.GetStaffRequest
 import openpos.store.v1.GetStaffResponse
 import openpos.store.v1.GetStoreRequest
 import openpos.store.v1.GetStoreResponse
+import openpos.store.v1.ListCustomersRequest
+import openpos.store.v1.ListCustomersResponse
 import openpos.store.v1.ListStaffRequest
 import openpos.store.v1.ListStaffResponse
 import openpos.store.v1.ListStoresRequest
@@ -69,6 +65,8 @@ import openpos.store.v1.ListTerminalsResponse
 import openpos.store.v1.Organization
 import openpos.store.v1.RecordConsentRequest
 import openpos.store.v1.RecordConsentResponse
+import openpos.store.v1.RedeemPointsRequest
+import openpos.store.v1.RedeemPointsResponse
 import openpos.store.v1.RegisterTerminalRequest
 import openpos.store.v1.RegisterTerminalResponse
 import openpos.store.v1.Staff
@@ -76,6 +74,8 @@ import openpos.store.v1.StaffRole
 import openpos.store.v1.Store
 import openpos.store.v1.StoreServiceGrpc
 import openpos.store.v1.Terminal
+import openpos.store.v1.UpdateCustomerRequest
+import openpos.store.v1.UpdateCustomerResponse
 import openpos.store.v1.UpdateOrganizationRequest
 import openpos.store.v1.UpdateOrganizationResponse
 import openpos.store.v1.UpdateStaffRequest
@@ -591,6 +591,11 @@ class StoreGrpcService : StoreServiceGrpc.StoreServiceImplBase() {
         request: RedeemPointsRequest,
         responseObserver: io.grpc.stub.StreamObserver<RedeemPointsResponse>,
     ) {
+        if (request.points <= 0) {
+            throw Status.INVALID_ARGUMENT
+                .withDescription("points must be positive, got: ${request.points}")
+                .asRuntimeException()
+        }
         tenantHelper.setupTenantContext()
         val customerId = request.customerId.toUUID()
         val transactionId = request.transactionId.ifBlank { null }?.let { it.toUUID() }

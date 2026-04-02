@@ -130,6 +130,11 @@ class TransactionResource {
         @PathParam("id") id: String,
         body: AddItemBody,
     ): Map<String, Any?> {
+        if (!body.customProductName.isNullOrBlank() && (body.customProductPrice == null || body.customProductPrice <= 0)) {
+            throw jakarta.ws.rs.BadRequestException(
+                "customProductPrice must be positive when customProductName is specified, got: ${body.customProductPrice}",
+            )
+        }
         val request =
             AddTransactionItemRequest
                 .newBuilder()
