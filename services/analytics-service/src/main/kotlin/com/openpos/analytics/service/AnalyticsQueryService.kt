@@ -181,16 +181,20 @@ class AnalyticsQueryService {
         }
     }
 
-
     // === Category Sales Report (#1030) ===
 
     data class CategorySalesItem(
+        val categoryId: UUID?,
         val categoryName: String,
         val totalAmount: Long,
         val quantitySold: Int,
         val transactionCount: Int,
     )
 
+    /**
+     * カテゴリ別売上レポートを取得する。
+     * category_id + category_name の組でグループ化し、同名の異なるカテゴリを区別する (#1141)。
+     */
     fun getCategorySalesReport(
         storeId: UUID,
         startDate: LocalDate,
@@ -200,10 +204,11 @@ class AnalyticsQueryService {
         val raw = productSalesRepository.findAggregatedByStoreAndDateRange(storeId, startDate, endDate)
 
         return raw
-            .groupBy { it.categoryName.ifBlank { "\u672A\u5206\u985E" } }
-            .map { (categoryName, records) ->
+            .groupBy { Pair(it.categoryId, it.categoryName.ifBlank { "\u672A\u5206\u985E" }) }
+            .map { (key, records) ->
                 CategorySalesItem(
-                    categoryName = categoryName,
+                    categoryId = key.first,
+                    categoryName = key.second,
                     totalAmount = records.sumOf { it.totalAmount },
                     quantitySold = records.sumOf { it.quantitySold },
                     transactionCount = records.sumOf { it.transactionCount },

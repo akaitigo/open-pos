@@ -61,6 +61,7 @@ class SalesEventProcessor {
                 storeId,
                 UUID.fromString(pid),
                 item.productName,
+                item.categoryId?.let { runCatching { UUID.fromString(it) }.getOrNull() },
                 item.categoryName,
                 saleDate,
                 item.quantity,
@@ -148,6 +149,7 @@ class SalesEventProcessor {
         storeId: UUID,
         productId: UUID,
         productName: String?,
+        categoryId: UUID?,
         categoryName: String?,
         saleDate: LocalDate,
         quantity: Int,
@@ -162,6 +164,7 @@ class SalesEventProcessor {
                     this.productId = productId
                     this.date = saleDate
                     this.productName = productName?.ifBlank { "Product-$productId" } ?: "Product-$productId"
+                    this.categoryId = categoryId
                     this.categoryName = categoryName?.ifBlank { "" } ?: ""
                 }
         productSales.quantitySold += quantity
