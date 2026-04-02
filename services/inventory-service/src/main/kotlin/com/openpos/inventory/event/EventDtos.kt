@@ -27,7 +27,7 @@ data class SaleVoidedPayload(
 )
 
 data class SaleItemPayload(
-    val productId: String,
+    val productId: String? = null,
     val quantity: Int,
     val unitPrice: Long,
     val subtotal: Long,

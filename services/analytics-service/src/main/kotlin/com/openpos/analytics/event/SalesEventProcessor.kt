@@ -52,12 +52,14 @@ class SalesEventProcessor {
         // 日次売上更新
         updateDailySales(organizationId, storeId, saleDate, payload.totalAmount, payload.taxTotal, payload.discountTotal, payload.payments)
 
-        // 商品別売上更新
+        // 商品別売上更新（カスタムアイテム = productId null/blank はスキップ）
         for (item in payload.items) {
+            val pid = item.productId
+            if (pid.isNullOrBlank()) continue
             updateProductSales(
                 organizationId,
                 storeId,
-                UUID.fromString(item.productId),
+                UUID.fromString(pid),
                 item.productName,
                 item.categoryName,
                 saleDate,
@@ -89,12 +91,14 @@ class SalesEventProcessor {
         val totalAmount = payload.items.sumOf { it.subtotal }
         rollbackDailySales(organizationId, storeId, originalDate, totalAmount)
 
-        // 商品別売上ロールバック
+        // 商品別売上ロールバック（カスタムアイテム = productId null/blank はスキップ）
         for (item in payload.items) {
+            val pid = item.productId
+            if (pid.isNullOrBlank()) continue
             rollbackProductSales(
                 organizationId,
                 storeId,
-                UUID.fromString(item.productId),
+                UUID.fromString(pid),
                 originalDate,
                 item.quantity,
                 item.subtotal,

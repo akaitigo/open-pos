@@ -43,10 +43,11 @@ data class SaleVoidedPayload(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SaleItemPayload(
-    val productId: String,
+    val productId: String? = null,
     val quantity: Int,
     val unitPrice: Long,
     val subtotal: Long,
     val productName: String? = null,
+    val categoryId: String? = null,
     val categoryName: String? = null,
 )

@@ -22,7 +22,7 @@ data class SalePaymentDto(
 )
 
 data class SaleItemDto(
-    val productId: String,
+    val productId: String? = null,
     val productName: String,
     val quantity: Int,
     val unitPrice: Long,
