@@ -48,5 +48,6 @@ data class SaleItemPayload(
     val unitPrice: Long,
     val subtotal: Long,
     val productName: String? = null,
+    val categoryId: String? = null,
     val categoryName: String? = null,
 )

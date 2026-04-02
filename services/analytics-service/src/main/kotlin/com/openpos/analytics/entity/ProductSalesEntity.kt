@@ -26,6 +26,9 @@ class ProductSalesEntity : BaseEntity() {
     @Column(name = "product_name", nullable = false)
     var productName: String = ""
 
+    @Column(name = "category_id")
+    var categoryId: UUID? = null
+
     @Column(name = "category_name", nullable = false)
     var categoryName: String = ""
 

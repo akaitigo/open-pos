@@ -13,14 +13,14 @@ import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
 import openpos.analytics.v1.AbcAnalysisItem
 import openpos.analytics.v1.AnalyticsServiceGrpc
+import openpos.analytics.v1.CategorySalesItem
 import openpos.analytics.v1.DailySales
 import openpos.analytics.v1.DeleteSalesTargetRequest
 import openpos.analytics.v1.DeleteSalesTargetResponse
-import openpos.analytics.v1.CategorySalesItem
 import openpos.analytics.v1.GetAbcAnalysisRequest
+import openpos.analytics.v1.GetAbcAnalysisResponse
 import openpos.analytics.v1.GetCategorySalesReportRequest
 import openpos.analytics.v1.GetCategorySalesReportResponse
-import openpos.analytics.v1.GetAbcAnalysisResponse
 import openpos.analytics.v1.GetDailySalesRequest
 import openpos.analytics.v1.GetDailySalesResponse
 import openpos.analytics.v1.GetGrossProfitReportRequest
@@ -472,6 +472,7 @@ class AnalyticsGrpcService : AnalyticsServiceGrpc.AnalyticsServiceImplBase() {
                     items.map { item ->
                         CategorySalesItem
                             .newBuilder()
+                            .setCategoryId(item.categoryId?.toString() ?: "")
                             .setCategoryName(item.categoryName)
                             .setTotalAmount(item.totalAmount)
                             .setQuantitySold(item.quantitySold)
