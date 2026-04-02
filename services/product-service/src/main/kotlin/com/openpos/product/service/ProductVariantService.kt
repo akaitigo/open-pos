@@ -33,6 +33,14 @@ class ProductVariantService {
         return variantRepository.findByProductIds(productIds)
     }
 
+    /**
+     * バーコードでバリアントを検索する。
+     */
+    fun findByBarcode(barcode: String): ProductVariantEntity? {
+        tenantFilterService.enableFilter()
+        return variantRepository.findByBarcode(barcode)
+    }
+
     @Transactional
     fun create(
         productId: java.util.UUID,
