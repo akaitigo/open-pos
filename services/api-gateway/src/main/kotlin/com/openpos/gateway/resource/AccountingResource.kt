@@ -26,6 +26,18 @@ import org.eclipse.microprofile.faulttolerance.Timeout
 @Blocking
 @Timeout(30000)
 class AccountingResource {
+    companion object {
+        private val DATE_ONLY_REGEX = Regex("""\d{4}-\d{2}-\d{2}""")
+
+        /**
+         * YYYY-MM-DD 形式の日付文字列を RFC 3339 タイムスタンプに正規化する。
+         * 既に RFC 3339（T を含む）形式の場合はそのまま返す。
+         */
+        fun normalizeStart(date: String): String = if (DATE_ONLY_REGEX.matches(date)) "${date}T00:00:00Z" else date
+
+        fun normalizeEnd(date: String): String = if (DATE_ONLY_REGEX.matches(date)) "${date}T23:59:59.999Z" else date
+    }
+
     @Inject
     @GrpcClient("analytics-service")
     lateinit var analyticsStub: AnalyticsServiceGrpc.AnalyticsServiceBlockingStub
@@ -54,8 +66,8 @@ class AccountingResource {
                 .setDateRange(
                     DateRange
                         .newBuilder()
-                        .setStart(date)
-                        .setEnd(date)
+                        .setStart(normalizeStart(date))
+                        .setEnd(normalizeEnd(date))
                         .build(),
                 ).build()
         val response = grpc.withTenant(analyticsStub).getDailySales(request)
@@ -80,8 +92,8 @@ class AccountingResource {
                     .setDateRange(
                         DateRange
                             .newBuilder()
-                            .setStart(startDate)
-                            .setEnd(endDate)
+                            .setStart(normalizeStart(startDate))
+                            .setEnd(normalizeEnd(endDate))
                             .build(),
                     ).setPagination(
                         PaginationRequest
