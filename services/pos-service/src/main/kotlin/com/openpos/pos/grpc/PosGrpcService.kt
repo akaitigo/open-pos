@@ -79,6 +79,8 @@ import openpos.pos.v1.UpdateTransactionItemResponse
 import openpos.pos.v1.VoidTransactionRequest
 import openpos.pos.v1.VoidTransactionResponse
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 
 @GrpcService
@@ -1215,8 +1217,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             require(request.dateRange.end.isNotBlank()) { "date_range.end is required" }
 
             val storeId = request.storeId.toUUID()
-            val startDate = Instant.parse(request.dateRange.start)
-            val endDate = Instant.parse(request.dateRange.end)
+            val startDate = parseInstantOrDate(request.dateRange.start)
+            val endDate = parseInstantOrDate(request.dateRange.end)
 
             val aggregated = transactionService.aggregateStaffSales(storeId, startDate, endDate)
 
@@ -1482,4 +1484,15 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             .setCreatedAt(createdAt.toString())
             .setUpdatedAt(updatedAt.toString())
             .build()
+
+    /**
+     * Instant 形式（ISO-8601）または日付文字列（YYYY-MM-DD）をパースして Instant を返す。
+     * 日付文字列の場合は UTC の開始時刻（00:00:00Z）に変換する。
+     */
+    private fun parseInstantOrDate(value: String): Instant =
+        try {
+            Instant.parse(value)
+        } catch (_: java.time.format.DateTimeParseException) {
+            LocalDate.parse(value).atStartOfDay(ZoneOffset.UTC).toInstant()
+        }
 }

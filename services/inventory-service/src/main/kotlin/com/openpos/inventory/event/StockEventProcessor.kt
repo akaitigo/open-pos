@@ -25,9 +25,11 @@ class StockEventProcessor {
         try {
             val storeId = UUID.fromString(payload.storeId)
             for (item in payload.items) {
+                val pid = item.productId
+                if (pid.isNullOrBlank()) continue // カスタムアイテムは在庫操作不要
                 stockService.adjustStock(
                     storeId = storeId,
-                    productId = UUID.fromString(item.productId),
+                    productId = UUID.fromString(pid),
                     quantityChange = -item.quantity,
                     movementType = "SALE",
                     referenceId = payload.transactionId,
@@ -47,9 +49,11 @@ class StockEventProcessor {
         try {
             val storeId = UUID.fromString(payload.storeId)
             for (item in payload.items) {
+                val pid = item.productId
+                if (pid.isNullOrBlank()) continue // カスタムアイテムは在庫操作不要
                 stockService.adjustStock(
                     storeId = storeId,
-                    productId = UUID.fromString(item.productId),
+                    productId = UUID.fromString(pid),
                     quantityChange = item.quantity,
                     movementType = "RETURN",
                     referenceId = payload.voidTransactionId,

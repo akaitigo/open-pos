@@ -888,7 +888,7 @@ class TransactionService {
                 items =
                     items.map { item ->
                         SaleItemDto(
-                            productId = item.productId?.toString().orEmpty(),
+                            productId = item.productId?.toString(),
                             productName = item.productName,
                             quantity = item.quantity,
                             unitPrice = item.unitPrice,
@@ -931,7 +931,7 @@ class TransactionService {
                 items =
                     items.map { item ->
                         SaleItemDto(
-                            productId = item.productId?.toString().orEmpty(),
+                            productId = item.productId?.toString(),
                             productName = item.productName,
                             quantity = item.quantity,
                             unitPrice = item.unitPrice,
