@@ -70,27 +70,30 @@ class AccountingResource {
         @QueryParam("endDate") endDate: String,
     ): Map<String, Any> {
         tenantContext.requireRole("OWNER")
-        val request =
-            ListTransactionsRequest
-                .newBuilder()
-                .setStoreId(storeId)
-                .setDateRange(
-                    DateRange
-                        .newBuilder()
-                        .setStart(startDate)
-                        .setEnd(endDate)
-                        .build(),
-                ).setPagination(
-                    PaginationRequest
-                        .newBuilder()
-                        .setPage(1)
-                        .setPageSize(100)
-                        .build(),
-                ).build()
-        val response = grpc.withTenant(posStub).listTransactions(request)
-        return mapOf(
-            "data" to response.transactionsList.map { it.toMap() },
-            "pagination" to response.pagination.toMap(),
-        )
+        val allTransactions = mutableListOf<openpos.pos.v1.Transaction>()
+        var page = 1
+        do {
+            val request =
+                ListTransactionsRequest
+                    .newBuilder()
+                    .setStoreId(storeId)
+                    .setDateRange(
+                        DateRange
+                            .newBuilder()
+                            .setStart(startDate)
+                            .setEnd(endDate)
+                            .build(),
+                    ).setPagination(
+                        PaginationRequest
+                            .newBuilder()
+                            .setPage(page)
+                            .setPageSize(100)
+                            .build(),
+                    ).build()
+            val response = grpc.withTenant(posStub).listTransactions(request)
+            allTransactions.addAll(response.transactionsList)
+            page++
+        } while (allTransactions.size < response.pagination.totalCount)
+        return mapOf("data" to allTransactions.map { it.toMap() })
     }
 }
