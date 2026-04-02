@@ -28,6 +28,12 @@ class StockTransferService {
         note: String?,
     ): StockTransferEntity {
         require(fromStoreId != toStoreId) { "fromStoreId and toStoreId must be different" }
+        val parsedItems = parseItems(items)
+        val invalidItems = parsedItems.filter { it.quantity <= 0 }
+        require(invalidItems.isEmpty()) {
+            "All item quantities must be positive, got non-positive quantities for products: " +
+                "${invalidItems.map { it.productId }}"
+        }
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
         val entity =
             StockTransferEntity().apply {
@@ -129,7 +135,7 @@ class StockTransferService {
      */
     internal fun parseItems(json: String): List<TransferItem> {
         val items = mutableListOf<TransferItem>()
-        val regex = Regex(""""productId"\s*:\s*"([^"]+)"\s*,\s*"quantity"\s*:\s*(\d+)""")
+        val regex = Regex(""""productId"\s*:\s*"([^"]+)"\s*,\s*"quantity"\s*:\s*(-?\d+)""")
         for (match in regex.findAll(json)) {
             items.add(
                 TransferItem(
