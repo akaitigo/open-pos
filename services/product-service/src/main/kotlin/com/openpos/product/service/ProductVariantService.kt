@@ -3,6 +3,7 @@ package com.openpos.product.service
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.ProductVariantEntity
+import com.openpos.product.repository.ProductRepository
 import com.openpos.product.repository.ProductVariantRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -12,6 +13,9 @@ import jakarta.transaction.Transactional
 class ProductVariantService {
     @Inject
     lateinit var variantRepository: ProductVariantRepository
+
+    @Inject
+    lateinit var productRepository: ProductRepository
 
     @Inject
     lateinit var tenantFilterService: TenantFilterService
@@ -39,6 +43,14 @@ class ProductVariantService {
         displayOrder: Int,
     ): ProductVariantEntity {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
+
+        // テナント検証: Hibernate Filter 有効状態で親商品を取得し、
+        // 他テナントの productId が指定された場合は null になるため NOT_FOUND として拒否する
+        tenantFilterService.enableFilter()
+        requireNotNull(productRepository.findById(productId)) {
+            "Product not found or belongs to another tenant: $productId"
+        }
+
         val entity =
             ProductVariantEntity().apply {
                 this.organizationId = orgId
