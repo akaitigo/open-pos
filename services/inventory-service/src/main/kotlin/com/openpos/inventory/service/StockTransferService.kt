@@ -48,12 +48,13 @@ class StockTransferService {
     }
 
     fun list(
+        status: String?,
         page: Int,
         pageSize: Int,
     ): Pair<List<StockTransferEntity>, Long> {
         tenantFilterService.enableFilter()
-        val items = stockTransferRepository.listPaginated(Page.of(page, pageSize))
-        val total = stockTransferRepository.count()
+        val items = stockTransferRepository.listPaginated(status, Page.of(page, pageSize))
+        val total = stockTransferRepository.countByStatus(status)
         return Pair(items, total)
     }
 

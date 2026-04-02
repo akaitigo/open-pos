@@ -104,7 +104,7 @@ class StockTransferServiceTest {
     @Nested
     inner class ListTransfers {
         @Test
-        fun `returns paginated results`() {
+        fun `returns paginated results without status filter`() {
             val items =
                 listOf(
                     StockTransferEntity().apply {
@@ -116,14 +116,39 @@ class StockTransferServiceTest {
                         status = "PENDING"
                     },
                 )
-            whenever(stockTransferRepository.listPaginated(any<Page>())).thenReturn(items)
-            whenever(stockTransferRepository.count()).thenReturn(1L)
+            whenever(stockTransferRepository.listPaginated(eq(null), any<Page>())).thenReturn(items)
+            whenever(stockTransferRepository.countByStatus(eq(null))).thenReturn(1L)
 
-            val (result, total) = service.list(0, 20)
+            val (result, total) = service.list(null, 0, 20)
 
             assertEquals(1, result.size)
             assertEquals(1L, total)
             verify(tenantFilterService).enableFilter()
+        }
+
+        @Test
+        fun `returns paginated results with status filter`() {
+            val items =
+                listOf(
+                    StockTransferEntity().apply {
+                        id = UUID.randomUUID()
+                        organizationId = orgId
+                        fromStoreId = UUID.randomUUID()
+                        toStoreId = UUID.randomUUID()
+                        this.items = "[]"
+                        status = "PENDING"
+                    },
+                )
+            whenever(stockTransferRepository.listPaginated(eq("PENDING"), any<Page>())).thenReturn(items)
+            whenever(stockTransferRepository.countByStatus(eq("PENDING"))).thenReturn(1L)
+
+            val (result, total) = service.list("PENDING", 0, 20)
+
+            assertEquals(1, result.size)
+            assertEquals(1L, total)
+            verify(tenantFilterService).enableFilter()
+            verify(stockTransferRepository).listPaginated(eq("PENDING"), any<Page>())
+            verify(stockTransferRepository).countByStatus(eq("PENDING"))
         }
     }
 

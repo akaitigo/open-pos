@@ -625,7 +625,7 @@ class InventoryGrpcService : InventoryServiceGrpc.InventoryServiceImplBase() {
                     pageSize = pageSize,
                 )
             } else {
-                stockTransferService.list(page = page, pageSize = pageSize)
+                stockTransferService.list(status = statusFilter, page = page, pageSize = pageSize)
             }
         val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
         responseObserver.onNext(
