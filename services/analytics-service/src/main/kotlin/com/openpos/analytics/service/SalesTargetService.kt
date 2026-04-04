@@ -40,13 +40,19 @@ class SalesTargetService {
 
     fun findById(id: UUID): SalesTargetEntity? {
         tenantFilterService.enableFilter()
-        return salesTargetRepository.findById(id)
+        // PanacheRepository.findById() は em.find() ベースのため Hibernate Filter が適用されない。
+        // HQL クエリでの検索に切り替えることで organizationFilter によるテナント隔離を保証する。
+        return salesTargetRepository.find("id = ?1", id).firstResult()
     }
 
     @Transactional
     fun delete(id: UUID): Boolean {
         tenantFilterService.enableFilter()
-        return salesTargetRepository.deleteById(id)
+        // deleteById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで検索してから削除し、テナント隔離を保証する。
+        val entity = salesTargetRepository.find("id = ?1", id).firstResult() ?: return false
+        salesTargetRepository.delete(entity)
+        return true
     }
 
     @Transactional

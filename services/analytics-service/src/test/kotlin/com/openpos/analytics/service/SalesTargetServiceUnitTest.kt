@@ -4,6 +4,7 @@ import com.openpos.analytics.config.OrganizationIdHolder
 import com.openpos.analytics.config.TenantFilterService
 import com.openpos.analytics.entity.SalesTargetEntity
 import com.openpos.analytics.repository.SalesTargetRepository
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -102,7 +104,9 @@ class SalesTargetServiceUnitTest {
                     targetMonth = LocalDate.of(2026, 3, 1)
                     targetAmount = 10000000
                 }
-            whenever(salesTargetRepository.findById(id)).thenReturn(entity)
+            val mockQuery = mock<PanacheQuery<SalesTargetEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(entity)
+            whenever(salesTargetRepository.find(eq("id = ?1"), eq(id))).thenReturn(mockQuery)
 
             val result = service.findById(id)
 
@@ -114,7 +118,9 @@ class SalesTargetServiceUnitTest {
         @Test
         fun `returns null when not found`() {
             val id = UUID.randomUUID()
-            whenever(salesTargetRepository.findById(id)).thenReturn(null)
+            val mockQuery = mock<PanacheQuery<SalesTargetEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(null)
+            whenever(salesTargetRepository.find(eq("id = ?1"), eq(id))).thenReturn(mockQuery)
 
             val result = service.findById(id)
 
@@ -127,18 +133,31 @@ class SalesTargetServiceUnitTest {
         @Test
         fun `returns true when target deleted`() {
             val id = UUID.randomUUID()
-            whenever(salesTargetRepository.deleteById(id)).thenReturn(true)
+            val entity =
+                SalesTargetEntity().apply {
+                    this.id = id
+                    organizationId = orgId
+                    targetMonth = LocalDate.of(2026, 3, 1)
+                    targetAmount = 10000000
+                }
+            val mockQuery = mock<PanacheQuery<SalesTargetEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(entity)
+            whenever(salesTargetRepository.find(eq("id = ?1"), eq(id))).thenReturn(mockQuery)
+            doNothing().whenever(salesTargetRepository).delete(any<SalesTargetEntity>())
 
             val result = service.delete(id)
 
             assertEquals(true, result)
             verify(tenantFilterService).enableFilter()
+            verify(salesTargetRepository).delete(entity)
         }
 
         @Test
         fun `returns false when target not found`() {
             val id = UUID.randomUUID()
-            whenever(salesTargetRepository.deleteById(id)).thenReturn(false)
+            val mockQuery = mock<PanacheQuery<SalesTargetEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(null)
+            whenever(salesTargetRepository.find(eq("id = ?1"), eq(id))).thenReturn(mockQuery)
 
             val result = service.delete(id)
 
