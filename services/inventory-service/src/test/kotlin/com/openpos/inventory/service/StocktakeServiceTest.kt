@@ -8,9 +8,8 @@ import com.openpos.inventory.entity.StocktakeItemEntity
 import com.openpos.inventory.repository.StockRepository
 import com.openpos.inventory.repository.StocktakeItemRepository
 import com.openpos.inventory.repository.StocktakeRepository
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.mock
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -25,34 +24,41 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
-@QuarkusTest
 class StocktakeServiceTest {
-    @Inject
-    lateinit var stocktakeService: StocktakeService
+    private lateinit var stocktakeService: StocktakeService
 
-    @Inject
-    lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
-    @InjectMock
-    lateinit var stocktakeRepository: StocktakeRepository
+    private lateinit var stocktakeRepository: StocktakeRepository
 
-    @InjectMock
-    lateinit var stocktakeItemRepository: StocktakeItemRepository
+    private lateinit var stocktakeItemRepository: StocktakeItemRepository
 
-    @InjectMock
-    lateinit var stockRepository: StockRepository
+    private lateinit var stockRepository: StockRepository
 
-    @InjectMock
-    lateinit var stockService: StockService
+    private lateinit var stockService: StockService
 
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var tenantFilterService: TenantFilterService
 
     private val orgId = UUID.randomUUID()
     private val storeId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        stocktakeRepository = mock()
+        stocktakeItemRepository = mock()
+        stockRepository = mock()
+        stockService = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+
+        stocktakeService = StocktakeService()
+        stocktakeService.stocktakeRepository = stocktakeRepository
+        stocktakeService.stocktakeItemRepository = stocktakeItemRepository
+        stocktakeService.stockRepository = stockRepository
+        stocktakeService.stockService = stockService
+        stocktakeService.tenantFilterService = tenantFilterService
+        stocktakeService.organizationIdHolder = organizationIdHolder
+
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
     }
@@ -98,7 +104,9 @@ class StocktakeServiceTest {
                     this.productId = productId
                     this.quantity = 10
                 }
-            whenever(stocktakeRepository.findById(stocktakeId)).thenReturn(stocktake)
+            val mockQuery1 = mock<PanacheQuery<StocktakeEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(stocktake)
+            whenever(stocktakeRepository.find(eq("id = ?1"), eq(stocktakeId))).thenReturn(mockQuery1)
             whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(stockEntity)
             whenever(stocktakeItemRepository.findByStocktakeAndProduct(stocktakeId, productId)).thenReturn(null)
             doNothing().whenever(stocktakeItemRepository).persist(any<StocktakeItemEntity>())
@@ -133,7 +141,9 @@ class StocktakeServiceTest {
                     this.actualQty = 5
                     this.difference = -5
                 }
-            whenever(stocktakeRepository.findById(stocktakeId)).thenReturn(stocktake)
+            val mockQuery2 = mock<PanacheQuery<StocktakeEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(stocktake)
+            whenever(stocktakeRepository.find(eq("id = ?1"), eq(stocktakeId))).thenReturn(mockQuery2)
             whenever(stockRepository.findByStoreAndProduct(storeId, productId)).thenReturn(null)
             whenever(stocktakeItemRepository.findByStocktakeAndProduct(stocktakeId, productId)).thenReturn(existingItem)
             doNothing().whenever(stocktakeItemRepository).persist(any<StocktakeItemEntity>())
@@ -154,7 +164,9 @@ class StocktakeServiceTest {
             // Arrange
             val stocktakeId = UUID.randomUUID()
             val productId = UUID.randomUUID()
-            whenever(stocktakeRepository.findById(stocktakeId)).thenReturn(null)
+            val mockQuery3 = mock<PanacheQuery<StocktakeEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(null)
+            whenever(stocktakeRepository.find(eq("id = ?1"), eq(stocktakeId))).thenReturn(mockQuery3)
 
             // Act & Assert
             assertThrows(IllegalArgumentException::class.java) {
@@ -174,7 +186,9 @@ class StocktakeServiceTest {
                     this.storeId = this@StocktakeServiceTest.storeId
                     this.status = "COMPLETED"
                 }
-            whenever(stocktakeRepository.findById(stocktakeId)).thenReturn(stocktake)
+            val mockQuery4 = mock<PanacheQuery<StocktakeEntity>>()
+            whenever(mockQuery4.firstResult()).thenReturn(stocktake)
+            whenever(stocktakeRepository.find(eq("id = ?1"), eq(stocktakeId))).thenReturn(mockQuery4)
 
             // Act & Assert
             assertThrows(IllegalArgumentException::class.java) {
@@ -207,7 +221,9 @@ class StocktakeServiceTest {
                     this.actualQty = 8
                     this.difference = -2
                 }
-            whenever(stocktakeRepository.findById(stocktakeId)).thenReturn(stocktake)
+            val mockQuery5 = mock<PanacheQuery<StocktakeEntity>>()
+            whenever(mockQuery5.firstResult()).thenReturn(stocktake)
+            whenever(stocktakeRepository.find(eq("id = ?1"), eq(stocktakeId))).thenReturn(mockQuery5)
             whenever(stocktakeItemRepository.findByStocktakeId(stocktakeId)).thenReturn(listOf(item))
             doNothing().whenever(stocktakeRepository).persist(any<StocktakeEntity>())
             whenever(stockService.adjustStock(any(), any(), any(), any(), any(), any())).thenReturn(
@@ -258,7 +274,9 @@ class StocktakeServiceTest {
                     this.actualQty = 10
                     this.difference = 0
                 }
-            whenever(stocktakeRepository.findById(stocktakeId)).thenReturn(stocktake)
+            val mockQuery6 = mock<PanacheQuery<StocktakeEntity>>()
+            whenever(mockQuery6.firstResult()).thenReturn(stocktake)
+            whenever(stocktakeRepository.find(eq("id = ?1"), eq(stocktakeId))).thenReturn(mockQuery6)
             whenever(stocktakeItemRepository.findByStocktakeId(stocktakeId)).thenReturn(listOf(item))
             doNothing().whenever(stocktakeRepository).persist(any<StocktakeEntity>())
 
@@ -274,7 +292,9 @@ class StocktakeServiceTest {
         fun `存在しない棚卸しの完了は例外を投げる`() {
             // Arrange
             val stocktakeId = UUID.randomUUID()
-            whenever(stocktakeRepository.findById(stocktakeId)).thenReturn(null)
+            val mockQuery7 = mock<PanacheQuery<StocktakeEntity>>()
+            whenever(mockQuery7.firstResult()).thenReturn(null)
+            whenever(stocktakeRepository.find(eq("id = ?1"), eq(stocktakeId))).thenReturn(mockQuery7)
 
             // Act & Assert
             assertThrows(IllegalArgumentException::class.java) {
@@ -293,7 +313,9 @@ class StocktakeServiceTest {
                     this.storeId = this@StocktakeServiceTest.storeId
                     this.status = "COMPLETED"
                 }
-            whenever(stocktakeRepository.findById(stocktakeId)).thenReturn(stocktake)
+            val mockQuery8 = mock<PanacheQuery<StocktakeEntity>>()
+            whenever(mockQuery8.firstResult()).thenReturn(stocktake)
+            whenever(stocktakeRepository.find(eq("id = ?1"), eq(stocktakeId))).thenReturn(mockQuery8)
 
             // Act & Assert
             assertThrows(IllegalArgumentException::class.java) {

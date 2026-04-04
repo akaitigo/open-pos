@@ -6,9 +6,9 @@ import com.openpos.product.entity.TaxRateEntity
 import com.openpos.product.entity.TaxRateScheduleEntity
 import com.openpos.product.repository.TaxRateRepository
 import com.openpos.product.repository.TaxRateScheduleRepository
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.eq
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -22,31 +22,36 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.UUID
 
-@QuarkusTest
 class TaxRateScheduleServiceTest {
-    @Inject
-    lateinit var scheduleService: TaxRateScheduleService
+    private lateinit var scheduleService: TaxRateScheduleService
 
-    @InjectMock
-    lateinit var scheduleRepository: TaxRateScheduleRepository
+    private lateinit var scheduleRepository: TaxRateScheduleRepository
 
-    @InjectMock
-    lateinit var taxRateRepository: TaxRateRepository
+    private lateinit var taxRateRepository: TaxRateRepository
 
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var tenantFilterService: TenantFilterService
 
-    @InjectMock
-    lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
     private val testOrgId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        scheduleRepository = mock()
+        taxRateRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+
+        scheduleService = TaxRateScheduleService()
+        scheduleService.scheduleRepository = scheduleRepository
+        scheduleService.taxRateRepository = taxRateRepository
+        scheduleService.tenantFilterService = tenantFilterService
+        scheduleService.organizationIdHolder = organizationIdHolder
+
+        organizationIdHolder.organizationId = testOrgId
         doNothing().whenever(scheduleRepository).persist(any<TaxRateScheduleEntity>())
         doNothing().whenever(taxRateRepository).persist(any<TaxRateEntity>())
         doNothing().whenever(tenantFilterService).enableFilter()
-        whenever(organizationIdHolder.organizationId).thenReturn(testOrgId)
     }
 
     @Test
@@ -119,7 +124,9 @@ class TaxRateScheduleServiceTest {
             }
 
         whenever(scheduleRepository.findPendingByDate(any())).thenReturn(listOf(schedule))
-        whenever(taxRateRepository.findById(taxRateId)).thenReturn(null)
+        val mockQuery1 = mock<PanacheQuery<TaxRateEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(null)
+            whenever(taxRateRepository.find(eq("id = ?1"), eq(taxRateId))).thenReturn(mockQuery1)
 
         val applied = scheduleService.applyPendingSchedules()
 
@@ -158,7 +165,9 @@ class TaxRateScheduleServiceTest {
             }
 
         whenever(scheduleRepository.findPendingByDate(any())).thenReturn(listOf(schedule))
-        whenever(taxRateRepository.findById(taxRateId)).thenReturn(taxRate)
+        val mockQuery2 = mock<PanacheQuery<TaxRateEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(taxRate)
+            whenever(taxRateRepository.find(eq("id = ?1"), eq(taxRateId))).thenReturn(mockQuery2)
 
         val applied = scheduleService.applyPendingSchedules()
 

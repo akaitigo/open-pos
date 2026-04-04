@@ -13,30 +13,44 @@ import java.util.UUID
 @ApplicationScoped
 class SupplierService {
     @Inject lateinit var supplierRepository: SupplierRepository
+
     @Inject lateinit var tenantFilterService: TenantFilterService
+
     @Inject lateinit var organizationIdHolder: OrganizationIdHolder
 
     @Transactional
-    fun create(name: String, contactPerson: String?, email: String?, phone: String?, address: String?): SupplierEntity {
+    fun create(
+        name: String,
+        contactPerson: String?,
+        email: String?,
+        phone: String?,
+        address: String?,
+    ): SupplierEntity {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
-        val entity = SupplierEntity().apply {
-            this.organizationId = orgId
-            this.name = name
-            this.contactPerson = contactPerson
-            this.email = email
-            this.phone = phone
-            this.address = address
-        }
+        val entity =
+            SupplierEntity().apply {
+                this.organizationId = orgId
+                this.name = name
+                this.contactPerson = contactPerson
+                this.email = email
+                this.phone = phone
+                this.address = address
+            }
         supplierRepository.persist(entity)
         return entity
     }
 
     fun findById(id: UUID): SupplierEntity? {
         tenantFilterService.enableFilter()
-        return supplierRepository.findById(id)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return supplierRepository.find("id = ?1", id).firstResult()
     }
 
-    fun list(page: Int, pageSize: Int): Pair<List<SupplierEntity>, Long> {
+    fun list(
+        page: Int,
+        pageSize: Int,
+    ): Pair<List<SupplierEntity>, Long> {
         tenantFilterService.enableFilter()
         val items = supplierRepository.listPaginated(Page.of(page, pageSize))
         val total = supplierRepository.count()
@@ -44,9 +58,16 @@ class SupplierService {
     }
 
     @Transactional
-    fun update(id: UUID, name: String?, contactPerson: String?, email: String?, phone: String?, address: String?): SupplierEntity? {
+    fun update(
+        id: UUID,
+        name: String?,
+        contactPerson: String?,
+        email: String?,
+        phone: String?,
+        address: String?,
+    ): SupplierEntity? {
         tenantFilterService.enableFilter()
-        val entity = supplierRepository.findById(id) ?: return null
+        val entity = supplierRepository.find("id = ?1", id).firstResult() ?: return null
         name?.let { entity.name = it }
         contactPerson?.let { entity.contactPerson = it }
         email?.let { entity.email = it }

@@ -7,9 +7,7 @@ import com.openpos.store.entity.StoreEntity
 import com.openpos.store.entity.TerminalEntity
 import com.openpos.store.repository.StoreRepository
 import com.openpos.store.repository.TerminalRepository
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -19,45 +17,46 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
-@QuarkusTest
+/**
+ * TerminalService の純粋ユニットテスト。
+ * register / updateSync は HQL クエリ (find("id = ?1", id)) を使うため
+ * PanacheQuery をモックして検証する。
+ */
 class TerminalServiceTest {
-    @Inject
-    lateinit var terminalService: TerminalService
-
-    @Inject
-    lateinit var organizationIdHolder: OrganizationIdHolder
-
-    @InjectMock
-    lateinit var terminalRepository: TerminalRepository
-
-    @InjectMock
-    lateinit var storeRepository: StoreRepository
-
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
-
-    @InjectMock
-    lateinit var cacheService: StoreCacheService
+    private lateinit var terminalService: TerminalService
+    private lateinit var terminalRepository: TerminalRepository
+    private lateinit var storeRepository: StoreRepository
+    private lateinit var tenantFilterService: TenantFilterService
+    private lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var cacheService: StoreCacheService
 
     private val orgId = UUID.randomUUID()
     private val storeId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        terminalRepository = mock()
+        storeRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+        cacheService = mock()
+
+        terminalService = TerminalService()
+        terminalService.terminalRepository = terminalRepository
+        terminalService.storeRepository = storeRepository
+        terminalService.tenantFilterService = tenantFilterService
+        terminalService.organizationIdHolder = organizationIdHolder
+        terminalService.cacheService = cacheService
+
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
         doNothing().whenever(cacheService).invalidateTerminalList(any(), any())
-        val storeEntity =
-            StoreEntity().apply {
-                this.id = storeId
-                this.organizationId = orgId
-                this.name = "テスト店舗"
-            }
-        whenever(storeRepository.findById(storeId)).thenReturn(storeEntity)
     }
 
     // === register ===
@@ -67,6 +66,15 @@ class TerminalServiceTest {
         @Test
         fun `ターミナルを正常に登録する`() {
             // Arrange
+            val storeEntity =
+                StoreEntity().apply {
+                    this.id = storeId
+                    this.organizationId = orgId
+                    this.name = "テスト店舗"
+                }
+            val mockQuery = mock<PanacheQuery<StoreEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(storeEntity)
+            whenever(storeRepository.find(eq("id = ?1"), eq(storeId))).thenReturn(mockQuery)
             doNothing().whenever(terminalRepository).persist(any<TerminalEntity>())
 
             // Act
@@ -79,6 +87,19 @@ class TerminalServiceTest {
             assertEquals("POS-01", result.terminalCode)
             assertEquals("レジ1号機", result.name)
             assertTrue(result.isActive)
+        }
+
+        @Test
+        fun `存在しない店舗IDの場合はIllegalArgumentExceptionをスローする`() {
+            // Arrange
+            val mockQuery = mock<PanacheQuery<StoreEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(null)
+            whenever(storeRepository.find(eq("id = ?1"), eq(storeId))).thenReturn(mockQuery)
+
+            // Act & Assert
+            org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+                terminalService.register(storeId, "POS-01", "レジ1号機")
+            }
         }
     }
 
@@ -151,7 +172,9 @@ class TerminalServiceTest {
                     this.lastSyncAt = null
                     this.isActive = true
                 }
-            whenever(terminalRepository.findById(terminalId)).thenReturn(entity)
+            val mockQuery = mock<PanacheQuery<TerminalEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(entity)
+            whenever(terminalRepository.find(eq("id = ?1"), eq(terminalId))).thenReturn(mockQuery)
             doNothing().whenever(terminalRepository).persist(any<TerminalEntity>())
 
             // Act
@@ -167,7 +190,9 @@ class TerminalServiceTest {
         fun `存在しないIDの場合はnullを返す`() {
             // Arrange
             val terminalId = UUID.randomUUID()
-            whenever(terminalRepository.findById(terminalId)).thenReturn(null)
+            val mockQuery = mock<PanacheQuery<TerminalEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(null)
+            whenever(terminalRepository.find(eq("id = ?1"), eq(terminalId))).thenReturn(mockQuery)
 
             // Act
             val result = terminalService.updateSync(terminalId)

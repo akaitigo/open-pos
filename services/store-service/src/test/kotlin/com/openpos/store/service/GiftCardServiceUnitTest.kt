@@ -4,6 +4,8 @@ import com.openpos.store.config.OrganizationIdHolder
 import com.openpos.store.config.TenantFilterService
 import com.openpos.store.entity.GiftCardEntity
 import com.openpos.store.repository.GiftCardRepository
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.eq
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -99,7 +101,9 @@ class GiftCardServiceUnitTest {
                     initialBalance = 20000
                     status = "ACTIVE"
                 }
-            whenever(giftCardRepository.findById(cardId)).thenReturn(card)
+            val mockQuery1 = mock<PanacheQuery<GiftCardEntity>>()
+whenever(mockQuery1.firstResult()).thenReturn(card)
+whenever(giftCardRepository.find(eq("id = ?1"), eq(cardId))).thenReturn(mockQuery1)
 
             val result = service.findById(cardId)
 

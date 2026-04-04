@@ -7,8 +7,8 @@ import com.openpos.store.repository.WebhookRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
-import java.util.UUID
 import org.jboss.logging.Logger
+import java.util.UUID
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -68,7 +68,9 @@ class WebhookService {
         isActive: Boolean?,
     ): WebhookEntity? {
         tenantFilterService.enableFilter()
-        val entity = webhookRepository.findById(id) ?: return null
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        val entity = webhookRepository.find("id = ?1", id).firstResult() ?: return null
         url?.let { entity.url = it }
         events?.let { entity.events = it }
         isActive?.let { entity.isActive = it }
@@ -79,7 +81,7 @@ class WebhookService {
     @Transactional
     fun delete(id: UUID): Boolean {
         tenantFilterService.enableFilter()
-        val entity = webhookRepository.findById(id) ?: return false
+        val entity = webhookRepository.find("id = ?1", id).firstResult() ?: return false
         webhookRepository.delete(entity)
         return true
     }

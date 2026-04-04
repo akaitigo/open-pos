@@ -1,13 +1,12 @@
 package com.openpos.product.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.openpos.product.cache.ProductCacheService
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.CategoryEntity
 import com.openpos.product.repository.CategoryRepository
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -18,31 +17,39 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
-@QuarkusTest
 class CategoryServiceTest {
-    @Inject
-    lateinit var categoryService: CategoryService
+    private lateinit var categoryService: CategoryService
 
-    @Inject
-    lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
-    @InjectMock
-    lateinit var categoryRepository: CategoryRepository
+    private lateinit var categoryRepository: CategoryRepository
 
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var tenantFilterService: TenantFilterService
 
-    @InjectMock
-    lateinit var cacheService: ProductCacheService
+    private lateinit var cacheService: ProductCacheService
 
     private val orgId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        categoryRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+        cacheService = mock()
+
+        categoryService = CategoryService()
+        categoryService.categoryRepository = categoryRepository
+        categoryService.tenantFilterService = tenantFilterService
+        categoryService.organizationIdHolder = organizationIdHolder
+        categoryService.cacheService = cacheService
+        categoryService.objectMapper = ObjectMapper()
+
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
         doNothing().whenever(cacheService).invalidateCategory(any(), any())
@@ -176,7 +183,9 @@ class CategoryServiceTest {
                     this.name = "フード"
                     this.displayOrder = 1
                 }
-            whenever(categoryRepository.findById(categoryId)).thenReturn(entity)
+            val mockQuery1 = mock<PanacheQuery<CategoryEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(entity)
+            whenever(categoryRepository.find(eq("id = ?1"), eq(categoryId))).thenReturn(mockQuery1)
 
             // Act
             val result = categoryService.findById(categoryId)
@@ -192,7 +201,9 @@ class CategoryServiceTest {
         fun `存在しないIDの場合はnullを返す`() {
             // Arrange
             val categoryId = UUID.randomUUID()
-            whenever(categoryRepository.findById(categoryId)).thenReturn(null)
+            val mockQuery2 = mock<PanacheQuery<CategoryEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(null)
+            whenever(categoryRepository.find(eq("id = ?1"), eq(categoryId))).thenReturn(mockQuery2)
 
             // Act
             val result = categoryService.findById(categoryId)
@@ -220,7 +231,9 @@ class CategoryServiceTest {
                     this.icon = "old-icon"
                     this.displayOrder = 1
                 }
-            whenever(categoryRepository.findById(categoryId)).thenReturn(entity)
+            val mockQuery3 = mock<PanacheQuery<CategoryEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(entity)
+            whenever(categoryRepository.find(eq("id = ?1"), eq(categoryId))).thenReturn(mockQuery3)
             doNothing().whenever(categoryRepository).persist(any<CategoryEntity>())
 
             // Act
@@ -257,7 +270,9 @@ class CategoryServiceTest {
                     this.color = "#FF0000"
                     this.displayOrder = 1
                 }
-            whenever(categoryRepository.findById(categoryId)).thenReturn(entity)
+            val mockQuery4 = mock<PanacheQuery<CategoryEntity>>()
+            whenever(mockQuery4.firstResult()).thenReturn(entity)
+            whenever(categoryRepository.find(eq("id = ?1"), eq(categoryId))).thenReturn(mockQuery4)
             doNothing().whenever(categoryRepository).persist(any<CategoryEntity>())
 
             // Act
@@ -282,7 +297,9 @@ class CategoryServiceTest {
         fun `存在しないカテゴリの更新はnullを返す`() {
             // Arrange
             val categoryId = UUID.randomUUID()
-            whenever(categoryRepository.findById(categoryId)).thenReturn(null)
+            val mockQuery5 = mock<PanacheQuery<CategoryEntity>>()
+            whenever(mockQuery5.firstResult()).thenReturn(null)
+            whenever(categoryRepository.find(eq("id = ?1"), eq(categoryId))).thenReturn(mockQuery5)
 
             // Act
             val result =
@@ -316,7 +333,9 @@ class CategoryServiceTest {
                     this.name = "削除対象カテゴリ"
                     this.displayOrder = 0
                 }
-            whenever(categoryRepository.findById(categoryId)).thenReturn(entity)
+            val mockQuery6 = mock<PanacheQuery<CategoryEntity>>()
+            whenever(mockQuery6.firstResult()).thenReturn(entity)
+            whenever(categoryRepository.find(eq("id = ?1"), eq(categoryId))).thenReturn(mockQuery6)
             doNothing().whenever(categoryRepository).delete(any<CategoryEntity>())
 
             // Act
@@ -332,7 +351,9 @@ class CategoryServiceTest {
         fun `存在しないカテゴリの削除はfalseを返す`() {
             // Arrange
             val categoryId = UUID.randomUUID()
-            whenever(categoryRepository.findById(categoryId)).thenReturn(null)
+            val mockQuery7 = mock<PanacheQuery<CategoryEntity>>()
+            whenever(mockQuery7.firstResult()).thenReturn(null)
+            whenever(categoryRepository.find(eq("id = ?1"), eq(categoryId))).thenReturn(mockQuery7)
 
             // Act
             val result = categoryService.delete(categoryId)

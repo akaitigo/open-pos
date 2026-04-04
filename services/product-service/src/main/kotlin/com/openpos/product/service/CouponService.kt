@@ -57,8 +57,10 @@ class CouponService {
             }
 
         tenantFilterService.enableFilter()
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
         val discount =
-            requireNotNull(discountRepository.findById(discountId)) {
+            requireNotNull(discountRepository.find("id = ?1", discountId).firstResult()) {
                 "Discount not found or belongs to another tenant: $discountId"
             }
         DiscountService.validateDiscountValue(discount.discountType, discount.value)
@@ -104,7 +106,9 @@ class CouponService {
      */
     fun findById(id: UUID): CouponEntity? {
         tenantFilterService.enableFilter()
-        return couponRepository.findById(id)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return couponRepository.find("id = ?1", id).firstResult()
     }
 
     /**
@@ -143,7 +147,7 @@ class CouponService {
         }
 
         // 紐付き割引の有効性チェック
-        val discount = discountRepository.findById(coupon.discountId)
+        val discount = discountRepository.find("id = ?1", coupon.discountId).firstResult()
         if (discount == null || !discount.isActive) {
             return CouponValidationResult(isValid = false, coupon = coupon, reason = "DISCOUNT_INACTIVE")
         }
@@ -185,7 +189,7 @@ class CouponService {
             }
         }
 
-        val discount = discountRepository.findById(coupon.discountId)
+        val discount = discountRepository.find("id = ?1", coupon.discountId).firstResult()
         if (discount == null || !discount.isActive) {
             return CouponValidationResult(isValid = false, coupon = coupon, reason = "DISCOUNT_INACTIVE")
         }

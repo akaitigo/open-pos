@@ -8,10 +8,10 @@ import com.openpos.product.repository.TaxRateScheduleRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
+import org.jboss.logging.Logger
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.UUID
-import org.jboss.logging.Logger
 
 /**
  * 税率変更スケジュールサービス。
@@ -74,7 +74,8 @@ class TaxRateScheduleService {
         var applied = 0
 
         for (schedule in pending) {
-            val taxRate = taxRateRepository.findById(schedule.taxRateId)
+            // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+            val taxRate = taxRateRepository.find("id = ?1", schedule.taxRateId).firstResult()
             if (taxRate != null) {
                 taxRate.rate = schedule.newRate
                 taxRateRepository.persist(taxRate)

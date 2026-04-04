@@ -7,6 +7,8 @@ import com.openpos.store.entity.PointTransactionEntity
 import com.openpos.store.repository.CustomerRepository
 import com.openpos.store.repository.PointTransactionRepository
 import io.quarkus.panache.common.Page
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.eq
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -60,7 +62,9 @@ class CustomerServiceUnitTest {
                     organizationId = orgId
                     name = "Test"
                 }
-            whenever(customerRepository.findById(customerId)).thenReturn(entity)
+            val mockQuery1 = mock<PanacheQuery<CustomerEntity>>()
+whenever(mockQuery1.firstResult()).thenReturn(entity)
+whenever(customerRepository.find(eq("id = ?1"), eq(customerId))).thenReturn(mockQuery1)
 
             val result = service.findById(customerId)
 
@@ -72,7 +76,9 @@ class CustomerServiceUnitTest {
         @Test
         fun `returns null when not found`() {
             val customerId = UUID.randomUUID()
-            whenever(customerRepository.findById(customerId)).thenReturn(null)
+            val mockQuery2 = mock<PanacheQuery<CustomerEntity>>()
+whenever(mockQuery2.firstResult()).thenReturn(null)
+whenever(customerRepository.find(eq("id = ?1"), eq(customerId))).thenReturn(mockQuery2)
 
             val result = service.findById(customerId)
 
@@ -115,7 +121,9 @@ class CustomerServiceUnitTest {
                     email = "old@test.com"
                     phone = "090-0000-0000"
                 }
-            whenever(customerRepository.findById(customerId)).thenReturn(entity)
+            val mockQuery3 = mock<PanacheQuery<CustomerEntity>>()
+whenever(mockQuery3.firstResult()).thenReturn(entity)
+whenever(customerRepository.find(eq("id = ?1"), eq(customerId))).thenReturn(mockQuery3)
 
             val result = service.update(customerId, "New Name", null, "090-1111-1111", null)
 
@@ -128,7 +136,9 @@ class CustomerServiceUnitTest {
         @Test
         fun `returns null when customer not found`() {
             val customerId = UUID.randomUUID()
-            whenever(customerRepository.findById(customerId)).thenReturn(null)
+            val mockQuery4 = mock<PanacheQuery<CustomerEntity>>()
+whenever(mockQuery4.firstResult()).thenReturn(null)
+whenever(customerRepository.find(eq("id = ?1"), eq(customerId))).thenReturn(mockQuery4)
 
             val result = service.update(customerId, "New", null, null, null)
 
@@ -202,7 +212,9 @@ class CustomerServiceUnitTest {
                     name = "Test"
                     notes = null
                 }
-            whenever(customerRepository.findById(customerId)).thenReturn(entity)
+            val mockQuery5 = mock<PanacheQuery<CustomerEntity>>()
+whenever(mockQuery5.firstResult()).thenReturn(entity)
+whenever(customerRepository.find(eq("id = ?1"), eq(customerId))).thenReturn(mockQuery5)
 
             val result = service.update(customerId, null, null, null, "新しいメモ")
 
@@ -216,7 +228,9 @@ class CustomerServiceUnitTest {
         @Test
         fun `throws when customer not found`() {
             val customerId = UUID.randomUUID()
-            whenever(customerRepository.findById(customerId)).thenReturn(null)
+            val mockQuery6 = mock<PanacheQuery<CustomerEntity>>()
+whenever(mockQuery6.firstResult()).thenReturn(null)
+whenever(customerRepository.find(eq("id = ?1"), eq(customerId))).thenReturn(mockQuery6)
 
             assertThrows(IllegalArgumentException::class.java) {
                 service.earnPoints(customerId, 50000, null)
@@ -234,7 +248,9 @@ class CustomerServiceUnitTest {
                     name = "Test"
                     points = 0
                 }
-            whenever(customerRepository.findById(customerId)).thenReturn(customer)
+            val mockQuery7 = mock<PanacheQuery<CustomerEntity>>()
+whenever(mockQuery7.firstResult()).thenReturn(customer)
+whenever(customerRepository.find(eq("id = ?1"), eq(customerId))).thenReturn(mockQuery7)
 
             val earned = service.earnPoints(customerId, 100000, txId)
 

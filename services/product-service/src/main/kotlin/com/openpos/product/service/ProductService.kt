@@ -81,7 +81,9 @@ class ProductService {
      */
     fun findById(id: UUID): ProductEntity? {
         tenantFilterService.enableFilter()
-        return productRepository.findById(id)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return productRepository.find("id = ?1", id).firstResult()
     }
 
     /**
@@ -137,7 +139,7 @@ class ProductService {
         isActive: Boolean?,
     ): ProductEntity? {
         tenantFilterService.enableFilter()
-        val entity = productRepository.findById(id) ?: return null
+        val entity = productRepository.find("id = ?1", id).firstResult() ?: return null
 
         validateForeignKeyOwnership(categoryId, taxRateId)
 
@@ -166,7 +168,7 @@ class ProductService {
     @Transactional
     fun delete(id: UUID): Boolean {
         tenantFilterService.enableFilter()
-        val entity = productRepository.findById(id) ?: return false
+        val entity = productRepository.find("id = ?1", id).firstResult() ?: return false
         entity.isActive = false
         entity.deletedAt = java.time.Instant.now()
         productRepository.persist(entity)
@@ -175,20 +177,21 @@ class ProductService {
 
     /**
      * categoryId / taxRateId が現在のテナントに属するか検証する。
-     * テナントフィルタが有効な状態で findById を呼ぶことで、
-     * 他テナントのレコードは null になり検出できる。
+     * findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+     * HQL クエリで organizationFilter が有効な状態で検索し、
+     * 他テナントのレコードは null になることで検出する。
      */
     private fun validateForeignKeyOwnership(
         categoryId: UUID?,
         taxRateId: UUID?,
     ) {
         categoryId?.let { id ->
-            requireNotNull(categoryRepository.findById(id)) {
+            requireNotNull(categoryRepository.find("id = ?1", id).firstResult()) {
                 "Category not found or belongs to another tenant: $id"
             }
         }
         taxRateId?.let { id ->
-            requireNotNull(taxRateRepository.findById(id)) {
+            requireNotNull(taxRateRepository.find("id = ?1", id).firstResult()) {
                 "TaxRate not found or belongs to another tenant: $id"
             }
         }

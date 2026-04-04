@@ -23,6 +23,7 @@ import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.quarkus.panache.common.Page
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -152,7 +153,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `adds new item to transaction`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix1 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix1.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix1)
             whenever(productServiceClient.getProductSnapshot(productId, orgId)).thenReturn(standardProduct)
             whenever(itemRepository.findByTransactionAndProduct(tx.id, productId)).thenReturn(null)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
@@ -183,7 +186,9 @@ class TransactionServiceUnitTest {
                     this.taxAmount = 2000
                     this.total = 22000
                 }
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix2 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix2.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix2)
             whenever(productServiceClient.getProductSnapshot(productId, orgId)).thenReturn(standardProduct)
             whenever(itemRepository.findByTransactionAndProduct(tx.id, productId)).thenReturn(existingItem)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(existingItem))
@@ -204,7 +209,9 @@ class TransactionServiceUnitTest {
 
         @Test
         fun `throws when transaction not found`() {
-            whenever(transactionRepository.findById(any<UUID>())).thenReturn(null)
+            val mockQueryFix1 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix1.firstResult()).thenReturn(null)
+            whenever(transactionRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(mockQueryFix1)
 
             assertThrows(ResourceNotFoundException::class.java) {
                 service.addItem(UUID.randomUUID(), productId, 1)
@@ -214,7 +221,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `uses provided productSnapshot`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix3 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix3.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix3)
             whenever(itemRepository.findByTransactionAndProduct(tx.id, productId)).thenReturn(null)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
@@ -233,8 +242,12 @@ class TransactionServiceUnitTest {
         fun `updates item quantity`() {
             val tx = createTransactionEntity()
             val item = createItemEntity(tx.id)
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
-            whenever(itemRepository.findById(item.id)).thenReturn(item)
+            val mockQueryFix4 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix4.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix4)
+            val mockQueryFix1 = mock<PanacheQuery<TransactionItemEntity>>()
+            whenever(mockQueryFix1.firstResult()).thenReturn(item)
+            whenever(itemRepository.find(eq("id = ?1"), eq(item.id))).thenReturn(mockQueryFix1)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
 
@@ -253,8 +266,12 @@ class TransactionServiceUnitTest {
         @Test
         fun `throws when item not found`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
-            whenever(itemRepository.findById(any<UUID>())).thenReturn(null)
+            val mockQueryFix5 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix5.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix5)
+            val mockQueryFix1 = mock<PanacheQuery<TransactionItemEntity>>()
+            whenever(mockQueryFix1.firstResult()).thenReturn(null)
+            whenever(itemRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(mockQueryFix1)
 
             assertThrows(ResourceNotFoundException::class.java) {
                 service.updateItem(tx.id, UUID.randomUUID(), 5)
@@ -265,8 +282,12 @@ class TransactionServiceUnitTest {
         fun `throws when item belongs to different transaction`() {
             val tx = createTransactionEntity()
             val item = createItemEntity(UUID.randomUUID()) // different transaction
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
-            whenever(itemRepository.findById(item.id)).thenReturn(item)
+            val mockQueryFix6 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix6.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix6)
+            val mockQueryFix2 = mock<PanacheQuery<TransactionItemEntity>>()
+            whenever(mockQueryFix2.firstResult()).thenReturn(item)
+            whenever(itemRepository.find(eq("id = ?1"), eq(item.id))).thenReturn(mockQueryFix2)
 
             assertThrows(BusinessPreconditionException::class.java) {
                 service.updateItem(tx.id, item.id, 5)
@@ -280,8 +301,12 @@ class TransactionServiceUnitTest {
         fun `removes item from transaction`() {
             val tx = createTransactionEntity()
             val item = createItemEntity(tx.id)
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
-            whenever(itemRepository.findById(item.id)).thenReturn(item)
+            val mockQueryFix7 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix7.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix7)
+            val mockQueryFix3 = mock<PanacheQuery<TransactionItemEntity>>()
+            whenever(mockQueryFix3.firstResult()).thenReturn(item)
+            whenever(itemRepository.find(eq("id = ?1"), eq(item.id))).thenReturn(mockQueryFix3)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             doNothing().whenever(itemRepository).delete(any<TransactionItemEntity>())
@@ -297,8 +322,12 @@ class TransactionServiceUnitTest {
         fun `throws when item belongs to different transaction`() {
             val tx = createTransactionEntity()
             val item = createItemEntity(UUID.randomUUID())
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
-            whenever(itemRepository.findById(item.id)).thenReturn(item)
+            val mockQueryFix8 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix8.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix8)
+            val mockQueryFix4 = mock<PanacheQuery<TransactionItemEntity>>()
+            whenever(mockQueryFix4.firstResult()).thenReturn(item)
+            whenever(itemRepository.find(eq("id = ?1"), eq(item.id))).thenReturn(mockQueryFix4)
 
             assertThrows(BusinessPreconditionException::class.java) {
                 service.removeItem(tx.id, item.id)
@@ -311,7 +340,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `applies percentage discount`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix9 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix9.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix9)
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
 
@@ -324,7 +355,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `throws on negative discount amount`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix10 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix10.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix10)
 
             assertThrows(IllegalArgumentException::class.java) {
                 service.applyDiscount(tx.id, null, "Bad", "PERCENTAGE", "10", -100, null)
@@ -334,7 +367,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `throws on unknown discount type`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix11 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix11.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix11)
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
 
             assertThrows(IllegalArgumentException::class.java) {
@@ -357,7 +392,9 @@ class TransactionServiceUnitTest {
                     this.value = "5"
                     this.amount = 500
                 }
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix12 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix12.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix12)
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(listOf(existing))
 
             assertThrows(IllegalArgumentException::class.java) {
@@ -369,7 +406,9 @@ class TransactionServiceUnitTest {
         fun `applies fixed amount discount to whole transaction`() {
             val tx = createTransactionEntity()
             val item = createItemEntity(tx.id).apply { this.subtotal = 50000 }
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix13 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix13.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix13)
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
 
@@ -383,7 +422,9 @@ class TransactionServiceUnitTest {
         fun `throws when fixed amount exceeds subtotal`() {
             val tx = createTransactionEntity()
             val item = createItemEntity(tx.id).apply { this.subtotal = 1000 }
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix14 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix14.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix14)
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
 
@@ -396,9 +437,13 @@ class TransactionServiceUnitTest {
         fun `applies fixed amount discount to specific item`() {
             val tx = createTransactionEntity()
             val item = createItemEntity(tx.id).apply { this.subtotal = 50000 }
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix15 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix15.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix15)
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
-            whenever(itemRepository.findById(item.id)).thenReturn(item)
+            val mockQueryFix5 = mock<PanacheQuery<TransactionItemEntity>>()
+            whenever(mockQueryFix5.firstResult()).thenReturn(item)
+            whenever(itemRepository.find(eq("id = ?1"), eq(item.id))).thenReturn(mockQueryFix5)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
 
             val result = service.applyDiscount(tx.id, null, "Item Off", "FIXED_AMOUNT", "1000", 1000, item.id)
@@ -411,9 +456,13 @@ class TransactionServiceUnitTest {
         fun `throws when fixed amount item not found`() {
             val tx = createTransactionEntity()
             val fakeItemId = UUID.randomUUID()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix16 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix16.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix16)
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
-            whenever(itemRepository.findById(fakeItemId)).thenReturn(null)
+            val mockQuery1 = mock<PanacheQuery<TransactionItemEntity>>()
+whenever(mockQuery1.firstResult()).thenReturn(null)
+whenever(itemRepository.find(eq("id = ?1"), eq(fakeItemId))).thenReturn(mockQuery1)
 
             assertThrows(IllegalArgumentException::class.java) {
                 service.applyDiscount(tx.id, null, "Item Off", "FIXED_AMOUNT", "1000", 1000, fakeItemId)
@@ -424,9 +473,13 @@ class TransactionServiceUnitTest {
         fun `throws when fixed amount item belongs to different transaction`() {
             val tx = createTransactionEntity()
             val item = createItemEntity(UUID.randomUUID()).apply { this.subtotal = 50000 } // different transaction
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix17 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix17.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix17)
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
-            whenever(itemRepository.findById(item.id)).thenReturn(item)
+            val mockQueryFix6 = mock<PanacheQuery<TransactionItemEntity>>()
+            whenever(mockQueryFix6.firstResult()).thenReturn(item)
+            whenever(itemRepository.find(eq("id = ?1"), eq(item.id))).thenReturn(mockQueryFix6)
 
             assertThrows(IllegalArgumentException::class.java) {
                 service.applyDiscount(tx.id, null, "Item Off", "FIXED_AMOUNT", "1000", 1000, item.id)
@@ -436,7 +489,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `throws on invalid percentage value`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix18 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix18.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix18)
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
 
             assertThrows(IllegalArgumentException::class.java) {
@@ -447,7 +502,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `throws when percentage out of range`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix19 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix19.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix19)
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
 
             assertThrows(IllegalArgumentException::class.java) {
@@ -462,7 +519,9 @@ class TransactionServiceUnitTest {
         fun `finalizes transaction with CASH payment`() {
             val tx = createTransactionEntity()
             val item = createItemEntity(tx.id)
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix20 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix20.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix20)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(paymentRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
@@ -479,7 +538,9 @@ class TransactionServiceUnitTest {
 
         @Test
         fun `throws when transaction not found`() {
-            whenever(transactionRepository.findById(any<UUID>())).thenReturn(null)
+            val mockQueryFix2 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix2.firstResult()).thenReturn(null)
+            whenever(transactionRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(mockQueryFix2)
 
             assertThrows(ResourceNotFoundException::class.java) {
                 service.finalizeTransaction(UUID.randomUUID(), emptyList())
@@ -489,7 +550,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `throws when transaction not DRAFT`() {
             val tx = createTransactionEntity().apply { this.status = "COMPLETED" }
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix21 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix21.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix21)
 
             assertThrows(BusinessPreconditionException::class.java) {
                 service.finalizeTransaction(tx.id, emptyList())
@@ -499,7 +562,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `throws when no items`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix22 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix22.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix22)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
 
@@ -512,7 +577,9 @@ class TransactionServiceUnitTest {
         fun `throws when payment insufficient`() {
             val tx = createTransactionEntity()
             val item = createItemEntity(tx.id)
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix23 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix23.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix23)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
 
@@ -543,7 +610,9 @@ class TransactionServiceUnitTest {
             val tx = createTransactionEntity()
             val item = createItemEntity(tx.id)
             whenever(transactionRepository.findByIdempotencyKey(idempotencyKey)).thenReturn(null)
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix24 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix24.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix24)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(paymentRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
@@ -560,7 +629,9 @@ class TransactionServiceUnitTest {
         fun `null idempotency key does not store key`() {
             val tx = createTransactionEntity()
             val item = createItemEntity(tx.id)
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix25 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix25.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix25)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(listOf(item))
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(paymentRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
@@ -583,7 +654,9 @@ class TransactionServiceUnitTest {
                     this.status = "COMPLETED"
                     this.completedAt = Instant.now()
                 }
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix26 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix26.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix26)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
 
             val result = service.voidTransaction(tx.id, "Customer request")
@@ -594,7 +667,9 @@ class TransactionServiceUnitTest {
 
         @Test
         fun `throws when transaction not found`() {
-            whenever(transactionRepository.findById(any<UUID>())).thenReturn(null)
+            val mockQueryFix3 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix3.firstResult()).thenReturn(null)
+            whenever(transactionRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(mockQueryFix3)
 
             assertThrows(ResourceNotFoundException::class.java) {
                 service.voidTransaction(UUID.randomUUID(), "reason")
@@ -604,7 +679,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `throws when not COMPLETED`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix27 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix27.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix27)
 
             assertThrows(BusinessPreconditionException::class.java) {
                 service.voidTransaction(tx.id, "reason")
@@ -614,7 +691,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `throws when reason is blank`() {
             val tx = createTransactionEntity().apply { this.status = "COMPLETED" }
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix28 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix28.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix28)
 
             assertThrows(InvalidInputException::class.java) {
                 service.voidTransaction(tx.id, "  ")
@@ -627,7 +706,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `getTransaction returns entity`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix29 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix29.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix29)
 
             val result = service.getTransaction(tx.id)
 
@@ -636,7 +717,9 @@ class TransactionServiceUnitTest {
 
         @Test
         fun `getTransaction throws when not found`() {
-            whenever(transactionRepository.findById(any<UUID>())).thenReturn(null)
+            val mockQueryFix4 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix4.firstResult()).thenReturn(null)
+            whenever(transactionRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(mockQueryFix4)
 
             assertThrows(ResourceNotFoundException::class.java) {
                 service.getTransaction(UUID.randomUUID())
@@ -735,7 +818,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `adds custom item to transaction`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix30 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix30.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix30)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             val result = service.addCustomItem(tx.id, "Hand-made item", 50000, 1, standardTaxRate)
@@ -747,7 +832,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `creates item with null productId and correct tax calculation`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix31 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix31.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix31)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             service.addCustomItem(tx.id, "Custom item", 30000, 2, standardTaxRate)
@@ -764,7 +851,9 @@ class TransactionServiceUnitTest {
         @Test
         fun `supports reduced tax rate`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix32 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix32.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix32)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             service.addCustomItem(tx.id, "Food item", 10000, 1, reducedTaxRate)
@@ -795,7 +884,9 @@ class TransactionServiceUnitTest {
 
         @Test
         fun `throws when transaction not found`() {
-            whenever(transactionRepository.findById(any<UUID>())).thenReturn(null)
+            val mockQueryFix5 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix5.firstResult()).thenReturn(null)
+            whenever(transactionRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(mockQueryFix5)
             assertThrows(
                 ResourceNotFoundException::class.java,
             ) { service.addCustomItem(UUID.randomUUID(), "Item", 10000, 1, standardTaxRate) }
@@ -804,14 +895,18 @@ class TransactionServiceUnitTest {
         @Test
         fun `throws when transaction is not DRAFT`() {
             val tx = createTransactionEntity().apply { this.status = "COMPLETED" }
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix33 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix33.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix33)
             assertThrows(BusinessPreconditionException::class.java) { service.addCustomItem(tx.id, "Item", 10000, 1, standardTaxRate) }
         }
 
         @Test
         fun `allows zero unit price for complimentary items`() {
             val tx = createTransactionEntity()
-            whenever(transactionRepository.findById(tx.id)).thenReturn(tx)
+            val mockQueryFix34 = mock<PanacheQuery<TransactionEntity>>()
+            whenever(mockQueryFix34.firstResult()).thenReturn(tx)
+            whenever(transactionRepository.find(eq("id = ?1"), eq(tx.id))).thenReturn(mockQueryFix34)
             whenever(itemRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             whenever(discountRepository.findByTransactionId(tx.id)).thenReturn(emptyList())
             val result = service.addCustomItem(tx.id, "Free sample", 0, 1, standardTaxRate)

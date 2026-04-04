@@ -61,7 +61,9 @@ class DiscountReasonService {
         isActive: Boolean?,
     ): DiscountReasonEntity? {
         tenantFilterService.enableFilter()
-        val entity = discountReasonRepository.findById(id) ?: return null
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        val entity = discountReasonRepository.find("id = ?1", id).firstResult() ?: return null
         description?.let { entity.description = it }
         isActive?.let { entity.isActive = it }
         discountReasonRepository.persist(entity)

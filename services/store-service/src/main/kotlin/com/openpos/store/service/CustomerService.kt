@@ -62,7 +62,9 @@ class CustomerService {
      */
     fun findById(id: UUID): CustomerEntity? {
         tenantFilterService.enableFilter()
-        return customerRepository.findById(id)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return customerRepository.find("id = ?1", id).firstResult()
     }
 
     /**
@@ -108,7 +110,7 @@ class CustomerService {
         notes: String?,
     ): CustomerEntity? {
         tenantFilterService.enableFilter()
-        val entity = customerRepository.findById(id) ?: return null
+        val entity = customerRepository.find("id = ?1", id).firstResult() ?: return null
         name?.let { entity.name = it }
         email?.let { entity.email = it }
         phone?.let { entity.phone = it }
@@ -137,7 +139,7 @@ class CustomerService {
     ): Long {
         tenantFilterService.enableFilter()
         val customer =
-            customerRepository.findById(customerId)
+            customerRepository.find("id = ?1", customerId).firstResult()
                 ?: throw IllegalArgumentException("Customer not found: $customerId")
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
         val points = transactionTotal / 10000

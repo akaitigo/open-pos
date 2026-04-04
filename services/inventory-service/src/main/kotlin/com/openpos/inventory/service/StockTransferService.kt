@@ -50,7 +50,9 @@ class StockTransferService {
 
     fun findById(id: UUID): StockTransferEntity? {
         tenantFilterService.enableFilter()
-        return stockTransferRepository.findById(id)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return stockTransferRepository.find("id = ?1", id).firstResult()
     }
 
     fun list(
@@ -82,7 +84,7 @@ class StockTransferService {
         status: String,
     ): StockTransferEntity? {
         tenantFilterService.enableFilter()
-        val entity = stockTransferRepository.findById(id) ?: return null
+        val entity = stockTransferRepository.find("id = ?1", id).firstResult() ?: return null
         entity.status = status
         stockTransferRepository.persist(entity)
         return entity
@@ -96,7 +98,7 @@ class StockTransferService {
     fun complete(id: UUID): StockTransferEntity {
         tenantFilterService.enableFilter()
         val entity =
-            stockTransferRepository.findById(id)
+            stockTransferRepository.find("id = ?1", id).firstResult()
                 ?: throw IllegalArgumentException("StockTransfer not found: $id")
         require(entity.status == "PENDING" || entity.status == "IN_TRANSIT") {
             "Cannot complete transfer with status: ${entity.status}"

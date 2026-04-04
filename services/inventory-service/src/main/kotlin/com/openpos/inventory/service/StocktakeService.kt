@@ -60,8 +60,10 @@ class StocktakeService {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
         tenantFilterService.enableFilter()
 
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
         val stocktake =
-            stocktakeRepository.findById(stocktakeId)
+            stocktakeRepository.find("id = ?1", stocktakeId).firstResult()
                 ?: throw IllegalArgumentException("Stocktake not found: $stocktakeId")
         require(stocktake.status == "IN_PROGRESS") { "Stocktake is not in progress" }
 
@@ -93,7 +95,7 @@ class StocktakeService {
     fun completeStocktake(stocktakeId: UUID): StocktakeEntity {
         tenantFilterService.enableFilter()
         val stocktake =
-            stocktakeRepository.findById(stocktakeId)
+            stocktakeRepository.find("id = ?1", stocktakeId).firstResult()
                 ?: throw IllegalArgumentException("Stocktake not found: $stocktakeId")
         require(stocktake.status == "IN_PROGRESS") { "Stocktake is not in progress" }
 

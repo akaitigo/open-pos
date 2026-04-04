@@ -4,6 +4,8 @@ import com.openpos.store.config.OrganizationIdHolder
 import com.openpos.store.config.TenantFilterService
 import com.openpos.store.entity.WebhookEntity
 import com.openpos.store.repository.WebhookRepository
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.eq
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -72,7 +74,9 @@ class WebhookServiceUnitTest {
                     secret = "old-secret"
                     isActive = true
                 }
-            whenever(webhookRepository.findById(webhookId)).thenReturn(entity)
+            val mockQuery1 = mock<PanacheQuery<WebhookEntity>>()
+whenever(mockQuery1.firstResult()).thenReturn(entity)
+whenever(webhookRepository.find(eq("id = ?1"), eq(webhookId))).thenReturn(mockQuery1)
 
             val result = service.update(webhookId, "https://new.com", null, false)
 
@@ -85,7 +89,9 @@ class WebhookServiceUnitTest {
         @Test
         fun `returns null when webhook not found`() {
             val id = UUID.randomUUID()
-            whenever(webhookRepository.findById(id)).thenReturn(null)
+            val mockQuery2 = mock<PanacheQuery<WebhookEntity>>()
+whenever(mockQuery2.firstResult()).thenReturn(null)
+whenever(webhookRepository.find(eq("id = ?1"), eq(id))).thenReturn(mockQuery2)
 
             val result = service.update(id, "url", null, null)
 
@@ -106,7 +112,9 @@ class WebhookServiceUnitTest {
                     events = "[]"
                     secret = "secret"
                 }
-            whenever(webhookRepository.findById(webhookId)).thenReturn(entity)
+            val mockQuery3 = mock<PanacheQuery<WebhookEntity>>()
+whenever(mockQuery3.firstResult()).thenReturn(entity)
+whenever(webhookRepository.find(eq("id = ?1"), eq(webhookId))).thenReturn(mockQuery3)
 
             val result = service.delete(webhookId)
 
@@ -117,7 +125,9 @@ class WebhookServiceUnitTest {
         @Test
         fun `returns false when webhook not found`() {
             val id = UUID.randomUUID()
-            whenever(webhookRepository.findById(id)).thenReturn(null)
+            val mockQuery4 = mock<PanacheQuery<WebhookEntity>>()
+whenever(mockQuery4.firstResult()).thenReturn(null)
+whenever(webhookRepository.find(eq("id = ?1"), eq(id))).thenReturn(mockQuery4)
 
             val result = service.delete(id)
 

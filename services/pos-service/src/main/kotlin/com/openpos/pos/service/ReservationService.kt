@@ -28,7 +28,9 @@ class ReservationService {
 
     fun findById(id: UUID): ReservationEntity? {
         tenantFilterService.enableFilter()
-        return reservationRepository.findById(id)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return reservationRepository.find("id = ?1", id).firstResult()
     }
 
     fun listByStoreId(
@@ -81,7 +83,7 @@ class ReservationService {
     @Transactional
     fun fulfill(id: UUID): ReservationEntity? {
         tenantFilterService.enableFilter()
-        val entity = reservationRepository.findById(id) ?: return null
+        val entity = reservationRepository.find("id = ?1", id).firstResult() ?: return null
         entity.status = "FULFILLED"
         reservationRepository.persist(entity)
         return entity
@@ -90,7 +92,7 @@ class ReservationService {
     @Transactional
     fun cancel(id: UUID): ReservationEntity? {
         tenantFilterService.enableFilter()
-        val entity = reservationRepository.findById(id) ?: return null
+        val entity = reservationRepository.find("id = ?1", id).firstResult() ?: return null
         entity.status = "CANCELLED"
         reservationRepository.persist(entity)
         return entity

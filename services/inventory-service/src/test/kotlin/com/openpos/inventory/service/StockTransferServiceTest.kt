@@ -4,6 +4,7 @@ import com.openpos.inventory.config.OrganizationIdHolder
 import com.openpos.inventory.config.TenantFilterService
 import com.openpos.inventory.entity.StockTransferEntity
 import com.openpos.inventory.repository.StockTransferRepository
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import io.quarkus.panache.common.Page
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -131,7 +132,9 @@ class StockTransferServiceTest {
                     this.items = "[]"
                     this.status = "PENDING"
                 }
-            whenever(stockTransferRepository.findById(id)).thenReturn(entity)
+            val mockQuery1 = mock<PanacheQuery<StockTransferEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(entity)
+            whenever(stockTransferRepository.find(eq("id = ?1"), eq(id))).thenReturn(mockQuery1)
 
             val result = service.findById(id)
 
@@ -142,7 +145,9 @@ class StockTransferServiceTest {
 
         @Test
         fun `returns null when not found`() {
-            whenever(stockTransferRepository.findById(any<UUID>())).thenReturn(null)
+            val notFoundQuery = mock<PanacheQuery<StockTransferEntity>>()
+            whenever(notFoundQuery.firstResult()).thenReturn(null)
+            whenever(stockTransferRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(notFoundQuery)
 
             val result = service.findById(UUID.randomUUID())
 
@@ -256,7 +261,9 @@ class StockTransferServiceTest {
                     items = "[]"
                     status = "PENDING"
                 }
-            whenever(stockTransferRepository.findById(transferId)).thenReturn(entity)
+            val mockQuery2 = mock<PanacheQuery<StockTransferEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(entity)
+            whenever(stockTransferRepository.find(eq("id = ?1"), eq(transferId))).thenReturn(mockQuery2)
             doNothing().whenever(stockTransferRepository).persist(any<StockTransferEntity>())
 
             val result = service.updateStatus(transferId, "IN_TRANSIT")
@@ -267,7 +274,9 @@ class StockTransferServiceTest {
 
         @Test
         fun `returns null when not found`() {
-            whenever(stockTransferRepository.findById(any<UUID>())).thenReturn(null)
+            val notFoundQuery = mock<PanacheQuery<StockTransferEntity>>()
+            whenever(notFoundQuery.firstResult()).thenReturn(null)
+            whenever(stockTransferRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(notFoundQuery)
 
             val result = service.updateStatus(UUID.randomUUID(), "IN_TRANSIT")
 
@@ -297,7 +306,9 @@ class StockTransferServiceTest {
                     items = itemsJson
                     status = "PENDING"
                 }
-            whenever(stockTransferRepository.findById(transferId)).thenReturn(entity)
+            val mockQuery3 = mock<PanacheQuery<StockTransferEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(entity)
+            whenever(stockTransferRepository.find(eq("id = ?1"), eq(transferId))).thenReturn(mockQuery3)
             doNothing().whenever(stockTransferRepository).persist(any<StockTransferEntity>())
             whenever(stockService.adjustStock(any(), any(), any(), any(), any(), any())).thenReturn(mock())
 
@@ -328,7 +339,9 @@ class StockTransferServiceTest {
 
         @Test
         fun `throws when transfer not found`() {
-            whenever(stockTransferRepository.findById(any<UUID>())).thenReturn(null)
+            val notFoundQuery = mock<PanacheQuery<StockTransferEntity>>()
+            whenever(notFoundQuery.firstResult()).thenReturn(null)
+            whenever(stockTransferRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(notFoundQuery)
 
             assertThrows(IllegalArgumentException::class.java) {
                 service.complete(UUID.randomUUID())
@@ -347,7 +360,9 @@ class StockTransferServiceTest {
                     items = "[]"
                     status = "COMPLETED"
                 }
-            whenever(stockTransferRepository.findById(transferId)).thenReturn(entity)
+            val mockQuery4 = mock<PanacheQuery<StockTransferEntity>>()
+            whenever(mockQuery4.firstResult()).thenReturn(entity)
+            whenever(stockTransferRepository.find(eq("id = ?1"), eq(transferId))).thenReturn(mockQuery4)
 
             assertThrows(IllegalArgumentException::class.java) {
                 service.complete(transferId)
@@ -366,7 +381,9 @@ class StockTransferServiceTest {
                     items = "[]"
                     status = "CANCELLED"
                 }
-            whenever(stockTransferRepository.findById(transferId)).thenReturn(entity)
+            val mockQuery5 = mock<PanacheQuery<StockTransferEntity>>()
+            whenever(mockQuery5.firstResult()).thenReturn(entity)
+            whenever(stockTransferRepository.find(eq("id = ?1"), eq(transferId))).thenReturn(mockQuery5)
 
             assertThrows(IllegalArgumentException::class.java) {
                 service.complete(transferId)
@@ -386,7 +403,9 @@ class StockTransferServiceTest {
                     items = itemsJson
                     status = "IN_TRANSIT"
                 }
-            whenever(stockTransferRepository.findById(transferId)).thenReturn(entity)
+            val mockQuery6 = mock<PanacheQuery<StockTransferEntity>>()
+            whenever(mockQuery6.firstResult()).thenReturn(entity)
+            whenever(stockTransferRepository.find(eq("id = ?1"), eq(transferId))).thenReturn(mockQuery6)
             doNothing().whenever(stockTransferRepository).persist(any<StockTransferEntity>())
             whenever(stockService.adjustStock(any(), any(), any(), any(), any(), any())).thenReturn(mock())
 
