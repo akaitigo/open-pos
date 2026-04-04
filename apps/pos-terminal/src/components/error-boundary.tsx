@@ -38,7 +38,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 p-8">
+        <div
+          className="flex min-h-[400px] flex-col items-center justify-center gap-4 p-8"
+          role="alert"
+        >
           <div className="flex flex-col items-center gap-2 text-center">
             <h2 className="text-xl font-semibold">エラーが発生しました</h2>
             <p className="max-w-md text-sm text-muted-foreground">

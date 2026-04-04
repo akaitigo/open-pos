@@ -46,7 +46,7 @@ export function WeightInputDialog({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Scale className="h-5 w-5" />
+            <Scale className="h-5 w-5" aria-hidden="true" />
             重量入力
           </DialogTitle>
         </DialogHeader>

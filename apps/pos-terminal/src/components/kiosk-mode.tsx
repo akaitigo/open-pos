@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useCartStore, getCartSubtotal, getCartItemCount } from '@/stores/cart-store'
 import { formatMoney } from '@shared-types/openpos'
 import type { Product } from '@shared-types/openpos'
+import { t } from '@/i18n'
 
 interface KioskModeProps {
   products: Product[]
@@ -22,8 +23,13 @@ export function KioskMode({ products, onCheckout, onExit }: KioskModeProps) {
 
   if (step === 'DONE') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8">
-        <div className="text-6xl mb-8">&#10004;</div>
+      <div
+        className="flex flex-col items-center justify-center min-h-screen bg-background p-8"
+        role="status"
+      >
+        <div className="text-6xl mb-8" aria-hidden="true">
+          &#10004;
+        </div>
         <h1 className="text-4xl font-bold mb-4">ありがとうございました</h1>
         <p className="text-xl text-muted-foreground mb-8">レシートをお受け取りください</p>
         <button
@@ -33,6 +39,7 @@ export function KioskMode({ products, onCheckout, onExit }: KioskModeProps) {
             setStep('SELECT')
           }}
           data-testid="kiosk-next-customer"
+          aria-label={t('accessibility.kioskNextCustomer')}
         >
           次のお客様
         </button>
@@ -68,6 +75,7 @@ export function KioskMode({ products, onCheckout, onExit }: KioskModeProps) {
               className="flex-1 px-8 py-6 text-xl rounded-xl border"
               onClick={() => setStep('SELECT')}
               data-testid="kiosk-back"
+              aria-label={t('accessibility.kioskBack')}
             >
               戻る
             </button>
@@ -78,6 +86,7 @@ export function KioskMode({ products, onCheckout, onExit }: KioskModeProps) {
                 setStep('DONE')
               }}
               data-testid="kiosk-pay"
+              aria-label={t('accessibility.kioskPay')}
             >
               お支払い
             </button>
@@ -96,6 +105,7 @@ export function KioskMode({ products, onCheckout, onExit }: KioskModeProps) {
           className="px-4 py-2 text-sm rounded-md border"
           onClick={onExit}
           data-testid="kiosk-exit"
+          aria-label={t('accessibility.kioskExit')}
         >
           スタッフモード
         </button>
@@ -109,6 +119,10 @@ export function KioskMode({ products, onCheckout, onExit }: KioskModeProps) {
             className="flex flex-col items-center justify-center p-6 rounded-xl border hover:bg-accent transition-colors min-h-[120px]"
             onClick={() => addItem(product)}
             data-testid={`kiosk-product-${product.id}`}
+            aria-label={t('accessibility.kioskSelectProduct', {
+              name: product.name,
+              price: formatMoney(product.price),
+            })}
           >
             <span className="text-lg font-medium text-center">{product.name}</span>
             <span className="text-xl font-bold mt-2">{formatMoney(product.price)}</span>
@@ -128,6 +142,7 @@ export function KioskMode({ products, onCheckout, onExit }: KioskModeProps) {
               className="px-6 py-4 text-lg rounded-xl border"
               onClick={clearCart}
               data-testid="kiosk-clear"
+              aria-label={t('accessibility.kioskClearCart')}
             >
               クリア
             </button>
@@ -135,6 +150,7 @@ export function KioskMode({ products, onCheckout, onExit }: KioskModeProps) {
               className="px-8 py-4 text-lg rounded-xl bg-primary text-primary-foreground"
               onClick={() => setStep('CONFIRM')}
               data-testid="kiosk-checkout"
+              aria-label={t('accessibility.kioskCheckout')}
             >
               注文する
             </button>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { z } from 'zod'
 import { RefreshCw } from 'lucide-react'
+import { t } from '@/i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
@@ -188,11 +189,13 @@ export function ProductsPage() {
             setPage(1)
           }}
           className="min-w-[260px] flex-1"
+          aria-label={t('accessibility.productSearch')}
         />
         <Button
           variant="outline"
           className="min-h-11 min-w-11"
           onClick={() => setScannerOpen(true)}
+          aria-label={t('accessibility.openBarcodeScanner')}
         >
           スキャン
         </Button>
@@ -200,8 +203,9 @@ export function ProductsPage() {
           variant="outline"
           className="min-h-11 min-w-11"
           onClick={() => setReloadKey((value) => value + 1)}
+          aria-label={t('accessibility.reloadProducts')}
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
           再読込
         </Button>
       </div>
@@ -249,6 +253,7 @@ export function ProductsPage() {
               setSearch('')
               setPage(1)
             }}
+            aria-label={t('accessibility.clearFilters')}
           >
             フィルタ解除
           </Button>
@@ -256,7 +261,10 @@ export function ProductsPage() {
       </div>
 
       {catalogLoading ? (
-        <div data-testid="product-grid" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div
+          data-testid="product-grid"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+        >
           {Array.from({ length: 12 }).map((_, index) => (
             <Card key={index} className="space-y-3 p-3">
               <div className="aspect-square animate-pulse rounded-md bg-muted" />
@@ -271,8 +279,11 @@ export function ProductsPage() {
         <Card className="flex min-h-[240px] flex-col items-center justify-center gap-3 p-6 text-center">
           <p className="text-lg font-semibold">商品カタログを読み込めませんでした</p>
           <p className="max-w-md text-sm text-muted-foreground">{catalogError}</p>
-          <Button onClick={() => setReloadKey((value) => value + 1)}>
-            <RefreshCw className="h-4 w-4" />
+          <Button
+            onClick={() => setReloadKey((value) => value + 1)}
+            aria-label={t('accessibility.retryAction')}
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
             再試行
           </Button>
         </Card>
@@ -281,7 +292,10 @@ export function ProductsPage() {
           商品が見つかりません
         </div>
       ) : (
-        <div data-testid="product-grid" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div
+          data-testid="product-grid"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+        >
           {pagedProducts.map((product) => {
             const category = product.categoryId ? categoryById[product.categoryId] : undefined
             const stock = stocksByProductId[product.id]
@@ -302,7 +316,17 @@ export function ProductsPage() {
                 role="button"
                 tabIndex={0}
                 aria-disabled={isSoldOut}
-                aria-label={`${product.name} ${formatMoney(product.price)}${isSoldOut ? ' 在庫切れ' : ''} をカートに追加`}
+                aria-label={
+                  isSoldOut
+                    ? t('accessibility.addToCartSoldOut', {
+                        name: product.name,
+                        price: formatMoney(product.price),
+                      })
+                    : t('accessibility.addToCart', {
+                        name: product.name,
+                        price: formatMoney(product.price),
+                      })
+                }
                 onClick={() => handleAddToCart(product, stock)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -360,16 +384,20 @@ export function ProductsPage() {
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <nav
+          className="flex items-center justify-center gap-2"
+          aria-label={t('accessibility.pageInfo', { current: currentPage, total: totalPages })}
+        >
           <Button
             variant="outline"
             size="sm"
             disabled={currentPage <= 1}
             onClick={() => setPage((value) => value - 1)}
+            aria-label={t('accessibility.previousPage')}
           >
             前へ
           </Button>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground" aria-current="page">
             {currentPage} / {totalPages}
           </span>
           <Button
@@ -377,10 +405,11 @@ export function ProductsPage() {
             size="sm"
             disabled={currentPage >= totalPages}
             onClick={() => setPage((value) => value + 1)}
+            aria-label={t('accessibility.nextPage')}
           >
             次へ
           </Button>
-        </div>
+        </nav>
       )}
 
       <BarcodeScannerDialog
@@ -471,7 +500,11 @@ function BarcodeScannerDialog({
           )}
 
           <form onSubmit={handleManualSubmit} className="flex items-end gap-2">
+            <label htmlFor="manual-barcode-input" className="sr-only">
+              {t('products.barcodeManual')}
+            </label>
             <Input
+              id="manual-barcode-input"
               placeholder="バーコードを手入力..."
               value={manualBarcode}
               onChange={(e) => setManualBarcode(e.target.value)}
@@ -666,8 +699,11 @@ function OpenPriceDialog({
         </p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">販売価格（円）</label>
+            <label htmlFor="open-price-input" className="text-sm font-medium">
+              {t('accessibility.openPriceLabelYen')}
+            </label>
             <Input
+              id="open-price-input"
               type="number"
               min="1"
               step="1"

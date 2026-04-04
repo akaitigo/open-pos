@@ -1,15 +1,16 @@
 import { cn } from '@/lib/utils'
 import { useToast, type ToasterToast } from '@/hooks/use-toast'
 import { X } from 'lucide-react'
+import { t } from '@/i18n'
 
 function ToastClose({ onClose }: { onClose: () => void }) {
   return (
     <button
-      aria-label="Close notification"
+      aria-label={t('accessibility.closeNotification')}
       className="absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-hidden group-hover:opacity-100"
       onClick={onClose}
     >
-      <X className="h-4 w-4" />
+      <X className="h-4 w-4" aria-hidden="true" />
     </button>
   )
 }
@@ -38,7 +39,12 @@ export function Toaster() {
   const { toasts, dismiss } = useToast()
 
   return (
-    <div className="pointer-events-none fixed right-0 top-0 z-100 flex max-h-screen w-full flex-col p-4 md:max-w-[420px]">
+    <div
+      className="pointer-events-none fixed right-0 top-0 z-100 flex max-h-screen w-full flex-col p-4 md:max-w-[420px]"
+      role="region"
+      aria-label={t('accessibility.notifications')}
+      aria-live="polite"
+    >
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} />
       ))}

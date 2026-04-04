@@ -26,7 +26,7 @@ export function AgeConfirmDialog({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-amber-500" />
+            <ShieldAlert className="h-5 w-5 text-amber-500" aria-hidden="true" />
             年齢確認
           </DialogTitle>
         </DialogHeader>

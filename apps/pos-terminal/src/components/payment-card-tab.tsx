@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input'
 import { normalizeNumericInput } from '@/hooks/use-checkout'
 import { formatMoney } from '@shared-types/openpos'
 import { CreditCard, QrCode } from 'lucide-react'
+import { t } from '@/i18n'
 
 interface PaymentCardTabProps {
   mode: 'CREDIT_CARD' | 'QR_CODE'
@@ -34,9 +35,9 @@ export function PaymentCardTab({
       <div className="rounded-xl border bg-muted/40 p-4">
         <div className="flex items-center gap-2">
           {isCard ? (
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <CreditCard className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           ) : (
-            <QrCode className="h-4 w-4 text-muted-foreground" />
+            <QrCode className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           )}
           <p className="text-sm font-medium">
             {isCard ? 'カード端末プレースホルダー' : 'QR 決済プレースホルダー'}
@@ -55,8 +56,11 @@ export function PaymentCardTab({
         )}
       </div>
       <div>
-        <label className="text-sm font-medium">決済金額（円）</label>
+        <label htmlFor={`payment-amount-${mode}`} className="text-sm font-medium">
+          {t('accessibility.paymentAmountLabel')}
+        </label>
         <Input
+          id={`payment-amount-${mode}`}
           type="number"
           inputMode="numeric"
           placeholder="残額を入力"
@@ -69,14 +73,18 @@ export function PaymentCardTab({
             variant="outline"
             size="sm"
             onClick={() => setPaymentAmount(String(Math.ceil(remainingAmount / 100)))}
+            aria-label={t('accessibility.setRemainingAmount')}
           >
             残額
           </Button>
         </div>
       </div>
       <div>
-        <label className="text-sm font-medium">参照番号</label>
+        <label htmlFor={`reference-${mode}`} className="text-sm font-medium">
+          {t('accessibility.referenceNumberLabel')}
+        </label>
         <Input
+          id={`reference-${mode}`}
           placeholder={isCard ? 'カード承認番号' : '決済ID'}
           value={reference}
           onChange={(event) => setReference(event.target.value)}
@@ -84,12 +92,14 @@ export function PaymentCardTab({
         />
       </div>
       {nonCashShortfall > 0 && parsedPaymentAmount > 0 && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground" role="status">
           この支払後も {formatMoney(nonCashShortfall)} 残ります。
         </p>
       )}
       {nonCashOverpayment > 0 && (
-        <p className="text-sm text-destructive">残額を超える金額は追加できません。</p>
+        <p className="text-sm text-destructive" role="alert">
+          残額を超える金額は追加できません。
+        </p>
       )}
     </div>
   )

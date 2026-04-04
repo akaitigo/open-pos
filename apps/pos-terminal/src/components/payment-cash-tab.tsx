@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { QUICK_CASH_AMOUNTS, CASH_KEYPAD_ROWS, normalizeNumericInput } from '@/hooks/use-checkout'
 import { formatMoney } from '@shared-types/openpos'
+import { t } from '@/i18n'
 
 interface PaymentCashTabProps {
   remainingAmount: number
@@ -37,8 +38,11 @@ export function PaymentCashTab({
       </div>
 
       <div>
-        <label className="text-sm font-medium">お預かり金額（円）</label>
+        <label htmlFor="received-amount-input" className="text-sm font-medium">
+          {t('accessibility.receivedAmountLabel')}
+        </label>
         <Input
+          id="received-amount-input"
           type="number"
           inputMode="numeric"
           placeholder="0"
@@ -53,7 +57,7 @@ export function PaymentCashTab({
           data-testid="checkout-exact-btn"
           variant="outline"
           size="sm"
-          aria-label="正確な金額を自動計算"
+          aria-label={t('accessibility.exactAmount')}
           onClick={() => setReceivedAmount(String(Math.ceil(remainingAmount / 100)))}
         >
           ぴったり
@@ -63,7 +67,7 @@ export function PaymentCashTab({
             key={yen}
             variant="outline"
             size="sm"
-            aria-label={`${yen}円を設定`}
+            aria-label={t('accessibility.quickCashAmount', { amount: yen })}
             onClick={() => setReceivedAmount(String(yen))}
           >
             ¥{yen.toLocaleString('ja-JP')}
@@ -72,14 +76,18 @@ export function PaymentCashTab({
         <Button
           variant="ghost"
           size="sm"
-          aria-label="金額をクリア"
+          aria-label={t('accessibility.clearAmount')}
           onClick={() => setReceivedAmount('')}
         >
           C
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div
+        className="grid grid-cols-3 gap-2"
+        role="group"
+        aria-label={t('accessibility.receivedAmountLabel')}
+      >
         {CASH_KEYPAD_ROWS.flat().map((key) => (
           <Button
             key={key}
@@ -105,7 +113,11 @@ export function PaymentCashTab({
       )}
 
       {parsedReceivedAmount >= roundedRemainingAmount && remainingAmount > 0 && (
-        <div className="rounded-lg bg-muted p-3 text-center">
+        <div
+          className="rounded-lg bg-muted p-3 text-center"
+          role="status"
+          aria-label={t('accessibility.changeAmount')}
+        >
           <p className="text-sm text-muted-foreground">お釣り</p>
           <p className="text-xl font-bold">{formatMoney(currentChange)}</p>
         </div>

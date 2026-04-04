@@ -5,6 +5,7 @@ import { getCartItemCount, useCartStore } from '@/stores/cart-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
 import { History, LogOut, ShoppingCart, Wifi, WifiOff } from 'lucide-react'
+import { t } from '@/i18n'
 
 interface HeaderProps {
   isTraining?: boolean
@@ -41,7 +42,8 @@ export function Header({ isTraining, isOnline = true, onToggleTraining }: Header
         {isOnline && (
           <Wifi
             className="h-3.5 w-3.5 text-green-500"
-            aria-label="オンライン"
+            aria-label={t('accessibility.onlineStatus')}
+            role="img"
             data-testid="online-indicator"
           />
         )}
@@ -51,23 +53,30 @@ export function Header({ isTraining, isOnline = true, onToggleTraining }: Header
           </Badge>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <nav className="flex items-center gap-2" aria-label={t('accessibility.mainNavigation')}>
         {staff && <span className="text-sm text-muted-foreground">{staff.name}</span>}
         {onToggleTraining && (
           <Button
             variant={isTraining ? 'destructive' : 'outline'}
             size="sm"
             onClick={onToggleTraining}
-            aria-label="トレーニングモード切替"
+            aria-label={t('accessibility.trainingModeToggle')}
           >
             {isTraining ? 'トレーニング中' : 'トレーニング'}
           </Button>
         )}
         <DarkModeToggle />
         <Button variant={location.pathname === '/cart' ? 'secondary' : 'ghost'} size="sm" asChild>
-          <Link to="/cart" aria-label={itemCount > 0 ? `カート ${itemCount}` : 'カート'}>
-            <ShoppingCart className="h-4 w-4" />
-            カート
+          <Link
+            to="/cart"
+            aria-label={
+              itemCount > 0
+                ? t('accessibility.cartWithCount', { count: itemCount })
+                : t('accessibility.cart')
+            }
+          >
+            <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+            {t('header.cart')}
             {itemCount > 0 && <span className="text-xs tabular-nums">{itemCount}</span>}
           </Link>
         </Button>
@@ -76,16 +85,21 @@ export function Header({ isTraining, isOnline = true, onToggleTraining }: Header
           size="sm"
           asChild
         >
-          <Link to="/history">
-            <History className="h-4 w-4" />
-            履歴
+          <Link to="/history" aria-label={t('accessibility.historyLink')}>
+            <History className="h-4 w-4" aria-hidden="true" />
+            {t('header.history')}
           </Link>
         </Button>
-        <Button variant="ghost" size="sm" onClick={logout}>
-          <LogOut className="h-4 w-4" />
-          退出
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={logout}
+          aria-label={t('accessibility.logoutButton')}
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          {t('header.logout')}
         </Button>
-      </div>
+      </nav>
     </header>
   )
 }
