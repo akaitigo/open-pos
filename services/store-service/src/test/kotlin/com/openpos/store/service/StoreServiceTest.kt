@@ -5,10 +5,7 @@ import com.openpos.store.config.OrganizationIdHolder
 import com.openpos.store.config.TenantFilterService
 import com.openpos.store.entity.StoreEntity
 import com.openpos.store.repository.StoreRepository
-import io.quarkus.panache.common.Page
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -18,31 +15,39 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
-@QuarkusTest
+/**
+ * StoreService の純粋ユニットテスト。
+ * findById / update は HQL クエリ (find("id = ?1", id)) を使うため
+ * PanacheQuery をモックして検証する。
+ */
 class StoreServiceTest {
-    @Inject
-    lateinit var storeService: StoreService
-
-    @Inject
-    lateinit var organizationIdHolder: OrganizationIdHolder
-
-    @InjectMock
-    lateinit var storeRepository: StoreRepository
-
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
-
-    @InjectMock
-    lateinit var cacheService: StoreCacheService
+    private lateinit var storeService: StoreService
+    private lateinit var storeRepository: StoreRepository
+    private lateinit var tenantFilterService: TenantFilterService
+    private lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var cacheService: StoreCacheService
 
     private val orgId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        storeRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+        cacheService = mock()
+
+        storeService = StoreService()
+        storeService.storeRepository = storeRepository
+        storeService.tenantFilterService = tenantFilterService
+        storeService.organizationIdHolder = organizationIdHolder
+        storeService.cacheService = cacheService
+
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
         doNothing().whenever(cacheService).invalidateStore(any(), any())
@@ -105,7 +110,9 @@ class StoreServiceTest {
                     this.settings = "{}"
                     this.isActive = true
                 }
-            whenever(storeRepository.findById(storeId)).thenReturn(entity)
+            val mockQuery = mock<PanacheQuery<StoreEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(entity)
+            whenever(storeRepository.find(eq("id = ?1"), eq(storeId))).thenReturn(mockQuery)
 
             // Act
             val result = storeService.findById(storeId)
@@ -118,10 +125,12 @@ class StoreServiceTest {
         }
 
         @Test
-        fun `存在しないIDの場合はnullを返す`() {
+        fun `存在しないIDの場合はnullを返す（テナント隔離：他テナントのIDはnull）`() {
             // Arrange
             val storeId = UUID.randomUUID()
-            whenever(storeRepository.findById(storeId)).thenReturn(null)
+            val mockQuery = mock<PanacheQuery<StoreEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(null)
+            whenever(storeRepository.find(eq("id = ?1"), eq(storeId))).thenReturn(mockQuery)
 
             // Act
             val result = storeService.findById(storeId)
@@ -201,7 +210,9 @@ class StoreServiceTest {
                     this.settings = "{}"
                     this.isActive = true
                 }
-            whenever(storeRepository.findById(storeId)).thenReturn(entity)
+            val mockQuery = mock<PanacheQuery<StoreEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(entity)
+            whenever(storeRepository.find(eq("id = ?1"), eq(storeId))).thenReturn(mockQuery)
             doNothing().whenever(storeRepository).persist(any<StoreEntity>())
 
             // Act
@@ -231,7 +242,9 @@ class StoreServiceTest {
                     this.settings = "{}"
                     this.isActive = true
                 }
-            whenever(storeRepository.findById(storeId)).thenReturn(entity)
+            val mockQuery = mock<PanacheQuery<StoreEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(entity)
+            whenever(storeRepository.find(eq("id = ?1"), eq(storeId))).thenReturn(mockQuery)
             doNothing().whenever(storeRepository).persist(any<StoreEntity>())
 
             // Act
@@ -257,10 +270,12 @@ class StoreServiceTest {
         }
 
         @Test
-        fun `存在しないIDの場合はnullを返す`() {
+        fun `存在しないIDの場合はnullを返す（テナント隔離：他テナントのIDはnull）`() {
             // Arrange
             val storeId = UUID.randomUUID()
-            whenever(storeRepository.findById(storeId)).thenReturn(null)
+            val mockQuery = mock<PanacheQuery<StoreEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(null)
+            whenever(storeRepository.find(eq("id = ?1"), eq(storeId))).thenReturn(mockQuery)
 
             // Act
             val result = storeService.update(storeId, "新店舗名", null, null, null, null, null)

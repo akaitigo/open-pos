@@ -5,6 +5,7 @@ import com.openpos.pos.config.TenantFilterService
 import com.openpos.pos.entity.ReservationEntity
 import com.openpos.pos.repository.ReservationRepository
 import io.quarkus.panache.common.Page
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -63,7 +64,9 @@ class ReservationServiceUnitTest {
                     this.items = "[]"
                     this.reservedUntil = Instant.now().plusSeconds(3600)
                 }
-            whenever(reservationRepository.findById(id)).thenReturn(entity)
+            val mockQuery1 = mock<PanacheQuery<ReservationEntity>>()
+whenever(mockQuery1.firstResult()).thenReturn(entity)
+whenever(reservationRepository.find(eq("id = ?1"), eq(id))).thenReturn(mockQuery1)
 
             val result = service.findById(id)
 
@@ -74,7 +77,9 @@ class ReservationServiceUnitTest {
 
         @Test
         fun `returns null when not found`() {
-            whenever(reservationRepository.findById(any<UUID>())).thenReturn(null)
+            val mockQueryFix1 = mock<PanacheQuery<ReservationEntity>>()
+            whenever(mockQueryFix1.firstResult()).thenReturn(null)
+            whenever(reservationRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(mockQueryFix1)
 
             val result = service.findById(UUID.randomUUID())
 
@@ -147,7 +152,9 @@ class ReservationServiceUnitTest {
                     this.id = id
                     this.status = "RESERVED"
                 }
-            whenever(reservationRepository.findById(id)).thenReturn(entity)
+            val mockQuery2 = mock<PanacheQuery<ReservationEntity>>()
+whenever(mockQuery2.firstResult()).thenReturn(entity)
+whenever(reservationRepository.find(eq("id = ?1"), eq(id))).thenReturn(mockQuery2)
             doNothing().whenever(reservationRepository).persist(any<ReservationEntity>())
 
             val result = service.fulfill(id)
@@ -158,7 +165,9 @@ class ReservationServiceUnitTest {
 
         @Test
         fun `returns null when not found`() {
-            whenever(reservationRepository.findById(any<UUID>())).thenReturn(null)
+            val mockQueryFix2 = mock<PanacheQuery<ReservationEntity>>()
+            whenever(mockQueryFix2.firstResult()).thenReturn(null)
+            whenever(reservationRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(mockQueryFix2)
 
             val result = service.fulfill(UUID.randomUUID())
 
@@ -176,7 +185,9 @@ class ReservationServiceUnitTest {
                     this.id = id
                     this.status = "RESERVED"
                 }
-            whenever(reservationRepository.findById(id)).thenReturn(entity)
+            val mockQuery3 = mock<PanacheQuery<ReservationEntity>>()
+whenever(mockQuery3.firstResult()).thenReturn(entity)
+whenever(reservationRepository.find(eq("id = ?1"), eq(id))).thenReturn(mockQuery3)
             doNothing().whenever(reservationRepository).persist(any<ReservationEntity>())
 
             val result = service.cancel(id)
@@ -187,7 +198,9 @@ class ReservationServiceUnitTest {
 
         @Test
         fun `returns null when not found`() {
-            whenever(reservationRepository.findById(any<UUID>())).thenReturn(null)
+            val mockQueryFix3 = mock<PanacheQuery<ReservationEntity>>()
+            whenever(mockQueryFix3.firstResult()).thenReturn(null)
+            whenever(reservationRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(mockQueryFix3)
 
             val result = service.cancel(UUID.randomUUID())
 

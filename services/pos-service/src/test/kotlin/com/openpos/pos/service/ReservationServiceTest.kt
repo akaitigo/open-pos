@@ -4,9 +4,9 @@ import com.openpos.pos.config.OrganizationIdHolder
 import com.openpos.pos.config.TenantFilterService
 import com.openpos.pos.entity.ReservationEntity
 import com.openpos.pos.repository.ReservationRepository
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.eq
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
@@ -17,28 +17,32 @@ import org.mockito.kotlin.whenever
 import java.time.Instant
 import java.util.UUID
 
-@QuarkusTest
 class ReservationServiceTest {
-    @Inject
-    lateinit var reservationService: ReservationService
+    private lateinit var reservationService: ReservationService
 
-    @InjectMock
-    lateinit var reservationRepository: ReservationRepository
+    private lateinit var reservationRepository: ReservationRepository
 
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var tenantFilterService: TenantFilterService
 
-    @InjectMock
-    lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
     private val testOrgId = UUID.randomUUID()
     private val testStoreId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        reservationRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+
+        reservationService = ReservationService()
+        reservationService.reservationRepository = reservationRepository
+        reservationService.tenantFilterService = tenantFilterService
+        reservationService.organizationIdHolder = organizationIdHolder
+
+        organizationIdHolder.organizationId = testOrgId
         doNothing().whenever(reservationRepository).persist(any<ReservationEntity>())
         doNothing().whenever(tenantFilterService).enableFilter()
-        whenever(organizationIdHolder.organizationId).thenReturn(testOrgId)
     }
 
     @Test
@@ -70,7 +74,9 @@ class ReservationServiceTest {
                 reservedUntil = Instant.now().plusSeconds(86400)
                 status = "RESERVED"
             }
-        whenever(reservationRepository.findById(reservationId)).thenReturn(entity)
+        val mockQuery1 = mock<PanacheQuery<ReservationEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(entity)
+            whenever(reservationRepository.find(eq("id = ?1"), eq(reservationId))).thenReturn(mockQuery1)
 
         val result = reservationService.fulfill(reservationId)
 
@@ -89,7 +95,9 @@ class ReservationServiceTest {
                 reservedUntil = Instant.now().plusSeconds(86400)
                 status = "RESERVED"
             }
-        whenever(reservationRepository.findById(reservationId)).thenReturn(entity)
+        val mockQuery2 = mock<PanacheQuery<ReservationEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(entity)
+            whenever(reservationRepository.find(eq("id = ?1"), eq(reservationId))).thenReturn(mockQuery2)
 
         val result = reservationService.cancel(reservationId)
 

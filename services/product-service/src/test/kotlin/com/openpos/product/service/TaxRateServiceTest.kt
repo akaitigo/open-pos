@@ -4,9 +4,9 @@ import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.TaxRateEntity
 import com.openpos.product.repository.TaxRateRepository
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.eq
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -21,24 +21,28 @@ import org.mockito.kotlin.whenever
 import java.math.BigDecimal
 import java.util.UUID
 
-@QuarkusTest
 class TaxRateServiceTest {
-    @Inject
-    lateinit var taxRateService: TaxRateService
+    private lateinit var taxRateService: TaxRateService
 
-    @Inject
-    lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
-    @InjectMock
-    lateinit var taxRateRepository: TaxRateRepository
+    private lateinit var taxRateRepository: TaxRateRepository
 
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var tenantFilterService: TenantFilterService
 
     private val orgId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        taxRateRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+
+        taxRateService = TaxRateService()
+        taxRateService.taxRateRepository = taxRateRepository
+        taxRateService.tenantFilterService = tenantFilterService
+        taxRateService.organizationIdHolder = organizationIdHolder
+
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
     }
@@ -198,7 +202,9 @@ class TaxRateServiceTest {
                     this.taxType = "STANDARD"
                     this.isActive = true
                 }
-            whenever(taxRateRepository.findById(taxRateId)).thenReturn(entity)
+            val mockQuery1 = mock<PanacheQuery<TaxRateEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(entity)
+            whenever(taxRateRepository.find(eq("id = ?1"), eq(taxRateId))).thenReturn(mockQuery1)
 
             // Act
             val result = taxRateService.findById(taxRateId)
@@ -214,7 +220,9 @@ class TaxRateServiceTest {
         fun `存在しないIDの場合はnullを返す`() {
             // Arrange
             val taxRateId = UUID.randomUUID()
-            whenever(taxRateRepository.findById(taxRateId)).thenReturn(null)
+            val mockQuery2 = mock<PanacheQuery<TaxRateEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(null)
+            whenever(taxRateRepository.find(eq("id = ?1"), eq(taxRateId))).thenReturn(mockQuery2)
 
             // Act
             val result = taxRateService.findById(taxRateId)
@@ -242,7 +250,9 @@ class TaxRateServiceTest {
                     this.taxType = "STANDARD"
                     this.isActive = true
                 }
-            whenever(taxRateRepository.findById(taxRateId)).thenReturn(entity)
+            val mockQuery3 = mock<PanacheQuery<TaxRateEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(entity)
+            whenever(taxRateRepository.find(eq("id = ?1"), eq(taxRateId))).thenReturn(mockQuery3)
             doNothing().whenever(taxRateRepository).persist(any<TaxRateEntity>())
 
             // Act
@@ -279,7 +289,9 @@ class TaxRateServiceTest {
                     this.taxType = "STANDARD"
                     this.isActive = true
                 }
-            whenever(taxRateRepository.findById(taxRateId)).thenReturn(entity)
+            val mockQuery4 = mock<PanacheQuery<TaxRateEntity>>()
+            whenever(mockQuery4.firstResult()).thenReturn(entity)
+            whenever(taxRateRepository.find(eq("id = ?1"), eq(taxRateId))).thenReturn(mockQuery4)
             doNothing().whenever(taxRateRepository).persist(any<TaxRateEntity>())
 
             // Act
@@ -303,7 +315,9 @@ class TaxRateServiceTest {
         fun `存在しない税率の更新はnullを返す`() {
             // Arrange
             val taxRateId = UUID.randomUUID()
-            whenever(taxRateRepository.findById(taxRateId)).thenReturn(null)
+            val mockQuery5 = mock<PanacheQuery<TaxRateEntity>>()
+            whenever(mockQuery5.firstResult()).thenReturn(null)
+            whenever(taxRateRepository.find(eq("id = ?1"), eq(taxRateId))).thenReturn(mockQuery5)
 
             // Act
             val result =
@@ -346,7 +360,9 @@ class TaxRateServiceTest {
                     this.isDefault = true
                     this.isActive = true
                 }
-            whenever(taxRateRepository.findById(taxRateId)).thenReturn(entity)
+            val mockQuery6 = mock<PanacheQuery<TaxRateEntity>>()
+            whenever(mockQuery6.firstResult()).thenReturn(entity)
+            whenever(taxRateRepository.find(eq("id = ?1"), eq(taxRateId))).thenReturn(mockQuery6)
             whenever(taxRateRepository.findDefaultsByOrganizationIdExcludingId(orgId, taxRateId)).thenReturn(listOf(existingDefault))
             doNothing().whenever(taxRateRepository).persist(any<TaxRateEntity>())
 

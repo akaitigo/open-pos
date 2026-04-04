@@ -1,12 +1,11 @@
 package com.openpos.product.service
 
+import com.openpos.product.cache.ProductCacheService
 import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.DiscountEntity
 import com.openpos.product.repository.DiscountRepository
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -17,30 +16,43 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
-@QuarkusTest
 class DiscountServiceTest {
-    @Inject
-    lateinit var discountService: DiscountService
+    private lateinit var discountService: DiscountService
 
-    @Inject
-    lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
-    @InjectMock
-    lateinit var discountRepository: DiscountRepository
+    private lateinit var discountRepository: DiscountRepository
 
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var tenantFilterService: TenantFilterService
+
+    private lateinit var cacheService: ProductCacheService
 
     private val orgId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        discountRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+        cacheService = mock()
+
+        discountService = DiscountService()
+        discountService.discountRepository = discountRepository
+        discountService.tenantFilterService = tenantFilterService
+        discountService.organizationIdHolder = organizationIdHolder
+        discountService.cacheService = cacheService
+        discountService.objectMapper =
+            com.fasterxml.jackson.databind
+                .ObjectMapper()
+
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
     }
@@ -295,7 +307,9 @@ class DiscountServiceTest {
                     this.value = 15
                     this.isActive = true
                 }
-            whenever(discountRepository.findById(discountId)).thenReturn(entity)
+            val mockQuery1 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(entity)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery1)
 
             // Act
             val result = discountService.findById(discountId)
@@ -311,7 +325,9 @@ class DiscountServiceTest {
         fun `存在しないIDの場合はnullを返す`() {
             // Arrange
             val discountId = UUID.randomUUID()
-            whenever(discountRepository.findById(discountId)).thenReturn(null)
+            val mockQuery2 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(null)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery2)
 
             // Act
             val result = discountService.findById(discountId)
@@ -341,7 +357,9 @@ class DiscountServiceTest {
                     this.validUntil = Instant.now().plus(7, ChronoUnit.DAYS)
                     this.isActive = true
                 }
-            whenever(discountRepository.findById(discountId)).thenReturn(entity)
+            val mockQuery3 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(entity)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery3)
             doNothing().whenever(discountRepository).persist(any<DiscountEntity>())
 
             // Act
@@ -379,7 +397,9 @@ class DiscountServiceTest {
                     this.value = 50000
                     this.isActive = true
                 }
-            whenever(discountRepository.findById(discountId)).thenReturn(entity)
+            val mockQuery4 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery4.firstResult()).thenReturn(entity)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery4)
             doNothing().whenever(discountRepository).persist(any<DiscountEntity>())
 
             // Act
@@ -404,7 +424,9 @@ class DiscountServiceTest {
         fun `存在しない割引の更新はnullを返す`() {
             // Arrange
             val discountId = UUID.randomUUID()
-            whenever(discountRepository.findById(discountId)).thenReturn(null)
+            val mockQuery5 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery5.firstResult()).thenReturn(null)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery5)
 
             // Act
             val result =

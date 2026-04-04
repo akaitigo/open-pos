@@ -9,10 +9,8 @@ import com.openpos.product.entity.TaxRateEntity
 import com.openpos.product.repository.CategoryRepository
 import com.openpos.product.repository.ProductRepository
 import com.openpos.product.repository.TaxRateRepository
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import io.quarkus.panache.common.Page
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -25,32 +23,26 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
-@QuarkusTest
 class ProductServiceTest {
-    @Inject
-    lateinit var productService: ProductService
+    private lateinit var productService: ProductService
 
-    @Inject
-    lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
-    @InjectMock
-    lateinit var productRepository: ProductRepository
+    private lateinit var productRepository: ProductRepository
 
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var tenantFilterService: TenantFilterService
 
-    @InjectMock
-    lateinit var categoryRepository: CategoryRepository
+    private lateinit var categoryRepository: CategoryRepository
 
-    @InjectMock
-    lateinit var taxRateRepository: TaxRateRepository
+    private lateinit var taxRateRepository: TaxRateRepository
 
-    @InjectMock
-    lateinit var cacheService: ProductCacheService
+    private lateinit var cacheService: ProductCacheService
 
     private val orgId = UUID.randomUUID()
     private val categoryId = UUID.randomUUID()
@@ -58,21 +50,36 @@ class ProductServiceTest {
 
     @BeforeEach
     fun setUp() {
+        productRepository = mock()
+        categoryRepository = mock()
+        taxRateRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+        cacheService = mock()
+
+        productService = ProductService()
+        productService.productRepository = productRepository
+        productService.categoryRepository = categoryRepository
+        productService.taxRateRepository = taxRateRepository
+        productService.tenantFilterService = tenantFilterService
+        productService.organizationIdHolder = organizationIdHolder
+
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
-        doNothing().whenever(cacheService).invalidateProduct(any(), any(), anyOrNull())
-        doNothing().whenever(cacheService).invalidateCategory(any(), any())
-        doNothing().whenever(cacheService).invalidateAllCategoryLists(any())
 
-        // FK 検証: デフォルトで同一テナントのレコードとして返す
-        whenever(categoryRepository.findById(categoryId)).thenReturn(
+        // FK 検証: デフォルトで同一テナントのレコードとして返す（HQL パターン）
+        val mockCatQuery = mock<PanacheQuery<CategoryEntity>>()
+        whenever(mockCatQuery.firstResult()).thenReturn(
             CategoryEntity().apply {
                 this.id = categoryId
                 this.organizationId = orgId
                 this.name = "テストカテゴリ"
             },
         )
-        whenever(taxRateRepository.findById(taxRateId)).thenReturn(
+        whenever(categoryRepository.find(eq("id = ?1"), eq(categoryId))).thenReturn(mockCatQuery)
+
+        val mockTaxQuery = mock<PanacheQuery<TaxRateEntity>>()
+        whenever(mockTaxQuery.firstResult()).thenReturn(
             TaxRateEntity().apply {
                 this.id = taxRateId
                 this.organizationId = orgId
@@ -80,6 +87,7 @@ class ProductServiceTest {
                 this.rate = java.math.BigDecimal("10.00")
             },
         )
+        whenever(taxRateRepository.find(eq("id = ?1"), eq(taxRateId))).thenReturn(mockTaxQuery)
     }
 
     // === create ===
@@ -201,7 +209,9 @@ class ProductServiceTest {
         fun `他テナントのcategoryIdで作成するとIllegalArgumentException`() {
             // Arrange: categoryId が他テナント（テナントフィルタで null 返却）
             val otherTenantCategoryId = UUID.randomUUID()
-            whenever(categoryRepository.findById(otherTenantCategoryId)).thenReturn(null)
+            val mockQuery1 = mock<PanacheQuery<CategoryEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(null)
+            whenever(categoryRepository.find(eq("id = ?1"), eq(otherTenantCategoryId))).thenReturn(mockQuery1)
             doNothing().whenever(productRepository).persist(any<ProductEntity>())
 
             // Act & Assert
@@ -224,7 +234,9 @@ class ProductServiceTest {
         fun `他テナントのtaxRateIdで作成するとIllegalArgumentException`() {
             // Arrange: taxRateId が他テナント
             val otherTenantTaxRateId = UUID.randomUUID()
-            whenever(taxRateRepository.findById(otherTenantTaxRateId)).thenReturn(null)
+            val mockQuery2 = mock<PanacheQuery<TaxRateEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(null)
+            whenever(taxRateRepository.find(eq("id = ?1"), eq(otherTenantTaxRateId))).thenReturn(mockQuery2)
             doNothing().whenever(productRepository).persist(any<ProductEntity>())
 
             // Act & Assert
@@ -256,10 +268,14 @@ class ProductServiceTest {
                     this.displayOrder = 0
                     this.isActive = true
                 }
-            whenever(productRepository.findById(productId)).thenReturn(entity)
+            val mockQuery3 = mock<PanacheQuery<ProductEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(entity)
+            whenever(productRepository.find(eq("id = ?1"), eq(productId))).thenReturn(mockQuery3)
 
             val otherTenantCategoryId = UUID.randomUUID()
-            whenever(categoryRepository.findById(otherTenantCategoryId)).thenReturn(null)
+            val mockQuery4 = mock<PanacheQuery<CategoryEntity>>()
+            whenever(mockQuery4.firstResult()).thenReturn(null)
+            whenever(categoryRepository.find(eq("id = ?1"), eq(otherTenantCategoryId))).thenReturn(mockQuery4)
 
             // Act & Assert
             assertThrows(IllegalArgumentException::class.java) {
@@ -297,7 +313,9 @@ class ProductServiceTest {
                     this.displayOrder = 1
                     this.isActive = true
                 }
-            whenever(productRepository.findById(productId)).thenReturn(entity)
+            val mockQuery5 = mock<PanacheQuery<ProductEntity>>()
+            whenever(mockQuery5.firstResult()).thenReturn(entity)
+            whenever(productRepository.find(eq("id = ?1"), eq(productId))).thenReturn(mockQuery5)
 
             // Act
             val result = productService.findById(productId)
@@ -307,14 +325,16 @@ class ProductServiceTest {
             assertEquals(productId, result!!.id)
             assertEquals("テスト商品", result.name)
             verify(tenantFilterService).enableFilter()
-            verify(productRepository).findById(productId)
+            verify(productRepository).find(eq("id = ?1"), eq(productId))
         }
 
         @Test
         fun `存在しないIDの場合はnullを返す`() {
             // Arrange
             val productId = UUID.randomUUID()
-            whenever(productRepository.findById(productId)).thenReturn(null)
+            val mockQuery6 = mock<PanacheQuery<ProductEntity>>()
+            whenever(mockQuery6.firstResult()).thenReturn(null)
+            whenever(productRepository.find(eq("id = ?1"), eq(productId))).thenReturn(mockQuery6)
 
             // Act
             val result = productService.findById(productId)
@@ -515,7 +535,9 @@ class ProductServiceTest {
                     this.displayOrder = 1
                     this.isActive = true
                 }
-            whenever(productRepository.findById(productId)).thenReturn(entity)
+            val mockQuery7 = mock<PanacheQuery<ProductEntity>>()
+            whenever(mockQuery7.firstResult()).thenReturn(entity)
+            whenever(productRepository.find(eq("id = ?1"), eq(productId))).thenReturn(mockQuery7)
             doNothing().whenever(productRepository).persist(any<ProductEntity>())
 
             // Act
@@ -550,7 +572,9 @@ class ProductServiceTest {
         fun `存在しない商品の更新はnullを返す`() {
             // Arrange
             val productId = UUID.randomUUID()
-            whenever(productRepository.findById(productId)).thenReturn(null)
+            val mockQuery8 = mock<PanacheQuery<ProductEntity>>()
+            whenever(mockQuery8.firstResult()).thenReturn(null)
+            whenever(productRepository.find(eq("id = ?1"), eq(productId))).thenReturn(mockQuery8)
 
             // Act
             val result =
@@ -591,7 +615,9 @@ class ProductServiceTest {
                     this.displayOrder = 0
                     this.isActive = true
                 }
-            whenever(productRepository.findById(productId)).thenReturn(entity)
+            val mockQuery9 = mock<PanacheQuery<ProductEntity>>()
+            whenever(mockQuery9.firstResult()).thenReturn(entity)
+            whenever(productRepository.find(eq("id = ?1"), eq(productId))).thenReturn(mockQuery9)
             doNothing().whenever(productRepository).persist(any<ProductEntity>())
 
             // Act
@@ -608,7 +634,9 @@ class ProductServiceTest {
         fun `存在しない商品の削除はfalseを返す`() {
             // Arrange
             val productId = UUID.randomUUID()
-            whenever(productRepository.findById(productId)).thenReturn(null)
+            val mockQuery10 = mock<PanacheQuery<ProductEntity>>()
+            whenever(mockQuery10.firstResult()).thenReturn(null)
+            whenever(productRepository.find(eq("id = ?1"), eq(productId))).thenReturn(mockQuery10)
 
             // Act
             val result = productService.delete(productId)

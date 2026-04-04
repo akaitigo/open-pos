@@ -4,9 +4,9 @@ import com.openpos.pos.config.OrganizationIdHolder
 import com.openpos.pos.config.TenantFilterService
 import com.openpos.pos.entity.DiscountReasonEntity
 import com.openpos.pos.repository.DiscountReasonRepository
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.eq
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
@@ -16,27 +16,31 @@ import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
-@QuarkusTest
 class DiscountReasonServiceTest {
-    @Inject
-    lateinit var discountReasonService: DiscountReasonService
+    private lateinit var discountReasonService: DiscountReasonService
 
-    @InjectMock
-    lateinit var discountReasonRepository: DiscountReasonRepository
+    private lateinit var discountReasonRepository: DiscountReasonRepository
 
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var tenantFilterService: TenantFilterService
 
-    @InjectMock
-    lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
     private val testOrgId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        discountReasonRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+
+        discountReasonService = DiscountReasonService()
+        discountReasonService.discountReasonRepository = discountReasonRepository
+        discountReasonService.tenantFilterService = tenantFilterService
+        discountReasonService.organizationIdHolder = organizationIdHolder
+
+        organizationIdHolder.organizationId = testOrgId
         doNothing().whenever(discountReasonRepository).persist(any<DiscountReasonEntity>())
         doNothing().whenever(tenantFilterService).enableFilter()
-        whenever(organizationIdHolder.organizationId).thenReturn(testOrgId)
     }
 
     @Test
@@ -64,7 +68,9 @@ class DiscountReasonServiceTest {
                 description = "商品損傷"
                 isActive = true
             }
-        whenever(discountReasonRepository.findById(reasonId)).thenReturn(entity)
+        val mockQuery1 = mock<PanacheQuery<DiscountReasonEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(entity)
+            whenever(discountReasonRepository.find(eq("id = ?1"), eq(reasonId))).thenReturn(mockQuery1)
 
         val result =
             discountReasonService.update(

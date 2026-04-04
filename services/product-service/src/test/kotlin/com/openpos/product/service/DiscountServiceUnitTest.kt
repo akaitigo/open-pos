@@ -6,6 +6,7 @@ import com.openpos.product.config.OrganizationIdHolder
 import com.openpos.product.config.TenantFilterService
 import com.openpos.product.entity.DiscountEntity
 import com.openpos.product.repository.DiscountRepository
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -88,7 +89,9 @@ class DiscountServiceUnitTest {
                     this.value = 10
                     this.isActive = true
                 }
-            whenever(discountRepository.findById(discountId)).thenReturn(entity)
+            val mockQuery1 = mock<PanacheQuery<DiscountEntity>>()
+whenever(mockQuery1.firstResult()).thenReturn(entity)
+whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery1)
 
             val result = service.findById(discountId)
 
@@ -111,7 +114,9 @@ class DiscountServiceUnitTest {
                     this.value = 50000
                     this.isActive = true
                 }
-            whenever(discountRepository.findById(discountId)).thenReturn(entity)
+            val mockQuery2 = mock<PanacheQuery<DiscountEntity>>()
+whenever(mockQuery2.firstResult()).thenReturn(entity)
+whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery2)
 
             val result = service.findById(discountId)
 
@@ -123,7 +128,9 @@ class DiscountServiceUnitTest {
         fun `returns null when not in cache or DB`() {
             val discountId = UUID.randomUUID()
             whenever(cacheService.get(any())).thenReturn(null)
-            whenever(discountRepository.findById(discountId)).thenReturn(null)
+            val mockQuery3 = mock<PanacheQuery<DiscountEntity>>()
+whenever(mockQuery3.firstResult()).thenReturn(null)
+whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery3)
 
             val result = service.findById(discountId)
 
@@ -145,7 +152,9 @@ class DiscountServiceUnitTest {
                     this.value = 5
                     this.isActive = true
                 }
-            whenever(discountRepository.findById(discountId)).thenReturn(entity)
+            val mockQuery4 = mock<PanacheQuery<DiscountEntity>>()
+whenever(mockQuery4.firstResult()).thenReturn(entity)
+whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery4)
 
             val result = service.findById(discountId)
 
@@ -261,7 +270,9 @@ class DiscountServiceUnitTest {
                     value = 10
                     isActive = true
                 }
-            whenever(discountRepository.findById(discountId)).thenReturn(entity)
+            val mockQuery5 = mock<PanacheQuery<DiscountEntity>>()
+whenever(mockQuery5.firstResult()).thenReturn(entity)
+whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery5)
             doNothing().whenever(cacheService).invalidate(any())
             doNothing().whenever(cacheService).invalidatePattern(any())
 
@@ -290,7 +301,9 @@ class DiscountServiceUnitTest {
                     value = 10
                     isActive = true
                 }
-            whenever(discountRepository.findById(discountId)).thenReturn(entity)
+            val mockQuery6 = mock<PanacheQuery<DiscountEntity>>()
+whenever(mockQuery6.firstResult()).thenReturn(entity)
+whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery6)
             doNothing().whenever(cacheService).invalidate(any())
             doNothing().whenever(cacheService).invalidatePattern(any())
 
@@ -305,7 +318,9 @@ class DiscountServiceUnitTest {
         @Test
         fun `delete returns false when entity not found`() {
             val discountId = UUID.randomUUID()
-            whenever(discountRepository.findById(discountId)).thenReturn(null)
+            val mockQuery7 = mock<PanacheQuery<DiscountEntity>>()
+whenever(mockQuery7.firstResult()).thenReturn(null)
+whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery7)
 
             val result = service.delete(discountId)
 

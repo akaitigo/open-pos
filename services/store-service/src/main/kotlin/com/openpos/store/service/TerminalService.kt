@@ -38,8 +38,9 @@ class TerminalService {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
         // storeId が自組織に属するか検証
         tenantFilterService.enableFilter()
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
         val store =
-            storeRepository.findById(storeId)
+            storeRepository.find("id = ?1", storeId).firstResult()
                 ?: throw IllegalArgumentException("Store $storeId not found in organization $orgId")
         require(store.organizationId == orgId) {
             "Store $storeId does not belong to organization $orgId"
@@ -66,7 +67,9 @@ class TerminalService {
     fun updateSync(terminalId: UUID): TerminalEntity? {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
         tenantFilterService.enableFilter()
-        val entity = terminalRepository.findById(terminalId) ?: return null
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        val entity = terminalRepository.find("id = ?1", terminalId).firstResult() ?: return null
         entity.lastSyncAt = Instant.now()
         terminalRepository.persist(entity)
         cacheService.invalidateTerminalList(orgId.toString(), entity.storeId.toString())

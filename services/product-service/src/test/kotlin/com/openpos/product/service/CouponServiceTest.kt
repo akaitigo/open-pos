@@ -6,9 +6,9 @@ import com.openpos.product.entity.CouponEntity
 import com.openpos.product.entity.DiscountEntity
 import com.openpos.product.repository.CouponRepository
 import com.openpos.product.repository.DiscountRepository
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.eq
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -26,28 +26,33 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
-@QuarkusTest
 class CouponServiceTest {
-    @Inject
-    lateinit var couponService: CouponService
+    private lateinit var couponService: CouponService
 
-    @Inject
-    lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
-    @InjectMock
-    lateinit var couponRepository: CouponRepository
+    private lateinit var couponRepository: CouponRepository
 
-    @InjectMock
-    lateinit var discountRepository: DiscountRepository
+    private lateinit var discountRepository: DiscountRepository
 
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var tenantFilterService: TenantFilterService
 
     private val orgId = UUID.randomUUID()
     private val discountId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        couponRepository = mock()
+        discountRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+
+        couponService = CouponService()
+        couponService.couponRepository = couponRepository
+        couponService.discountRepository = discountRepository
+        couponService.tenantFilterService = tenantFilterService
+        couponService.organizationIdHolder = organizationIdHolder
+
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
     }
@@ -71,7 +76,9 @@ class CouponServiceTest {
                     this.value = 10
                     this.isActive = true
                 }
-            whenever(discountRepository.findById(discountId)).thenReturn(discount)
+            val mockQuery1 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(discount)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery1)
 
             // Act
             val result =
@@ -108,7 +115,9 @@ class CouponServiceTest {
                     this.value = 50000
                     this.isActive = true
                 }
-            whenever(discountRepository.findById(discountId)).thenReturn(discount)
+            val mockQuery2 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(discount)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery2)
 
             // Act
             val result =
@@ -132,7 +141,9 @@ class CouponServiceTest {
         @Test
         fun `存在しない割引IDの場合はIllegalArgumentExceptionを投げる`() {
             // Arrange
-            whenever(discountRepository.findById(discountId)).thenReturn(null)
+            val mockQuery3 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(null)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery3)
 
             // Act & Assert
             assertThrows(IllegalArgumentException::class.java) {
@@ -158,7 +169,9 @@ class CouponServiceTest {
                     this.value = 150
                     this.isActive = true
                 }
-            whenever(discountRepository.findById(discountId)).thenReturn(invalidDiscount)
+            val mockQuery4 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery4.firstResult()).thenReturn(invalidDiscount)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery4)
 
             // Act & Assert
             assertThrows(IllegalArgumentException::class.java) {
@@ -230,7 +243,9 @@ class CouponServiceTest {
                     this.discountId = this@CouponServiceTest.discountId
                     this.usedCount = 0
                 }
-            whenever(couponRepository.findById(couponId)).thenReturn(entity)
+            val mockQuery5 = mock<PanacheQuery<CouponEntity>>()
+            whenever(mockQuery5.firstResult()).thenReturn(entity)
+            whenever(couponRepository.find(eq("id = ?1"), eq(couponId))).thenReturn(mockQuery5)
 
             // Act
             val result = couponService.findById(couponId)
@@ -245,7 +260,9 @@ class CouponServiceTest {
         fun `存在しないIDの場合はnullを返す`() {
             // Arrange
             val couponId = UUID.randomUUID()
-            whenever(couponRepository.findById(couponId)).thenReturn(null)
+            val mockQuery6 = mock<PanacheQuery<CouponEntity>>()
+            whenever(mockQuery6.firstResult()).thenReturn(null)
+            whenever(couponRepository.find(eq("id = ?1"), eq(couponId))).thenReturn(mockQuery6)
 
             // Act
             val result = couponService.findById(couponId)
@@ -396,7 +413,9 @@ class CouponServiceTest {
                     this.isActive = false
                 }
             whenever(couponRepository.findByCodeForUpdate("INACTIVE_DISC")).thenReturn(entity)
-            whenever(discountRepository.findById(discountId)).thenReturn(inactiveDiscount)
+            val mockQuery7 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery7.firstResult()).thenReturn(inactiveDiscount)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery7)
 
             // Act
             val result = couponService.redeem("INACTIVE_DISC")
@@ -421,7 +440,9 @@ class CouponServiceTest {
                     this.validUntil = Instant.now().plus(7, ChronoUnit.DAYS)
                 }
             whenever(couponRepository.findByCodeForUpdate("NO_DISC")).thenReturn(entity)
-            whenever(discountRepository.findById(discountId)).thenReturn(null)
+            val mockQuery8 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery8.firstResult()).thenReturn(null)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery8)
 
             // Act
             val result = couponService.redeem("NO_DISC")
@@ -456,7 +477,9 @@ class CouponServiceTest {
                     this.isActive = true
                 }
             whenever(couponRepository.findByCodeForUpdate("VALID")).thenReturn(entity)
-            whenever(discountRepository.findById(discountId)).thenReturn(activeDiscount)
+            val mockQuery9 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery9.firstResult()).thenReturn(activeDiscount)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery9)
             doNothing().whenever(couponRepository).persist(any<CouponEntity>())
 
             // Act
@@ -495,7 +518,9 @@ class CouponServiceTest {
                     this.isActive = true
                 }
             whenever(couponRepository.findByCodeForUpdate("UNLIMITED")).thenReturn(entity)
-            whenever(discountRepository.findById(discountId)).thenReturn(activeDiscount)
+            val mockQuery10 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery10.firstResult()).thenReturn(activeDiscount)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery10)
             doNothing().whenever(couponRepository).persist(any<CouponEntity>())
 
             // Act
@@ -650,7 +675,9 @@ class CouponServiceTest {
                     this.isActive = false
                 }
             whenever(couponRepository.findByCode("INACTIVE_DISC")).thenReturn(entity)
-            whenever(discountRepository.findById(discountId)).thenReturn(inactiveDiscount)
+            val mockQuery11 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery11.firstResult()).thenReturn(inactiveDiscount)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery11)
 
             // Act
             val result = couponService.validate("INACTIVE_DISC")
@@ -675,7 +702,9 @@ class CouponServiceTest {
                     this.validUntil = Instant.now().plus(7, ChronoUnit.DAYS)
                 }
             whenever(couponRepository.findByCode("NO_DISC")).thenReturn(entity)
-            whenever(discountRepository.findById(discountId)).thenReturn(null)
+            val mockQuery12 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery12.firstResult()).thenReturn(null)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery12)
 
             // Act
             val result = couponService.validate("NO_DISC")
@@ -710,7 +739,9 @@ class CouponServiceTest {
                     this.isActive = true
                 }
             whenever(couponRepository.findByCode("VALID")).thenReturn(entity)
-            whenever(discountRepository.findById(discountId)).thenReturn(activeDiscount)
+            val mockQuery13 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery13.firstResult()).thenReturn(activeDiscount)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery13)
 
             // Act
             val result = couponService.validate("VALID")
@@ -748,7 +779,9 @@ class CouponServiceTest {
                     this.isActive = true
                 }
             whenever(couponRepository.findByCode("UNLIMITED")).thenReturn(entity)
-            whenever(discountRepository.findById(discountId)).thenReturn(activeDiscount)
+            val mockQuery14 = mock<PanacheQuery<DiscountEntity>>()
+            whenever(mockQuery14.firstResult()).thenReturn(activeDiscount)
+            whenever(discountRepository.find(eq("id = ?1"), eq(discountId))).thenReturn(mockQuery14)
 
             // Act
             val result = couponService.validate("UNLIMITED")

@@ -4,6 +4,8 @@ import com.openpos.pos.config.OrganizationIdHolder
 import com.openpos.pos.config.TenantFilterService
 import com.openpos.pos.entity.DiscountReasonEntity
 import com.openpos.pos.repository.DiscountReasonRepository
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.eq
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -71,7 +73,9 @@ class DiscountReasonServiceUnitTest {
     inner class Update {
         @Test
         fun `returns null when not found`() {
-            whenever(discountReasonRepository.findById(any<UUID>())).thenReturn(null)
+            val mockQueryFix1 = mock<PanacheQuery<DiscountReasonEntity>>()
+            whenever(mockQueryFix1.firstResult()).thenReturn(null)
+            whenever(discountReasonRepository.find(eq("id = ?1"), any<UUID>())).thenReturn(mockQueryFix1)
 
             val result = service.update(UUID.randomUUID(), "新しい説明", null)
 
@@ -89,7 +93,9 @@ class DiscountReasonServiceUnitTest {
                     this.description = "旧説明"
                     this.isActive = true
                 }
-            whenever(discountReasonRepository.findById(id)).thenReturn(entity)
+            val mockQuery1 = mock<PanacheQuery<DiscountReasonEntity>>()
+whenever(mockQuery1.firstResult()).thenReturn(entity)
+whenever(discountReasonRepository.find(eq("id = ?1"), eq(id))).thenReturn(mockQuery1)
             doNothing().whenever(discountReasonRepository).persist(any<DiscountReasonEntity>())
 
             val result = service.update(id, "新しい説明", null)

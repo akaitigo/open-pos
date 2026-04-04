@@ -279,7 +279,7 @@ class TransactionService {
         val tx = getWritableTransaction(transactionId)
 
         val item =
-            itemRepository.findById(itemId)
+            itemRepository.find("id = ?1", itemId).firstResult()
                 ?: throw ResourceNotFoundException("Item not found: $itemId")
         if (item.transactionId != transactionId) throw BusinessPreconditionException("Item does not belong to this transaction")
 
@@ -313,7 +313,7 @@ class TransactionService {
         val tx = getWritableTransaction(transactionId)
 
         val item =
-            itemRepository.findById(itemId)
+            itemRepository.find("id = ?1", itemId).firstResult()
                 ?: throw ResourceNotFoundException("Item not found: $itemId")
         if (item.transactionId != transactionId) throw BusinessPreconditionException("Item does not belong to this transaction")
 
@@ -381,7 +381,7 @@ class TransactionService {
                 val targetSubtotal =
                     if (transactionItemId != null) {
                         val item =
-                            itemRepository.findById(transactionItemId)
+                            itemRepository.find("id = ?1", transactionItemId).firstResult()
                                 ?: throw IllegalArgumentException("Transaction item not found: $transactionItemId")
                         require(item.transactionId == transactionId) {
                             "Item does not belong to this transaction"
@@ -449,7 +449,7 @@ class TransactionService {
         }
 
         val tx =
-            transactionRepository.findById(transactionId)
+            transactionRepository.find("id = ?1", transactionId).firstResult()
                 ?: throw ResourceNotFoundException("Transaction not found: $transactionId")
         if (tx.status !=
             "DRAFT"
@@ -553,7 +553,7 @@ class TransactionService {
     ): TransactionEntity {
         tenantFilterService.enableFilter()
         val tx =
-            transactionRepository.findById(transactionId)
+            transactionRepository.find("id = ?1", transactionId).firstResult()
                 ?: throw ResourceNotFoundException("Transaction not found: $transactionId")
         if (tx.status !=
             "COMPLETED"
@@ -584,7 +584,9 @@ class TransactionService {
      */
     fun getTransaction(transactionId: UUID): TransactionEntity {
         tenantFilterService.enableFilter()
-        return transactionRepository.findById(transactionId)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return transactionRepository.find("id = ?1", transactionId).firstResult()
             ?: throw ResourceNotFoundException("Transaction not found: $transactionId")
     }
 
@@ -824,7 +826,7 @@ class TransactionService {
     private fun getWritableTransaction(transactionId: UUID): TransactionEntity {
         tenantFilterService.enableFilter()
         val tx =
-            transactionRepository.findById(transactionId)
+            transactionRepository.find("id = ?1", transactionId).firstResult()
                 ?: throw ResourceNotFoundException("Transaction not found: $transactionId")
         if (tx.status != "DRAFT") throw BusinessPreconditionException("Transaction is not in DRAFT status: ${tx.status}")
         return tx

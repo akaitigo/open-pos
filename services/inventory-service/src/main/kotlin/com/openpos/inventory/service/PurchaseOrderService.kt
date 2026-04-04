@@ -82,7 +82,9 @@ class PurchaseOrderService {
      */
     fun findById(id: UUID): PurchaseOrderEntity? {
         tenantFilterService.enableFilter()
-        return purchaseOrderRepository.findById(id)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return purchaseOrderRepository.find("id = ?1", id).firstResult()
     }
 
     /**
@@ -118,7 +120,7 @@ class PurchaseOrderService {
     ): PurchaseOrderEntity {
         tenantFilterService.enableFilter()
         val order =
-            purchaseOrderRepository.findById(id)
+            purchaseOrderRepository.find("id = ?1", id).firstResult()
                 ?: throw IllegalArgumentException("PurchaseOrder not found: $id")
 
         validateStatusTransition(order.status, newStatus)

@@ -6,6 +6,7 @@ import com.openpos.product.entity.ProductEntity
 import com.openpos.product.entity.ProductVariantEntity
 import com.openpos.product.repository.ProductRepository
 import com.openpos.product.repository.ProductVariantRepository
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -48,14 +50,16 @@ class ProductVariantServiceUnitTest {
         doNothing().whenever(tenantFilterService).enableFilter()
         doNothing().whenever(variantRepository).persist(any<ProductVariantEntity>())
 
-        // デフォルト: 親商品がテナント内に存在する
-        whenever(productRepository.findById(productId)).thenReturn(
+        // デフォルト: 親商品がテナント内に存在する（HQL パターン）
+        val mockDefaultProductQuery = mock<PanacheQuery<ProductEntity>>()
+        whenever(mockDefaultProductQuery.firstResult()).thenReturn(
             ProductEntity().apply {
                 id = productId
                 organizationId = orgId
                 name = "テスト商品"
             },
         )
+        whenever(productRepository.find(eq("id = ?1"), eq(productId))).thenReturn(mockDefaultProductQuery)
     }
 
     @Nested
@@ -121,7 +125,9 @@ class ProductVariantServiceUnitTest {
         fun `throws when productId belongs to another tenant`() {
             // Arrange — テナントフィルタ有効時に他テナントの product は null が返る
             val otherTenantProductId = UUID.randomUUID()
-            whenever(productRepository.findById(otherTenantProductId)).thenReturn(null)
+            val mockQuery1 = mock<PanacheQuery<ProductEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(null)
+            whenever(productRepository.find(eq("id = ?1"), eq(otherTenantProductId))).thenReturn(mockQuery1)
 
             // Act & Assert
             val exception =
@@ -136,7 +142,9 @@ class ProductVariantServiceUnitTest {
         fun `throws when productId does not exist`() {
             // Arrange — 存在しない productId
             val nonExistentProductId = UUID.randomUUID()
-            whenever(productRepository.findById(nonExistentProductId)).thenReturn(null)
+            val mockQuery2 = mock<PanacheQuery<ProductEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(null)
+            whenever(productRepository.find(eq("id = ?1"), eq(nonExistentProductId))).thenReturn(mockQuery2)
 
             // Act & Assert
             assertThrows<IllegalArgumentException> {
@@ -151,7 +159,7 @@ class ProductVariantServiceUnitTest {
 
             // Assert — テナントフィルタが有効化されていることを確認
             verify(tenantFilterService).enableFilter()
-            verify(productRepository).findById(productId)
+            verify(productRepository).find(eq("id = ?1"), eq(productId))
         }
     }
 
@@ -267,7 +275,9 @@ class ProductVariantServiceUnitTest {
                     isActive = true
                     displayOrder = 0
                 }
-            whenever(variantRepository.findById(variantId)).thenReturn(entity)
+            val mockQuery3 = mock<PanacheQuery<ProductVariantEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(entity)
+            whenever(variantRepository.find(eq("id = ?1"), eq(variantId))).thenReturn(mockQuery3)
 
             // Act
             val result = service.update(variantId, "New Name", null, null, null, null, null)
@@ -292,7 +302,9 @@ class ProductVariantServiceUnitTest {
                     isActive = true
                     displayOrder = 0
                 }
-            whenever(variantRepository.findById(variantId)).thenReturn(entity)
+            val mockQuery4 = mock<PanacheQuery<ProductVariantEntity>>()
+            whenever(mockQuery4.firstResult()).thenReturn(entity)
+            whenever(variantRepository.find(eq("id = ?1"), eq(variantId))).thenReturn(mockQuery4)
 
             // Act
             val result = service.update(variantId, null, null, null, 20000L, null, null)
@@ -316,7 +328,9 @@ class ProductVariantServiceUnitTest {
                     isActive = true
                     displayOrder = 0
                 }
-            whenever(variantRepository.findById(variantId)).thenReturn(entity)
+            val mockQuery5 = mock<PanacheQuery<ProductVariantEntity>>()
+            whenever(mockQuery5.firstResult()).thenReturn(entity)
+            whenever(variantRepository.find(eq("id = ?1"), eq(variantId))).thenReturn(mockQuery5)
 
             // Act
             val result = service.update(variantId, null, null, null, null, false, null)
@@ -341,7 +355,9 @@ class ProductVariantServiceUnitTest {
                     isActive = true
                     displayOrder = 0
                 }
-            whenever(variantRepository.findById(variantId)).thenReturn(entity)
+            val mockQuery6 = mock<PanacheQuery<ProductVariantEntity>>()
+            whenever(mockQuery6.firstResult()).thenReturn(entity)
+            whenever(variantRepository.find(eq("id = ?1"), eq(variantId))).thenReturn(mockQuery6)
 
             // Act
             val result =
@@ -368,7 +384,9 @@ class ProductVariantServiceUnitTest {
         fun `throws when variant not found`() {
             // Arrange
             val variantId = UUID.randomUUID()
-            whenever(variantRepository.findById(variantId)).thenReturn(null)
+            val mockQuery7 = mock<PanacheQuery<ProductVariantEntity>>()
+            whenever(mockQuery7.firstResult()).thenReturn(null)
+            whenever(variantRepository.find(eq("id = ?1"), eq(variantId))).thenReturn(mockQuery7)
 
             // Act & Assert
             assertThrows<IllegalArgumentException> {
@@ -390,7 +408,9 @@ class ProductVariantServiceUnitTest {
                     isActive = true
                     displayOrder = 0
                 }
-            whenever(variantRepository.findById(variantId)).thenReturn(entity)
+            val mockQuery8 = mock<PanacheQuery<ProductVariantEntity>>()
+            whenever(mockQuery8.firstResult()).thenReturn(entity)
+            whenever(variantRepository.find(eq("id = ?1"), eq(variantId))).thenReturn(mockQuery8)
 
             // Act
             val result = service.update(variantId, null, null, null, 0L, null, null)
@@ -406,7 +426,20 @@ class ProductVariantServiceUnitTest {
         fun `deletes variant and returns true`() {
             // Arrange
             val variantId = UUID.randomUUID()
-            whenever(variantRepository.deleteById(variantId)).thenReturn(true)
+            val entity =
+                ProductVariantEntity().apply {
+                    id = variantId
+                    organizationId = orgId
+                    this.productId = this@ProductVariantServiceUnitTest.productId
+                    name = "削除対象"
+                    price = 10000L
+                    isActive = true
+                    displayOrder = 0
+                }
+            val mockQuery = mock<PanacheQuery<ProductVariantEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(entity)
+            whenever(variantRepository.find(eq("id = ?1"), eq(variantId))).thenReturn(mockQuery)
+            doNothing().whenever(variantRepository).delete(entity)
 
             // Act
             val result = service.delete(variantId)
@@ -420,7 +453,9 @@ class ProductVariantServiceUnitTest {
         fun `returns false when variant not found`() {
             // Arrange
             val variantId = UUID.randomUUID()
-            whenever(variantRepository.deleteById(variantId)).thenReturn(false)
+            val mockQuery = mock<PanacheQuery<ProductVariantEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(null)
+            whenever(variantRepository.find(eq("id = ?1"), eq(variantId))).thenReturn(mockQuery)
 
             // Act
             val result = service.delete(variantId)

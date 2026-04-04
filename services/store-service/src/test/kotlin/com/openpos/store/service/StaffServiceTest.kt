@@ -6,10 +6,7 @@ import com.openpos.store.entity.StaffEntity
 import com.openpos.store.entity.StoreEntity
 import com.openpos.store.repository.StaffRepository
 import com.openpos.store.repository.StoreRepository
-import io.quarkus.panache.common.Page
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -20,42 +17,43 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Instant
 import java.util.UUID
 
-@QuarkusTest
+/**
+ * StaffService の純粋ユニットテスト。
+ * findById / update / create は HQL クエリ (find("id = ?1", id)) を使うため
+ * PanacheQuery をモックして検証する。
+ */
 class StaffServiceTest {
-    @Inject
-    lateinit var staffService: StaffService
-
-    @Inject
-    lateinit var organizationIdHolder: OrganizationIdHolder
-
-    @InjectMock
-    lateinit var staffRepository: StaffRepository
-
-    @InjectMock
-    lateinit var storeRepository: StoreRepository
-
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var staffService: StaffService
+    private lateinit var staffRepository: StaffRepository
+    private lateinit var storeRepository: StoreRepository
+    private lateinit var tenantFilterService: TenantFilterService
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
     private val orgId = UUID.randomUUID()
     private val storeId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        staffRepository = mock()
+        storeRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+
+        staffService = StaffService()
+        staffService.staffRepository = staffRepository
+        staffService.storeRepository = storeRepository
+        staffService.tenantFilterService = tenantFilterService
+        staffService.organizationIdHolder = organizationIdHolder
+
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
-        val storeEntity =
-            StoreEntity().apply {
-                this.id = storeId
-                this.organizationId = orgId
-                this.name = "テスト店舗"
-            }
-        whenever(storeRepository.findById(storeId)).thenReturn(storeEntity)
     }
 
     // === create ===
@@ -65,6 +63,15 @@ class StaffServiceTest {
         @Test
         fun `スタッフを正常に作成する`() {
             // Arrange
+            val storeEntity =
+                StoreEntity().apply {
+                    this.id = storeId
+                    this.organizationId = orgId
+                    this.name = "テスト店舗"
+                }
+            val mockQuery = mock<PanacheQuery<StoreEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(storeEntity)
+            whenever(storeRepository.find(eq("id = ?1"), eq(storeId))).thenReturn(mockQuery)
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
@@ -79,6 +86,19 @@ class StaffServiceTest {
             assertEquals("CASHIER", result.role)
             assertEquals("hashed_pin_123", result.pinHash)
             assertTrue(result.isActive)
+        }
+
+        @Test
+        fun `存在しない店舗IDの場合はIllegalArgumentExceptionをスローする`() {
+            // Arrange
+            val mockQuery = mock<PanacheQuery<StoreEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(null)
+            whenever(storeRepository.find(eq("id = ?1"), eq(storeId))).thenReturn(mockQuery)
+
+            // Act & Assert
+            org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
+                staffService.create(storeId, "田中太郎", "tanaka@example.com", "CASHIER", "hashed_pin_123")
+            }
         }
     }
 
@@ -99,7 +119,9 @@ class StaffServiceTest {
                     this.email = "tanaka@example.com"
                     this.role = "CASHIER"
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            val mockQuery = mock<PanacheQuery<StaffEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(entity)
+            whenever(staffRepository.find(eq("id = ?1"), eq(staffId))).thenReturn(mockQuery)
 
             // Act
             val result = staffService.findById(staffId)
@@ -112,10 +134,12 @@ class StaffServiceTest {
         }
 
         @Test
-        fun `存在しないIDの場合はnullを返す`() {
+        fun `存在しないIDの場合はnullを返す（テナント隔離：他テナントのIDはnull）`() {
             // Arrange
             val staffId = UUID.randomUUID()
-            whenever(staffRepository.findById(staffId)).thenReturn(null)
+            val mockQuery = mock<PanacheQuery<StaffEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(null)
+            whenever(staffRepository.find(eq("id = ?1"), eq(staffId))).thenReturn(mockQuery)
 
             // Act
             val result = staffService.findById(staffId)
@@ -195,7 +219,9 @@ class StaffServiceTest {
                     this.pinHash = "old_hash"
                     this.isActive = true
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            val mockQuery = mock<PanacheQuery<StaffEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(entity)
+            whenever(staffRepository.find(eq("id = ?1"), eq(staffId))).thenReturn(mockQuery)
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
@@ -226,7 +252,9 @@ class StaffServiceTest {
                     this.pinHash = "old_hash"
                     this.isActive = true
                 }
-            whenever(staffRepository.findById(staffId)).thenReturn(entity)
+            val mockQuery = mock<PanacheQuery<StaffEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(entity)
+            whenever(staffRepository.find(eq("id = ?1"), eq(staffId))).thenReturn(mockQuery)
             doNothing().whenever(staffRepository).persist(any<StaffEntity>())
 
             // Act
@@ -242,10 +270,12 @@ class StaffServiceTest {
         }
 
         @Test
-        fun `存在しないIDの場合はnullを返す`() {
+        fun `存在しないIDの場合はnullを返す（テナント隔離：他テナントのIDはnull）`() {
             // Arrange
             val staffId = UUID.randomUUID()
-            whenever(staffRepository.findById(staffId)).thenReturn(null)
+            val mockQuery = mock<PanacheQuery<StaffEntity>>()
+            whenever(mockQuery.firstResult()).thenReturn(null)
+            whenever(staffRepository.find(eq("id = ?1"), eq(staffId))).thenReturn(mockQuery)
 
             // Act
             val result = staffService.update(staffId, "新名前", null, null, null, null)

@@ -51,8 +51,9 @@ class StaffService {
         val orgId = requireNotNull(organizationIdHolder.organizationId) { "organizationId is not set" }
         // storeId が自組織に属するか検証
         tenantFilterService.enableFilter()
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
         val store =
-            storeRepository.findById(storeId)
+            storeRepository.find("id = ?1", storeId).firstResult()
                 ?: throw IllegalArgumentException("Store $storeId not found in organization $orgId")
         require(store.organizationId == orgId) {
             "Store $storeId does not belong to organization $orgId"
@@ -74,7 +75,9 @@ class StaffService {
     @Transactional
     fun findById(id: UUID): StaffEntity? {
         tenantFilterService.enableFilter()
-        return staffRepository.findById(id)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return staffRepository.find("id = ?1", id).firstResult()
     }
 
     @Transactional
@@ -99,7 +102,7 @@ class StaffService {
         isActive: Boolean?,
     ): StaffEntity? {
         tenantFilterService.enableFilter()
-        val entity = staffRepository.findById(id) ?: return null
+        val entity = staffRepository.find("id = ?1", id).firstResult() ?: return null
         name?.let { entity.name = it }
         email?.let { entity.email = it }
         role?.let { entity.role = it }

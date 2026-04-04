@@ -54,8 +54,9 @@ class ProductVariantService {
 
         // テナント検証: Hibernate Filter 有効状態で親商品を取得し、
         // 他テナントの productId が指定された場合は null になるため NOT_FOUND として拒否する
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
         tenantFilterService.enableFilter()
-        requireNotNull(productRepository.findById(productId)) {
+        requireNotNull(productRepository.find("id = ?1", productId).firstResult()) {
             "Product not found or belongs to another tenant: $productId"
         }
 
@@ -84,7 +85,9 @@ class ProductVariantService {
         displayOrder: Int?,
     ): ProductVariantEntity {
         tenantFilterService.enableFilter()
-        val entity = requireNotNull(variantRepository.findById(id)) { "Variant not found: $id" }
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        val entity = requireNotNull(variantRepository.find("id = ?1", id).firstResult()) { "Variant not found: $id" }
         name?.let { entity.name = it }
         sku?.let { entity.sku = it }
         barcode?.let { entity.barcode = it }
@@ -98,6 +101,10 @@ class ProductVariantService {
     @Transactional
     fun delete(id: java.util.UUID): Boolean {
         tenantFilterService.enableFilter()
-        return variantRepository.deleteById(id)
+        // deleteById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        val entity = variantRepository.find("id = ?1", id).firstResult() ?: return false
+        variantRepository.delete(entity)
+        return true
     }
 }

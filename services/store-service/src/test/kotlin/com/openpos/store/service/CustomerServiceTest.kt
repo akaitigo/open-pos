@@ -6,6 +6,8 @@ import com.openpos.store.entity.CustomerEntity
 import com.openpos.store.entity.PointTransactionEntity
 import com.openpos.store.repository.CustomerRepository
 import com.openpos.store.repository.PointTransactionRepository
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.eq
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -63,7 +65,9 @@ class CustomerServiceTest {
                 name = "テスト顧客"
                 points = 100
             }
-        whenever(customerRepository.findById(customerId)).thenReturn(customer)
+        val mockQuery1 = mock<PanacheQuery<CustomerEntity>>()
+whenever(mockQuery1.firstResult()).thenReturn(customer)
+whenever(customerRepository.find(eq("id = ?1"), eq(customerId))).thenReturn(mockQuery1)
 
         // Act: 50000 sen = 500 yen => 5 points
         val earned = service.earnPoints(customerId, 50000, null)
@@ -85,7 +89,9 @@ class CustomerServiceTest {
                 name = "テスト顧客"
                 points = 100
             }
-        whenever(customerRepository.findById(customerId)).thenReturn(customer)
+        val mockQuery2 = mock<PanacheQuery<CustomerEntity>>()
+whenever(mockQuery2.firstResult()).thenReturn(customer)
+whenever(customerRepository.find(eq("id = ?1"), eq(customerId))).thenReturn(mockQuery2)
 
         // Act: 9999 sen = 99.99 yen => 0 points
         val earned = service.earnPoints(customerId, 9999, null)

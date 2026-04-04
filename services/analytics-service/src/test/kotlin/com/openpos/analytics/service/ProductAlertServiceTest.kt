@@ -4,10 +4,8 @@ import com.openpos.analytics.config.OrganizationIdHolder
 import com.openpos.analytics.config.TenantFilterService
 import com.openpos.analytics.entity.ProductAlertEntity
 import com.openpos.analytics.repository.ProductAlertRepository
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import io.quarkus.panache.common.Page
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -17,28 +15,31 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
-@QuarkusTest
 class ProductAlertServiceTest {
-    @Inject
-    lateinit var productAlertService: ProductAlertService
-
-    @InjectMock
-    lateinit var productAlertRepository: ProductAlertRepository
-
-    @InjectMock
-    lateinit var organizationIdHolder: OrganizationIdHolder
-
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var productAlertService: ProductAlertService
+    private lateinit var productAlertRepository: ProductAlertRepository
+    private lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var tenantFilterService: TenantFilterService
 
     private val orgId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
-        whenever(organizationIdHolder.organizationId).thenReturn(orgId)
+        productAlertRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+
+        productAlertService = ProductAlertService()
+        productAlertService.productAlertRepository = productAlertRepository
+        productAlertService.tenantFilterService = tenantFilterService
+        productAlertService.organizationIdHolder = organizationIdHolder
+
+        organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
     }
 
@@ -135,7 +136,9 @@ class ProductAlertServiceTest {
             // Arrange
             val alertId = UUID.randomUUID()
             val alert = createAlert(id = alertId, isRead = false, alertOrgId = orgId)
-            whenever(productAlertRepository.findById(alertId)).thenReturn(alert)
+            val mockQuery1 = mock<PanacheQuery<ProductAlertEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(alert)
+            whenever(productAlertRepository.find(eq("id = ?1"), eq(alertId))).thenReturn(mockQuery1)
             doNothing().whenever(productAlertRepository).persist(any<ProductAlertEntity>())
 
             // Act
@@ -150,7 +153,9 @@ class ProductAlertServiceTest {
         fun `returns null when alert not found`() {
             // Arrange
             val alertId = UUID.randomUUID()
-            whenever(productAlertRepository.findById(alertId)).thenReturn(null)
+            val mockQuery2 = mock<PanacheQuery<ProductAlertEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(null)
+            whenever(productAlertRepository.find(eq("id = ?1"), eq(alertId))).thenReturn(mockQuery2)
 
             // Act
             val result = productAlertService.markAsRead(alertId)
@@ -165,7 +170,9 @@ class ProductAlertServiceTest {
             val alertId = UUID.randomUUID()
             val otherOrgId = UUID.randomUUID()
             val alert = createAlert(id = alertId, isRead = false, alertOrgId = otherOrgId)
-            whenever(productAlertRepository.findById(alertId)).thenReturn(alert)
+            val mockQuery3 = mock<PanacheQuery<ProductAlertEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(alert)
+            whenever(productAlertRepository.find(eq("id = ?1"), eq(alertId))).thenReturn(mockQuery3)
 
             // Act
             val result = productAlertService.markAsRead(alertId)

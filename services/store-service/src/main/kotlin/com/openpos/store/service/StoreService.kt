@@ -50,7 +50,9 @@ class StoreService {
 
     fun findById(id: UUID): StoreEntity? {
         tenantFilterService.enableFilter()
-        return storeRepository.findById(id)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return storeRepository.find("id = ?1", id).firstResult()
     }
 
     fun list(
@@ -74,7 +76,7 @@ class StoreService {
         isActive: Boolean?,
     ): StoreEntity? {
         tenantFilterService.enableFilter()
-        val entity = storeRepository.findById(id) ?: return null
+        val entity = storeRepository.find("id = ?1", id).firstResult() ?: return null
         name?.let { entity.name = it }
         address?.let { entity.address = it }
         phone?.let { entity.phone = it }

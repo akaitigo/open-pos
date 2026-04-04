@@ -42,7 +42,9 @@ class GiftCardService {
 
     fun findById(id: UUID): GiftCardEntity? {
         tenantFilterService.enableFilter()
-        return giftCardRepository.findById(id)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return giftCardRepository.find("id = ?1", id).firstResult()
     }
 
     @Transactional

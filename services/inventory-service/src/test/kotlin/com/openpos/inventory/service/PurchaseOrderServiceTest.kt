@@ -8,10 +8,9 @@ import com.openpos.inventory.repository.PurchaseOrderItemRepository
 import com.openpos.inventory.repository.PurchaseOrderRepository
 import io.grpc.StatusRuntimeException
 import io.quarkus.panache.common.Page
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
 import jakarta.persistence.OptimisticLockException
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.mock
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -28,31 +27,37 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
-@QuarkusTest
 class PurchaseOrderServiceTest {
-    @Inject
-    lateinit var purchaseOrderService: PurchaseOrderService
+    private lateinit var purchaseOrderService: PurchaseOrderService
 
-    @Inject
-    lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
-    @InjectMock
-    lateinit var purchaseOrderRepository: PurchaseOrderRepository
+    private lateinit var purchaseOrderRepository: PurchaseOrderRepository
 
-    @InjectMock
-    lateinit var itemRepository: PurchaseOrderItemRepository
+    private lateinit var itemRepository: PurchaseOrderItemRepository
 
-    @InjectMock
-    lateinit var stockService: StockService
+    private lateinit var stockService: StockService
 
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var tenantFilterService: TenantFilterService
 
     private val orgId = UUID.randomUUID()
     private val storeId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        purchaseOrderRepository = mock()
+        itemRepository = mock()
+        stockService = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+
+        purchaseOrderService = PurchaseOrderService()
+        purchaseOrderService.purchaseOrderRepository = purchaseOrderRepository
+        purchaseOrderService.itemRepository = itemRepository
+        purchaseOrderService.stockService = stockService
+        purchaseOrderService.tenantFilterService = tenantFilterService
+        purchaseOrderService.organizationIdHolder = organizationIdHolder
+
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
     }
@@ -127,7 +132,9 @@ class PurchaseOrderServiceTest {
                     this.supplierName = "テスト仕入先"
                     this.status = "DRAFT"
                 }
-            whenever(purchaseOrderRepository.findById(orderId)).thenReturn(entity)
+            val mockQuery1 = mock<PanacheQuery<PurchaseOrderEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(entity)
+            whenever(purchaseOrderRepository.find(eq("id = ?1"), eq(orderId))).thenReturn(mockQuery1)
 
             // Act
             val result = purchaseOrderService.findById(orderId)
@@ -143,7 +150,9 @@ class PurchaseOrderServiceTest {
         fun `存在しないIDの場合はnullを返す`() {
             // Arrange
             val orderId = UUID.randomUUID()
-            whenever(purchaseOrderRepository.findById(orderId)).thenReturn(null)
+            val mockQuery2 = mock<PanacheQuery<PurchaseOrderEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(null)
+            whenever(purchaseOrderRepository.find(eq("id = ?1"), eq(orderId))).thenReturn(mockQuery2)
 
             // Act
             val result = purchaseOrderService.findById(orderId)
@@ -210,7 +219,9 @@ class PurchaseOrderServiceTest {
                     this.supplierName = "テスト仕入先"
                     this.status = "DRAFT"
                 }
-            whenever(purchaseOrderRepository.findById(orderId)).thenReturn(entity)
+            val mockQuery3 = mock<PanacheQuery<PurchaseOrderEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(entity)
+            whenever(purchaseOrderRepository.find(eq("id = ?1"), eq(orderId))).thenReturn(mockQuery3)
             doNothing().whenever(purchaseOrderRepository).persist(any<PurchaseOrderEntity>())
 
             // Act
@@ -234,7 +245,9 @@ class PurchaseOrderServiceTest {
                     this.supplierName = "テスト仕入先"
                     this.status = "DRAFT"
                 }
-            whenever(purchaseOrderRepository.findById(orderId)).thenReturn(entity)
+            val mockQuery4 = mock<PanacheQuery<PurchaseOrderEntity>>()
+            whenever(mockQuery4.firstResult()).thenReturn(entity)
+            whenever(purchaseOrderRepository.find(eq("id = ?1"), eq(orderId))).thenReturn(mockQuery4)
             doNothing().whenever(purchaseOrderRepository).persist(any<PurchaseOrderEntity>())
 
             // Act
@@ -266,7 +279,9 @@ class PurchaseOrderServiceTest {
                     this.orderedQuantity = 10
                     this.unitCost = 5000L
                 }
-            whenever(purchaseOrderRepository.findById(orderId)).thenReturn(entity)
+            val mockQuery5 = mock<PanacheQuery<PurchaseOrderEntity>>()
+            whenever(mockQuery5.firstResult()).thenReturn(entity)
+            whenever(purchaseOrderRepository.find(eq("id = ?1"), eq(orderId))).thenReturn(mockQuery5)
             whenever(itemRepository.findByPurchaseOrderId(orderId)).thenReturn(listOf(item))
             doNothing().whenever(purchaseOrderRepository).persist(any<PurchaseOrderEntity>())
             doNothing().whenever(itemRepository).persist(any<PurchaseOrderItemEntity>())
@@ -314,7 +329,9 @@ class PurchaseOrderServiceTest {
                     this.supplierName = "テスト仕入先"
                     this.status = "RECEIVED"
                 }
-            whenever(purchaseOrderRepository.findById(orderId)).thenReturn(entity)
+            val mockQuery6 = mock<PanacheQuery<PurchaseOrderEntity>>()
+            whenever(mockQuery6.firstResult()).thenReturn(entity)
+            whenever(purchaseOrderRepository.find(eq("id = ?1"), eq(orderId))).thenReturn(mockQuery6)
 
             // Act & Assert
             assertThrows(IllegalArgumentException::class.java) {
@@ -326,7 +343,9 @@ class PurchaseOrderServiceTest {
         fun `存在しない発注の更新は例外を投げる`() {
             // Arrange
             val orderId = UUID.randomUUID()
-            whenever(purchaseOrderRepository.findById(orderId)).thenReturn(null)
+            val mockQuery7 = mock<PanacheQuery<PurchaseOrderEntity>>()
+            whenever(mockQuery7.firstResult()).thenReturn(null)
+            whenever(purchaseOrderRepository.find(eq("id = ?1"), eq(orderId))).thenReturn(mockQuery7)
 
             // Act & Assert
             assertThrows(IllegalArgumentException::class.java) {
@@ -346,7 +365,9 @@ class PurchaseOrderServiceTest {
                     this.supplierName = "テスト仕入先"
                     this.status = "DRAFT"
                 }
-            whenever(purchaseOrderRepository.findById(orderId)).thenReturn(entity)
+            val mockQuery8 = mock<PanacheQuery<PurchaseOrderEntity>>()
+            whenever(mockQuery8.firstResult()).thenReturn(entity)
+            whenever(purchaseOrderRepository.find(eq("id = ?1"), eq(orderId))).thenReturn(mockQuery8)
             doNothing().whenever(purchaseOrderRepository).persist(any<PurchaseOrderEntity>())
             doThrow(OptimisticLockException("concurrent modification"))
                 .whenever(purchaseOrderRepository)

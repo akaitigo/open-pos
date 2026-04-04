@@ -4,6 +4,7 @@ import com.openpos.analytics.config.OrganizationIdHolder
 import com.openpos.analytics.config.TenantFilterService
 import com.openpos.analytics.entity.ProductAlertEntity
 import com.openpos.analytics.repository.ProductAlertRepository
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
 import io.quarkus.panache.common.Page
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -92,7 +94,9 @@ class ProductAlertServiceUnitTest {
         fun `marks alert as read when owned by current tenant`() {
             val alertId = UUID.randomUUID()
             val alert = createAlert(id = alertId, alertOrgId = orgId)
-            whenever(productAlertRepository.findById(alertId)).thenReturn(alert)
+            val mockQuery1 = mock<PanacheQuery<ProductAlertEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(alert)
+            whenever(productAlertRepository.find(eq("id = ?1"), eq(alertId))).thenReturn(mockQuery1)
 
             val result = service.markAsRead(alertId)
 
@@ -103,7 +107,9 @@ class ProductAlertServiceUnitTest {
         @Test
         fun `returns null when alert not found`() {
             val alertId = UUID.randomUUID()
-            whenever(productAlertRepository.findById(alertId)).thenReturn(null)
+            val mockQuery2 = mock<PanacheQuery<ProductAlertEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(null)
+            whenever(productAlertRepository.find(eq("id = ?1"), eq(alertId))).thenReturn(mockQuery2)
 
             assertNull(service.markAsRead(alertId))
         }
@@ -113,7 +119,9 @@ class ProductAlertServiceUnitTest {
             val alertId = UUID.randomUUID()
             val otherOrgId = UUID.randomUUID()
             val alert = createAlert(id = alertId, alertOrgId = otherOrgId)
-            whenever(productAlertRepository.findById(alertId)).thenReturn(alert)
+            val mockQuery3 = mock<PanacheQuery<ProductAlertEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(alert)
+            whenever(productAlertRepository.find(eq("id = ?1"), eq(alertId))).thenReturn(mockQuery3)
 
             assertNull(service.markAsRead(alertId))
         }

@@ -70,7 +70,9 @@ class TaxRateService {
      */
     fun findById(id: UUID): TaxRateEntity? {
         tenantFilterService.enableFilter()
-        return taxRateRepository.findById(id)
+        // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+        // HQL クエリで organizationFilter を適用してテナント隔離を保証する。
+        return taxRateRepository.find("id = ?1", id).firstResult()
     }
 
     /**
@@ -79,7 +81,7 @@ class TaxRateService {
     @Transactional
     fun delete(id: UUID): Boolean {
         tenantFilterService.enableFilter()
-        val entity = taxRateRepository.findById(id) ?: return false
+        val entity = taxRateRepository.find("id = ?1", id).firstResult() ?: return false
         entity.isActive = false
         taxRateRepository.persist(entity)
         return true
@@ -98,7 +100,7 @@ class TaxRateService {
         isDefault: Boolean?,
     ): TaxRateEntity? {
         tenantFilterService.enableFilter()
-        val entity = taxRateRepository.findById(id) ?: return null
+        val entity = taxRateRepository.find("id = ?1", id).firstResult() ?: return null
 
         name?.let { entity.name = it }
         rate?.let { entity.rate = it }

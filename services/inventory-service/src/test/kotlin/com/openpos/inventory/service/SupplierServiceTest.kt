@@ -5,9 +5,9 @@ import com.openpos.inventory.config.TenantFilterService
 import com.openpos.inventory.entity.SupplierEntity
 import com.openpos.inventory.repository.SupplierRepository
 import io.quarkus.panache.common.Page
-import io.quarkus.test.InjectMock
-import io.quarkus.test.junit.QuarkusTest
-import jakarta.inject.Inject
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheQuery
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.eq
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -20,24 +20,28 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
-@QuarkusTest
 class SupplierServiceTest {
-    @Inject
-    lateinit var supplierService: SupplierService
+    private lateinit var supplierService: SupplierService
 
-    @Inject
-    lateinit var organizationIdHolder: OrganizationIdHolder
+    private lateinit var organizationIdHolder: OrganizationIdHolder
 
-    @InjectMock
-    lateinit var supplierRepository: SupplierRepository
+    private lateinit var supplierRepository: SupplierRepository
 
-    @InjectMock
-    lateinit var tenantFilterService: TenantFilterService
+    private lateinit var tenantFilterService: TenantFilterService
 
     private val orgId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
+        supplierRepository = mock()
+        tenantFilterService = mock()
+        organizationIdHolder = OrganizationIdHolder()
+
+        supplierService = SupplierService()
+        supplierService.supplierRepository = supplierRepository
+        supplierService.tenantFilterService = tenantFilterService
+        supplierService.organizationIdHolder = organizationIdHolder
+
         organizationIdHolder.organizationId = orgId
         doNothing().whenever(tenantFilterService).enableFilter()
     }
@@ -106,7 +110,9 @@ class SupplierServiceTest {
                     this.organizationId = orgId
                     this.name = "テスト仕入先"
                 }
-            whenever(supplierRepository.findById(supplierId)).thenReturn(entity)
+            val mockQuery1 = mock<PanacheQuery<SupplierEntity>>()
+            whenever(mockQuery1.firstResult()).thenReturn(entity)
+            whenever(supplierRepository.find(eq("id = ?1"), eq(supplierId))).thenReturn(mockQuery1)
 
             // Act
             val result = supplierService.findById(supplierId)
@@ -122,7 +128,9 @@ class SupplierServiceTest {
         fun `存在しないIDの場合はnullを返す`() {
             // Arrange
             val supplierId = UUID.randomUUID()
-            whenever(supplierRepository.findById(supplierId)).thenReturn(null)
+            val mockQuery2 = mock<PanacheQuery<SupplierEntity>>()
+            whenever(mockQuery2.firstResult()).thenReturn(null)
+            whenever(supplierRepository.find(eq("id = ?1"), eq(supplierId))).thenReturn(mockQuery2)
 
             // Act
             val result = supplierService.findById(supplierId)
@@ -192,7 +200,9 @@ class SupplierServiceTest {
                     this.contactPerson = "旧担当者"
                     this.email = "old@example.com"
                 }
-            whenever(supplierRepository.findById(supplierId)).thenReturn(entity)
+            val mockQuery3 = mock<PanacheQuery<SupplierEntity>>()
+            whenever(mockQuery3.firstResult()).thenReturn(entity)
+            whenever(supplierRepository.find(eq("id = ?1"), eq(supplierId))).thenReturn(mockQuery3)
             doNothing().whenever(supplierRepository).persist(any<SupplierEntity>())
 
             // Act
@@ -218,7 +228,9 @@ class SupplierServiceTest {
         fun `存在しない仕入先の更新はnullを返す`() {
             // Arrange
             val supplierId = UUID.randomUUID()
-            whenever(supplierRepository.findById(supplierId)).thenReturn(null)
+            val mockQuery4 = mock<PanacheQuery<SupplierEntity>>()
+            whenever(mockQuery4.firstResult()).thenReturn(null)
+            whenever(supplierRepository.find(eq("id = ?1"), eq(supplierId))).thenReturn(mockQuery4)
 
             // Act
             val result =

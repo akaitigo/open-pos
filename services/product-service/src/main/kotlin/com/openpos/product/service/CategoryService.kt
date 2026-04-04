@@ -149,12 +149,14 @@ class CategoryService {
                 }
             } catch (e: Exception) {
                 log.warnf("Failed to deserialize category cache: %s", e.message)
-                categoryRepository.findById(id)
+                // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+                categoryRepository.find("id = ?1", id).firstResult()
             }
         }
 
         // cache miss: DB から取得
-        val entity = categoryRepository.findById(id) ?: return null
+        // findById() は em.find() ベースのため HQL クエリを使用して organizationFilter を適用する。
+        val entity = categoryRepository.find("id = ?1", id).firstResult() ?: return null
 
         // キャッシュに書き込み
         try {
@@ -183,7 +185,7 @@ class CategoryService {
             requireNotNull(organizationIdHolder.organizationId) {
                 "organizationId is not set"
             }
-        val entity = categoryRepository.findById(id) ?: return null
+        val entity = categoryRepository.find("id = ?1", id).firstResult() ?: return null
 
         name?.let { entity.name = it }
         // parentId は nullable なので明示的にセット（空文字列の場合も想定）
@@ -209,7 +211,7 @@ class CategoryService {
             requireNotNull(organizationIdHolder.organizationId) {
                 "organizationId is not set"
             }
-        val entity = categoryRepository.findById(id) ?: return false
+        val entity = categoryRepository.find("id = ?1", id).firstResult() ?: return false
         categoryRepository.delete(entity)
         cacheService.invalidateCategory(orgId.toString(), id.toString())
         return true

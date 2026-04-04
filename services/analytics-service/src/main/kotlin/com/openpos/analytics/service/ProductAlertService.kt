@@ -62,8 +62,9 @@ class ProductAlertService {
             requireNotNull(organizationIdHolder.organizationId) {
                 "organizationId is not set in OrganizationIdHolder"
             }
-        val entity = productAlertRepository.findById(id) ?: return null
         // ProductAlertEntity は BaseEntity を継承していないため Hibernate Filter が効かない。
+        // HQL クエリで全テナントのレコードが返るため、手動でテナント所有権を検証する。
+        val entity = productAlertRepository.find("id = ?1", id).firstResult() ?: return null
         // 手動でテナント所有権を検証し、他テナントのアラートを操作できないようにする。
         if (entity.organizationId != orgId) {
             return null

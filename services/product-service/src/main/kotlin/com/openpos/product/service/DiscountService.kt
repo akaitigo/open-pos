@@ -143,12 +143,14 @@ class DiscountService {
                 dto.toEntity()
             } catch (e: Exception) {
                 log.warnf("Failed to deserialize discount cache: %s", e.message)
-                discountRepository.findById(id)
+                // findById() は em.find() ベースのため Hibernate Filter をバイパスする。
+                discountRepository.find("id = ?1", id).firstResult()
             }
         }
 
         // cache miss: DB から取得
-        val entity = discountRepository.findById(id) ?: return null
+        // findById() は em.find() ベースのため HQL クエリを使用して organizationFilter を適用する。
+        val entity = discountRepository.find("id = ?1", id).firstResult() ?: return null
 
         // キャッシュに書き込み
         try {
@@ -170,7 +172,7 @@ class DiscountService {
             requireNotNull(organizationIdHolder.organizationId) {
                 "organizationId is not set"
             }
-        val entity = discountRepository.findById(id) ?: return false
+        val entity = discountRepository.find("id = ?1", id).firstResult() ?: return false
         entity.isActive = false
         discountRepository.persist(entity)
         cacheService.invalidate(discountKey(orgId.toString(), id.toString()))
@@ -196,7 +198,7 @@ class DiscountService {
             requireNotNull(organizationIdHolder.organizationId) {
                 "organizationId is not set"
             }
-        val entity = discountRepository.findById(id) ?: return null
+        val entity = discountRepository.find("id = ?1", id).firstResult() ?: return null
 
         name?.let { entity.name = it }
         discountType?.let { entity.discountType = it }
