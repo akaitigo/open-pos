@@ -28,7 +28,7 @@ export function CartSidebar() {
           className="h-14 gap-2 rounded-full px-6 shadow-lg"
           onClick={() => setSheetOpen(true)}
         >
-          <ShoppingCart className="h-5 w-5" />
+          <ShoppingCart className="h-5 w-5" aria-hidden="true" />
           カート
           {itemCount > 0 && (
             <Badge variant="secondary" className="ml-1">

@@ -14,6 +14,7 @@ import {
 import type { Staff } from '@shared-types/openpos'
 import { z } from 'zod'
 import { Loader2, ArrowLeft, Delete } from 'lucide-react'
+import { t } from '@/i18n'
 
 const PaginatedStaffSchema = z.object({
   data: z.array(StaffSchema),
@@ -103,8 +104,12 @@ export function LoginScreen() {
 
   if (initialLoading) {
     return (
-      <div className="flex min-h-svh items-center justify-center bg-muted/30">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div
+        className="flex min-h-svh items-center justify-center bg-muted/30"
+        role="status"
+        aria-label={t('common.loading')}
+      >
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
       </div>
     )
   }
@@ -149,13 +154,13 @@ export function LoginScreen() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
-                aria-label="戻る"
+                aria-label={t('accessibility.pinBackButton')}
                 onClick={() => {
                   setSelectedStaff(null)
                   setPin('')
                 }}
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               </Button>
               <span className="text-sm font-medium">{selectedStaff.name}</span>
             </div>
@@ -165,7 +170,7 @@ export function LoginScreen() {
               <div
                 className="flex justify-center gap-2"
                 role="status"
-                aria-label={`PIN入力済み ${pin.length} 桁`}
+                aria-label={t('accessibility.pinProgress', { count: pin.length })}
               >
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div
@@ -176,7 +181,12 @@ export function LoginScreen() {
               </div>
             </div>
 
-            <div data-testid="pin-input" className="grid grid-cols-3 gap-2">
+            <div
+              data-testid="pin-input"
+              className="grid grid-cols-3 gap-2"
+              role="group"
+              aria-label="PIN入力キーパッド"
+            >
               {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '←'].map((key) => (
                 <Button
                   key={key}
@@ -184,8 +194,15 @@ export function LoginScreen() {
                   variant={key === 'C' ? 'destructive' : key === '←' ? 'secondary' : 'outline'}
                   className="h-14 text-lg"
                   onClick={() => handleKeyPress(key)}
+                  aria-label={
+                    key === 'C'
+                      ? t('accessibility.pinKeyClear')
+                      : key === '←'
+                        ? t('accessibility.pinKeyBackspace')
+                        : undefined
+                  }
                 >
-                  {key === '←' ? <Delete className="h-5 w-5" /> : key}
+                  {key === '←' ? <Delete className="h-5 w-5" aria-hidden="true" /> : key}
                 </Button>
               ))}
             </div>
@@ -199,7 +216,7 @@ export function LoginScreen() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                   認証中...
                 </>
               ) : (

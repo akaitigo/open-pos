@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Printer } from 'lucide-react'
+import { t } from '@/i18n'
 
 interface ReceiptDialogProps {
   open: boolean
@@ -155,7 +156,7 @@ export function ReceiptDialog({ open, receiptData, onClose }: ReceiptDialogProps
 
               <Separator className="bg-gray-300" />
 
-              <table className="w-full text-xs">
+              <table className="w-full text-xs" aria-label={t('accessibility.receiptItemsTable')}>
                 <thead>
                   <tr className="border-b border-gray-300">
                     <th className="pb-1 text-left font-medium">商品</th>
@@ -241,11 +242,18 @@ export function ReceiptDialog({ open, receiptData, onClose }: ReceiptDialogProps
             className="w-full gap-2"
             size="lg"
             onClick={handlePrint}
+            aria-label={t('accessibility.printReceipt')}
           >
-            <Printer className="h-4 w-4" />
+            <Printer className="h-4 w-4" aria-hidden="true" />
             印刷
           </Button>
-          <Button data-testid="receipt-close-btn" className="w-full" size="lg" onClick={onClose}>
+          <Button
+            data-testid="receipt-close-btn"
+            className="w-full"
+            size="lg"
+            onClick={onClose}
+            aria-label={t('accessibility.closeReceipt')}
+          >
             閉じる
           </Button>
         </DialogFooter>

@@ -5,6 +5,7 @@ import { formatMoney, PaginatedTransactionsSchema, ReceiptSchema } from '@shared
 import type { Transaction, PaginatedResponse } from '@shared-types/openpos'
 import { Button } from '@/components/ui/button'
 import { ReceiptDialog } from '@/components/receipt-dialog'
+import { t } from '@/i18n'
 
 export function HistoryPage() {
   const storeId = useAuthStore((s) => s.storeId)
@@ -41,7 +42,7 @@ export function HistoryPage() {
       <h2 className="text-lg font-semibold">取引履歴</h2>
 
       <div data-testid="history-table" className="overflow-auto rounded-lg border">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" aria-label={t('accessibility.transactionHistory')}>
           <thead className="border-b bg-muted/50">
             <tr>
               <th className="p-3 text-left font-medium">取引番号</th>
@@ -63,6 +64,7 @@ export function HistoryPage() {
                 <td className="p-3 text-right font-medium">{formatMoney(tx.total)}</td>
                 <td className="p-3">
                   <span
+                    role="status"
                     className={`rounded-full px-2 py-0.5 text-xs ${
                       tx.status === 'COMPLETED'
                         ? 'bg-green-100 text-green-800'
@@ -87,6 +89,7 @@ export function HistoryPage() {
                         size="sm"
                         className="min-h-11 min-w-11"
                         onClick={() => handleViewReceipt(tx.id)}
+                        aria-label={t('accessibility.viewReceipt', { id: tx.transactionNumber })}
                       >
                         レシート
                       </Button>
@@ -95,6 +98,7 @@ export function HistoryPage() {
                         size="sm"
                         className="min-h-11 min-w-11"
                         onClick={() => handleViewReceipt(tx.id)}
+                        aria-label={t('accessibility.issueReceipt', { id: tx.transactionNumber })}
                       >
                         領収書発行
                       </Button>
@@ -115,17 +119,21 @@ export function HistoryPage() {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <nav
+          className="flex items-center justify-center gap-2"
+          aria-label={t('accessibility.pageInfo', { current: page, total: totalPages })}
+        >
           <Button
             variant="outline"
             size="sm"
             className="min-h-11 min-w-11"
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
+            aria-label={t('accessibility.previousPage')}
           >
             前へ
           </Button>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground" aria-current="page">
             {page} / {totalPages}
           </span>
           <Button
@@ -134,10 +142,11 @@ export function HistoryPage() {
             className="min-h-11 min-w-11"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
+            aria-label={t('accessibility.nextPage')}
           >
             次へ
           </Button>
-        </div>
+        </nav>
       )}
 
       <ReceiptDialog

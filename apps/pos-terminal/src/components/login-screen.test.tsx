@@ -164,7 +164,7 @@ describe('LoginScreen', () => {
     await userEvent.click(screen.getByText('田中太郎'))
     await userEvent.click(screen.getByRole('button', { name: '1' }))
     await userEvent.click(screen.getByRole('button', { name: '2' }))
-    await userEvent.click(screen.getByRole('button', { name: 'C' }))
+    await userEvent.click(screen.getByTestId('pin-key-C'))
 
     const loginButton = screen.getByRole('button', { name: 'ログイン' })
     expect(loginButton).toBeDisabled()

@@ -18,6 +18,7 @@ import { getCartItemCount, getCartSubtotal, useCartStore } from '@/stores/cart-s
 import { useParkingStore } from '@/stores/parking-store'
 import { toast } from '@/hooks/use-toast'
 import { Minus, Pause, Play, Plus, ShoppingCart, Trash2, X } from 'lucide-react'
+import { t } from '@/i18n'
 
 interface CartPanelProps {
   className?: string
@@ -109,7 +110,7 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
     <section data-testid="cart-panel" className={className}>
       <div className="flex items-center justify-between border-b p-4">
         <div className="flex items-center gap-2">
-          <ShoppingCart className="h-5 w-5" />
+          <ShoppingCart className="h-5 w-5" aria-hidden="true" />
           <div>
             <h2 className="font-semibold">カート</h2>
             <p className="text-xs text-muted-foreground">{itemCount} 点</p>
@@ -127,18 +128,31 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
               size="sm"
               onClick={() => setShowParked(!showParked)}
               className="gap-1"
+              aria-label={t('accessibility.resumeParked', { count: parkedTransactions.length })}
+              aria-expanded={showParked}
             >
-              <Play className="h-3 w-3" />
+              <Play className="h-3 w-3" aria-hidden="true" />
               保留中 ({parkedTransactions.length})
             </Button>
           )}
           {items.length > 0 && (
             <>
-              <Button variant="outline" size="sm" onClick={handleParkTransaction} className="gap-1">
-                <Pause className="h-3 w-3" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleParkTransaction}
+                className="gap-1"
+                aria-label={t('accessibility.parkTransaction')}
+              >
+                <Pause className="h-3 w-3" aria-hidden="true" />
                 保留
               </Button>
-              <Button variant="ghost" size="sm" onClick={clearCart}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearCart}
+                aria-label={t('accessibility.clearCart')}
+              >
                 クリア
               </Button>
             </>
@@ -167,6 +181,7 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => handleResumeTransaction(parked.id)}
+                    aria-label={t('accessibility.resumeTransaction')}
                   >
                     再開
                   </Button>
@@ -174,10 +189,10 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    aria-label="削除"
+                    aria-label={t('accessibility.deleteParkedTransaction')}
                     onClick={() => removeParkedTransaction(parked.id)}
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-3 w-3" aria-hidden="true" />
                   </Button>
                 </div>
               </div>
@@ -189,7 +204,7 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
       <div className="flex-1 overflow-auto p-4">
         {items.length === 0 ? (
           <div className="flex h-full min-h-56 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed bg-background/70 p-6 text-center">
-            <ShoppingCart className="h-8 w-8 text-muted-foreground" />
+            <ShoppingCart className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
             <div className="space-y-1">
               <p className="font-medium">カートは空です</p>
               <p className="text-sm text-muted-foreground">商品を追加してください</p>
@@ -239,9 +254,11 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
                           clearQuantityDraft(item.product.id)
                           updateQuantity(item.product.id, item.quantity - 1)
                         }}
-                        aria-label={`${item.product.name} の数量を減らす`}
+                        aria-label={t('accessibility.decreaseQuantity', {
+                          name: item.product.name,
+                        })}
                       >
-                        <Minus className="h-3 w-3" />
+                        <Minus className="h-3 w-3" aria-hidden="true" />
                       </Button>
                       <Input
                         type="number"
@@ -252,7 +269,7 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
                         }
                         onBlur={() => handleQuantityBlur(item.product.id)}
                         className="h-8 w-16 text-center"
-                        aria-label={`${item.product.name} の数量`}
+                        aria-label={t('accessibility.quantityOf', { name: item.product.name })}
                       />
                       <Button
                         variant="outline"
@@ -262,9 +279,11 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
                           clearQuantityDraft(item.product.id)
                           updateQuantity(item.product.id, item.quantity + 1)
                         }}
-                        aria-label={`${item.product.name} の数量を増やす`}
+                        aria-label={t('accessibility.increaseQuantity', {
+                          name: item.product.name,
+                        })}
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-3 w-3" aria-hidden="true" />
                       </Button>
                     </div>
                     <Button
@@ -275,9 +294,9 @@ export function CartPanel({ className, fullScreen = false }: CartPanelProps) {
                         clearQuantityDraft(item.product.id)
                         removeItem(item.product.id)
                       }}
-                      aria-label={`${item.product.name} を削除`}
+                      aria-label={t('accessibility.removeItem', { name: item.product.name })}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
                 </div>

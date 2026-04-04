@@ -16,6 +16,7 @@ import { PaymentCardTab } from '@/components/payment-card-tab'
 import { ReceiptDialog } from '@/components/receipt-dialog'
 import { formatMoney } from '@shared-types/openpos'
 import { CreditCard, Loader2, Percent, QrCode, Receipt, Tag, Wallet, X } from 'lucide-react'
+import { t } from '@/i18n'
 
 interface CheckoutDialogProps {
   open: boolean
@@ -68,14 +69,17 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             {/* 割引・クーポン */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 text-muted-foreground" />
+                <Tag className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <p className="text-sm font-medium">割引・クーポン</p>
               </div>
 
               <div className="flex items-end gap-2">
                 <div className="flex-1">
-                  <label className="text-sm font-medium">クーポンコード</label>
+                  <label htmlFor="coupon-code-input" className="text-sm font-medium">
+                    {t('accessibility.couponCodeLabel')}
+                  </label>
                   <Input
+                    id="coupon-code-input"
                     placeholder="クーポンコードを入力"
                     value={checkout.couponCode}
                     onChange={(event) => checkout.setCouponCode(event.target.value)}
@@ -93,9 +97,14 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                   variant="outline"
                   onClick={() => void checkout.handleApplyCoupon()}
                   disabled={checkout.couponValidating || !checkout.couponCode.trim()}
+                  aria-label={
+                    checkout.couponValidating
+                      ? t('accessibility.applyCouponLoading')
+                      : t('accessibility.applyCoupon')
+                  }
                 >
                   {checkout.couponValidating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                   ) : (
                     '適用'
                   )}
@@ -111,7 +120,10 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Percent className="h-3 w-3 text-green-600 dark:text-green-400" />
+                          <Percent
+                            className="h-3 w-3 text-green-600 dark:text-green-400"
+                            aria-hidden="true"
+                          />
                           <span className="text-sm font-medium">{entry.discount.name}</span>
                           <Badge variant="secondary" className="text-xs">
                             {entry.couponCode}
@@ -132,9 +144,9 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                             checkout.removeDiscount(entry.couponCode)
                           }
                         }}
-                        aria-label={`クーポン ${entry.couponCode} を削除`}
+                        aria-label={t('accessibility.removeCoupon', { code: entry.couponCode })}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </div>
                   ))}
@@ -146,7 +158,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             {checkout.addedPayments.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Receipt className="h-4 w-4 text-muted-foreground" />
+                  <Receipt className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   <p className="text-sm font-medium">追加済みの支払</p>
                 </div>
                 <div className="space-y-2">
@@ -170,9 +182,11 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                         variant="ghost"
                         size="icon"
                         onClick={() => checkout.handleRemovePayment(payment.id)}
-                        aria-label={`${PAYMENT_METHOD_LABELS[payment.method]} 支払を削除`}
+                        aria-label={t('accessibility.removePayment', {
+                          method: PAYMENT_METHOD_LABELS[payment.method],
+                        })}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </div>
                   ))}
@@ -190,15 +204,15 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             >
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger data-testid="payment-tab-cash" value="CASH" className="gap-2">
-                  <Wallet className="h-4 w-4" />
+                  <Wallet className="h-4 w-4" aria-hidden="true" />
                   現金
                 </TabsTrigger>
                 <TabsTrigger data-testid="payment-tab-card" value="CREDIT_CARD" className="gap-2">
-                  <CreditCard className="h-4 w-4" />
+                  <CreditCard className="h-4 w-4" aria-hidden="true" />
                   カード
                 </TabsTrigger>
                 <TabsTrigger data-testid="payment-tab-qr" value="QR_CODE" className="gap-2">
-                  <QrCode className="h-4 w-4" />
+                  <QrCode className="h-4 w-4" aria-hidden="true" />
                   QR
                 </TabsTrigger>
               </TabsList>
@@ -253,6 +267,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
               size="sm"
               disabled={checkout.processing}
               onClick={() => onOpenChange(false)}
+              aria-label={t('accessibility.cancelTransaction')}
             >
               取引をキャンセル
             </Button>
@@ -263,6 +278,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                 size="lg"
                 disabled={checkout.processing || !checkout.canAddCurrentPayment}
                 onClick={checkout.handleAddCurrentPayment}
+                aria-label={t('accessibility.addPayment')}
               >
                 この支払を追加
               </Button>
@@ -273,10 +289,15 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
               size="lg"
               disabled={checkout.processing || !checkout.canFinalize}
               onClick={checkout.handleFinalize}
+              aria-label={
+                checkout.processing
+                  ? t('accessibility.processingCheckout')
+                  : t('accessibility.finalizeCheckout')
+              }
             >
               {checkout.processing ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                   処理中...
                 </>
               ) : (

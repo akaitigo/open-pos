@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { Loader2, Store, Monitor } from 'lucide-react'
+import { t } from '@/i18n'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { api } from '@/lib/api'
@@ -115,8 +116,10 @@ export function StoreTerminalSelector({ onSelect }: StoreTerminalSelectorProps) 
       <div
         className="flex min-h-svh items-center justify-center bg-muted/30"
         data-testid="store-selector-loading"
+        role="status"
+        aria-label={t('common.loading')}
       >
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
       </div>
     )
   }
@@ -150,7 +153,7 @@ export function StoreTerminalSelector({ onSelect }: StoreTerminalSelectorProps) 
                     onClick={() => setSelectedStore(store)}
                     data-testid={`store-item-${store.id}`}
                   >
-                    <Store className="h-5 w-5 text-muted-foreground" />
+                    <Store className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                     <span className="text-sm font-medium">{store.name}</span>
                     {store.address && (
                       <span className="text-xs text-muted-foreground">{store.address}</span>
@@ -168,6 +171,7 @@ export function StoreTerminalSelector({ onSelect }: StoreTerminalSelectorProps) 
               className="mb-2"
               onClick={() => setSelectedStore(null)}
               data-testid="back-to-stores"
+              aria-label={t('accessibility.backToStores')}
             >
               ← 店舗選択に戻る
             </Button>
@@ -175,8 +179,15 @@ export function StoreTerminalSelector({ onSelect }: StoreTerminalSelectorProps) 
             <p className="text-center text-sm font-medium">{selectedStore.name}</p>
 
             {loadingTerminals ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div
+                className="flex justify-center py-8"
+                role="status"
+                aria-label={t('common.loading')}
+              >
+                <Loader2
+                  className="h-6 w-6 animate-spin text-muted-foreground"
+                  aria-hidden="true"
+                />
               </div>
             ) : terminals.length === 0 ? (
               <p className="text-center text-sm text-muted-foreground">
@@ -192,7 +203,7 @@ export function StoreTerminalSelector({ onSelect }: StoreTerminalSelectorProps) 
                     onClick={() => handleTerminalSelect(terminal)}
                     data-testid={`terminal-item-${terminal.id}`}
                   >
-                    <Monitor className="h-5 w-5 text-muted-foreground" />
+                    <Monitor className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                     <span className="text-sm font-medium">
                       {terminal.name ?? terminal.terminalCode}
                     </span>
