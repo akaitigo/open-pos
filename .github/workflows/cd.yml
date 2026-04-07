@@ -109,7 +109,7 @@ jobs:
             echo "::notice::COSIGN_KEY secret not configured — skipping image signing"
           fi
 
-      - uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3
+      - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v3
         if: steps.check-key.outputs.available == 'true'
 
       - name: Sign container images
