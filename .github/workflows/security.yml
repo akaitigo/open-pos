@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0
       - name: Cache gitleaks
         id: cache-gitleaks
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: /usr/local/bin/gitleaks
           key: gitleaks-${{ env.GITLEAKS_VERSION }}-linux-x64
@@ -83,7 +83,7 @@ jobs:
             .
       - name: Upload SARIF report
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: gitleaks-sarif
           path: results.sarif
@@ -151,7 +151,7 @@ jobs:
             -f infra/docker/Dockerfile.service .
       - name: Cache Trivy
         id: cache-trivy
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: /usr/local/bin/trivy
           key: trivy-${{ env.TRIVY_VERSION }}-linux-x64
@@ -187,7 +187,7 @@ jobs:
             "openpos-${SERVICE_NAME}:scan" || true
       - name: Upload Trivy report
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: trivy-report-${{ matrix.service }}
           path: trivy-${{ matrix.service }}.json
@@ -218,7 +218,7 @@ jobs:
       - name: Generate npm SBOM
         run: pnpm --filter pos-terminal exec -- npx @cyclonedx/cyclonedx-npm --output-file sbom-frontend.json || true
       - name: Upload SBOM artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom
           path: sbom-*.json
