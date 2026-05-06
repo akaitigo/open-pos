@@ -111,6 +111,8 @@ pnpm e2e:install
 make verify-full
 ```
 
+`make verify` は root script を経由し、frontend workspace の `typecheck` と app tests を CI と同じ直列実行で揃えます。
+
 `make doctor` は `grpcurl` が未インストールの場合に警告を出します。`make grpc-test` が `grpcurl` に依存しているためです。
 
 ## ランタイム設定ファイル

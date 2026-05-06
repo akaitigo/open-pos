@@ -20,6 +20,8 @@ pnpm install
 make verify
 ```
 
+`make verify` は CI と同じ直列 `typecheck` / frontend app tests を含むため、フロントエンド monorepo の依存更新時もローカル再現性を保ちやすくなります。
+
 5. リリースがデモフロー、フロントエンドアプリ、シードデータ、認証、または API コントラクトに影響する場合は、以下も実行する:
 
 ```bash

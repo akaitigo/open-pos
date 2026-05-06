@@ -14,8 +14,8 @@ help: ## Show this help
 doctor: ## Check whether the local development prerequisites are installed and usable
 	bash scripts/doctor.sh
 
-verify: ## Run the supported local quality gate (typecheck, lint, unit/functional tests)
-	pnpm -r typecheck
+verify: ## Run the supported local quality gate (CI-aligned typecheck, lint, unit/functional tests)
+	pnpm typecheck
 	$(MAKE) lint
 	$(MAKE) test-all
 

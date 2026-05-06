@@ -186,7 +186,7 @@ pnpm dev:admin     # Admin panel  -> http://localhost:5174
 make test          # Backend tests
 make test-apps     # Frontend unit/functional tests
 make grpc-test     # gRPC health check (against running services)
-make verify        # typecheck + lint + backend/frontend tests
+make verify        # CI-aligned local gate (serialized typecheck + lint + backend/frontend tests)
 pnpm e2e:install   # Initial Playwright browser installation
 make verify-full   # verify + docker-demo + Playwright E2E
 
@@ -199,7 +199,7 @@ make db-restore FILE=.local/backups/openpos-20260314-120000.sql
 make reset         # Recreate PostgreSQL volume + reseed
 ```
 
-`pnpm test` runs unit/functional tests for `packages/` and `apps/`. E2E tests are opt-in via `pnpm test:e2e` (does not depend on Playwright browsers).
+`pnpm test` runs unit/functional tests for `packages/` and `apps/` in a stable sequential order. E2E tests are opt-in via `pnpm test:e2e` (does not depend on Playwright browsers).
 
 ### Local Development Mode Details
 
