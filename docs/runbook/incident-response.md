@@ -1,66 +1,102 @@
-# インシデント対応手順（SOP）
+# Incident Response SOP
 
-## オンコール体制
+> **Scope**: self-hosted / pre-production deployments of open-pos
+> **Support model**: maintainer-led; this repository does not currently provide a staffed 24/7 on-call rotation
 
-| 役割 | 担当 | 連絡先 |
-|------|------|--------|
-| Primary on-call | (要設定) | (要設定) |
-| Secondary on-call | (要設定) | (要設定) |
-| エスカレーション先 | (要設定) | (要設定) |
+## Ownership
 
-> **TODO**: 本番デプロイ前に上記を埋めること。
+| Role | Current owner | Contact path |
+| --- | --- | --- |
+| Incident commander | Repository maintainer | GitHub `@akaitigo` or the team operating the deployment |
+| Technical backup | Deployment owner | Your internal pager/chat/on-call system |
+| Security escalation | Deployment owner + repository maintainer | GitHub Security Advisory or private security contact configured by the deployer |
 
-## 重大度レベル
+## Severity Levels
 
-| レベル | 定義 | 対応時間 | 例 |
-|--------|------|---------|-----|
-| **SEV1** | 全サービス停止 | 15分以内に対応開始 | DB障害、api-gatewayダウン |
-| **SEV2** | 主要機能停止 | 30分以内に対応開始 | POS決済不可、認証障害 |
-| **SEV3** | 一部機能劣化 | 4時間以内に対応開始 | analytics遅延、キャッシュ不整合 |
-| **SEV4** | 軽微な問題 | 次営業日に対応 | UIバグ、ログ欠損 |
+| Level | Definition | Response target | Examples |
+| --- | --- | --- | --- |
+| `SEV1` | Full service outage or cross-tenant/security incident | Start within 15 minutes | API gateway outage, data leak suspicion, auth failure across tenants |
+| `SEV2` | Core workflow unavailable for part of the product | Start within 30 minutes | Checkout blocked, login broken, message broker unavailable |
+| `SEV3` | Partial degradation with workaround | Start within 4 hours | Analytics delay, cache inconsistency, non-critical admin page failure |
+| `SEV4` | Minor defect or cosmetic issue | Next business day | Small UI bug, missing log field, flaky local script |
 
-## 対応フロー
+## Detection Sources
 
-### 1. 検知・通知
-- Grafana アラート → Slack 通知（要設定）
-- ユーザー報告 → サポート窓口
+- GitHub Actions failures on `main`
+- `make local-smoke` / `make grpc-test` failures
+- Docker Compose health or container restart loops
+- application logs from `make logs` / `make logs-pos`
+- operator or user reports from the deployment owner
 
-### 2. 初動対応（15分以内）
-1. アラート内容を確認
-2. 影響範囲を特定（テナント単体 or 全体）
-3. Slack の `#incident` チャンネルでインシデント宣言
-4. 重大度レベルを決定
+## Initial Response
 
-### 3. 調査
-1. **Grafana ダッシュボード** でメトリクス確認
-   - `http://grafana:3000/d/openpos-overview`
-2. **ログ確認**
-   ```bash
-   kubectl logs -n openpos deployment/{service-name} --tail=100
-   ```
-3. **gRPC トレース** で Correlation ID (`x-request-id`) を追跡
+1. Record the incident start time and the observed symptom.
+2. Decide whether the impact is tenant-scoped or system-wide.
+3. Classify severity (`SEV1`-`SEV4`).
+4. Open a dedicated incident channel/thread in the deployer's chat system.
+5. Avoid posting live access tokens, PKCE artifacts, or customer data into public issues or logs.
 
-### 4. 対応
-- **スケールアウト**: `kubectl scale deployment/{service} -n openpos --replicas=3`
-- **ロールバック**: `kubectl rollout undo deployment/{service} -n openpos`
-- **サービス再起動**: `kubectl rollout restart deployment/{service} -n openpos`
+## Local / Docker Compose Triage
 
-### 5. 復旧確認
-1. ヘルスチェック: `kubectl get pods -n openpos`
-2. E2E スモークテスト実行
-3. Grafana でエラー率が正常に戻ったことを確認
+### Health And Logs
 
-### 6. ポストモーテム
-- インシデント発生後 3営業日以内に作成
-- テンプレート: `docs/templates/postmortem.md`
-- ブレームレス、根本原因分析、再発防止策
+```bash
+docker compose -f infra/compose.yml ps
+make logs
+make logs-pos
+make local-smoke
+make grpc-test
+```
 
-## よくある障害と対応
+### Fast Recovery Actions
 
-| 障害 | 確認方法 | 対応 |
-|------|---------|------|
-| DB接続断 | `kubectl logs` で `Connection refused` | PostgreSQL Pod確認、pgBouncer再起動 |
-| Redis接続断 | メトリクスでcache miss急増 | Redis Pod確認、再起動 |
-| RabbitMQ溢れ | Management UI でキュー深度確認 | コンシューマースケールアウト |
-| OOM Kill | `kubectl describe pod` で `OOMKilled` | リソースlimits引き上げ |
-| E2Eテスト的な503 | api-gateway ログ | Readiness probe確認、依存サービス確認 |
+```bash
+docker compose -f infra/compose.yml restart postgres redis rabbitmq hydra
+make local-down
+make local-up-fast
+```
+
+### If The Demo Stack Is Suspect
+
+```bash
+make docker-down-core
+make docker-demo
+```
+
+## Kubernetes Deployments
+
+If you run open-pos on Kubernetes, use your platform's rollout and secret-management conventions. The repository does not define a single production Kubernetes control plane, so the deployer is responsible for the exact commands.
+
+Typical checks:
+
+```bash
+kubectl get pods -n openpos
+kubectl logs -n openpos deployment/<service> --tail=100
+kubectl rollout restart deployment/<service> -n openpos
+kubectl rollout undo deployment/<service> -n openpos
+```
+
+## Service-Specific Hints
+
+| Symptom | First checks | Common actions |
+| --- | --- | --- |
+| API failures / 5xx | `api-gateway` logs, Hydra reachability, gRPC downstream health | restart gateway, verify OIDC config, inspect gRPC deadlines/timeouts |
+| Checkout blocked | `pos-service` logs, Redis/RabbitMQ reachability, product/store gRPC clients | verify downstream services, restart broker/cache, run smoke flow |
+| Analytics stale | `analytics-service` logs, RabbitMQ queue depth | inspect event consumer lag, replay/restart consumer if needed |
+| Cache anomalies | Redis logs, cache key patterns, fallback behavior | confirm read-through/fallback path, restart Redis if safe |
+| E2E-only failure | `make docker-demo`, Playwright artifacts, frontend env files | rebuild demo stack, inspect generated `demo-config.json` |
+
+## Recovery Validation
+
+1. Confirm container or pod health.
+2. Re-run `make local-smoke` or the environment-equivalent smoke test.
+3. Re-run `make grpc-test` if backend reachability is involved.
+4. Confirm the user-visible flow that triggered the incident.
+5. Capture whether the system degraded gracefully or failed hard.
+
+## Aftercare
+
+- Create a postmortem within 3 business days for `SEV1`/`SEV2`.
+- Link the incident to the fixing PRs and follow-up issues.
+- If secrets or tokens may have leaked, rotate them before closing the incident.
+- Update this runbook when the incident exposed a missing operational step.

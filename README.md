@@ -11,7 +11,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-95%25+-brightgreen)]()
 [![Tests](https://img.shields.io/badge/tests-1800+-blue)]()
 
-A production-ready, universal POS (Point of Sale) system featuring multi-tenant and offline-capable microservice architecture.
+A production-oriented, self-hostable POS (Point of Sale) reference implementation featuring a multi-tenant and offline-capable microservice architecture.
 
 ### Why this project?
 
@@ -23,6 +23,7 @@ A production-ready, universal POS (Point of Sale) system featuring multi-tenant 
 
 ## Project Status
 
+- **Repository posture**: self-hostable beta / release-candidate baseline, not a managed SaaS with staffed 24/7 operations
 - **Demo flow**: `make local-demo` / `make docker-demo`
 - **Quality gates**: CI, dependency audit, secret scanning, CodeQL, Playwright E2E
 - **Authentication**: ORY Hydra v2.2 (OIDC/PKCE) + RBAC (Owner / Manager / Cashier)
@@ -108,7 +109,7 @@ See [docs/guides/demo-assets.md](docs/guides/demo-assets.md) for details.
 
 | Category | Technology |
 | --- | --- |
-| Backend | Kotlin 2.3 / Quarkus 3.34 / GraalVM CE 21 / Gradle 9.4 |
+| Backend | Kotlin 2.3 / Quarkus 3.34 / GraalVM CE 21 / Gradle 9.5 |
 | Frontend | React 19 / TypeScript / Vite 7 / Tailwind CSS + shadcn/ui |
 | Database | PostgreSQL 17 (schema isolation, Flyway migrations) |
 | Cache | Redis 7 (Lettuce, cache-aside pattern) |
