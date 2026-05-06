@@ -21,6 +21,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Dependency Manifest Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      frontend_dependencies: ${{ steps.filter.outputs.frontend_dependencies }}
+      backend_dependencies: ${{ steps.filter.outputs.backend_dependencies }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        id: filter
+        with:
+          filters: |
+            frontend_dependencies:
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'apps/**/package.json'
+              - 'packages/**/package.json'
+              - 'e2e/package.json'
+            backend_dependencies:
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
+              - 'gradle/**'
+              - 'services/**/build.gradle.kts'
+
   gitleaks:
     name: Secret Scanning (gitleaks)
     runs-on: ubuntu-latest
@@ -92,6 +122,7 @@ jobs:
 
   dependency-audit:
     name: Dependency Vulnerability Scan
+    needs: [changes]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -110,12 +141,44 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
 
-      - run: pnpm install --frozen-lockfile
+      # PRs compare against the base branch so pre-existing monorepo vulnerabilities
+      # do not block unrelated dependency updates. Pushes and scheduled scans remain
+      # absolute gates on the current default branch state.
+      - name: pnpm audit diff against base branch (frontend)
+        if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.frontend_dependencies == 'true' }}
+        run: |
+          set -euo pipefail
+
+          pnpm install --frozen-lockfile
+          pnpm audit --audit-level=high --json > pnpm-audit-head.json || true
+
+          git fetch origin "${{ github.event.pull_request.base.ref }}:base-compare"
+          base_dir="$(mktemp -d)"
+          cleanup() {
+            git worktree remove --force "${base_dir}"
+          }
+          trap cleanup EXIT
+
+          git worktree add --detach "${base_dir}" base-compare
+
+          (
+            cd "${base_dir}"
+            pnpm install --frozen-lockfile
+            pnpm audit --audit-level=high --json > "${GITHUB_WORKSPACE}/pnpm-audit-base.json" || true
+          )
+
+          node scripts/ci/compare-pnpm-audit.mjs \
+            --base pnpm-audit-base.json \
+            --head pnpm-audit-head.json
 
       - name: pnpm audit (frontend)
-        run: pnpm audit --audit-level=high
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm audit --audit-level=high
 
       - name: Gradle dependency verification (backend)
+        if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.backend_dependencies == 'true' }}
         run: ./gradlew dependencies
 
   container-scan:

@@ -17,7 +17,7 @@ feature/25-offline-sync
 2. **ブランチ作成**: `git checkout -b feature/12-product-crud`
 3. **前提確認**: `make doctor`
 4. **開発**: コード実装 + テスト
-5. **ローカル品質ゲート**: `make verify`
+5. **ローカル品質ゲート**: `make verify`（CI と同じ直列 typecheck / frontend app tests を含む）
 6. **必要なら E2E**: `pnpm e2e:install && make verify-full`
 7. **PR 作成**: `gh pr create`（本文に `Closes #12` を記載）
 8. **CI 通過**: GitHub Actions の全チェック通過を確認

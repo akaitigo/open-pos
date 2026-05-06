@@ -11,38 +11,20 @@ updates:
         update-types: ['minor', 'patch']
 
   - package-ecosystem: 'npm'
-    directory: '/apps/pos-terminal'
+    directories:
+      - '/apps/pos-terminal'
+      - '/apps/admin-dashboard'
+      - '/packages/shared-types'
+      - '/e2e'
     schedule:
       interval: 'weekly'
     labels:
       - 'type:chore'
     groups:
-      npm-pos-minor:
+      npm-monorepo-minor:
+        patterns: ['*']
+        group-by: dependency-name
         update-types: ['minor', 'patch']
-
-  - package-ecosystem: 'npm'
-    directory: '/apps/admin-dashboard'
-    schedule:
-      interval: 'weekly'
-    labels:
-      - 'type:chore'
-    groups:
-      npm-admin-minor:
-        update-types: ['minor', 'patch']
-
-  - package-ecosystem: 'npm'
-    directory: '/packages/shared-types'
-    schedule:
-      interval: 'weekly'
-    labels:
-      - 'type:chore'
-
-  - package-ecosystem: 'npm'
-    directory: '/e2e'
-    schedule:
-      interval: 'weekly'
-    labels:
-      - 'type:chore'
 
   - package-ecosystem: 'github-actions'
     directory: '/'

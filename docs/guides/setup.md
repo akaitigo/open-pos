@@ -84,6 +84,8 @@ make local-smoke
 make verify
 ```
 
+`make verify` は root script を利用し、frontend workspace の `typecheck` と app tests を CI と同じ順序で実行します。
+
 ## 動作確認
 
 ```bash

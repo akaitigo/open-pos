@@ -245,7 +245,7 @@ pnpm --filter pos-terminal test -- --coverage
 
 ## E2E の前提
 
-- `pnpm test` と `make test-apps` は E2E を含めない。日常の高速な回帰確認を優先する。
+- `pnpm test` と `make test-apps` は E2E を含めず、workspace 単位で直列実行する。日常の高速な回帰確認と CI との再現性を優先する。
 - E2E は `pnpm test:e2e` または `make test-e2e` で明示実行する。
 - 初回のみ `pnpm e2e:install` で Playwright 用 Chromium をインストールする。
 - `pnpm test:e2e` は `pos-terminal` と `admin-dashboard` の dev server を自動起動する。
