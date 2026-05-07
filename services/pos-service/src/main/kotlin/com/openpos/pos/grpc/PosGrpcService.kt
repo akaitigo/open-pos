@@ -849,31 +849,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         val payments = transactionService.getTransactionPayments(id)
         val discounts = transactionService.getTransactionDiscounts(id)
         val taxSummaries = transactionService.getTransactionTaxSummaries(id)
-
-        return Transaction
-            .newBuilder()
-            .setId(id.toString())
-            .setOrganizationId(organizationId.toString())
-            .setStoreId(storeId.toString())
-            .setTerminalId(terminalId.toString())
-            .setStaffId(staffId.toString())
-            .setTransactionNumber(transactionNumber)
-            .setType(type.toProtoTransactionType())
-            .setStatus(status.toProtoTransactionStatus())
-            .setClientId(clientId.orEmpty())
-            .addAllItems(items.map { it.toProto() })
-            .addAllDiscounts(discounts.map { it.toProto() })
-            .addAllPayments(payments.map { it.toProto() })
-            .addAllTaxSummaries(taxSummaries.map { it.toProto() })
-            .setSubtotal(subtotal)
-            .setTaxTotal(taxTotal)
-            .setDiscountTotal(discountTotal)
-            .setTotal(total)
-            .setChangeAmount(changeAmount)
-            .setCreatedAt(createdAt.toString())
-            .setUpdatedAt(updatedAt.toString())
-            .setCompletedAt(completedAt?.toString().orEmpty())
-            .build()
+        return toProto(items, payments, discounts, taxSummaries)
     }
 
     private fun TransactionEntity.toBatchProto(
@@ -881,80 +857,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         payments: List<PaymentEntity>,
         discounts: List<TransactionDiscountEntity>,
         taxSummaries: List<TaxSummaryEntity>,
-    ): Transaction =
-        Transaction
-            .newBuilder()
-            .setId(id.toString())
-            .setOrganizationId(organizationId.toString())
-            .setStoreId(storeId.toString())
-            .setTerminalId(terminalId.toString())
-            .setStaffId(staffId.toString())
-            .setTransactionNumber(transactionNumber)
-            .setType(type.toProtoTransactionType())
-            .setStatus(status.toProtoTransactionStatus())
-            .setClientId(clientId.orEmpty())
-            .addAllItems(items.map { it.toProto() })
-            .addAllDiscounts(discounts.map { it.toProto() })
-            .addAllPayments(payments.map { it.toProto() })
-            .addAllTaxSummaries(taxSummaries.map { it.toProto() })
-            .setSubtotal(subtotal)
-            .setTaxTotal(taxTotal)
-            .setDiscountTotal(discountTotal)
-            .setTotal(total)
-            .setChangeAmount(changeAmount)
-            .setCreatedAt(createdAt.toString())
-            .setUpdatedAt(updatedAt.toString())
-            .setCompletedAt(completedAt?.toString().orEmpty())
-            .build()
-
-    private fun TransactionItemEntity.toProto(): TransactionItem =
-        TransactionItem
-            .newBuilder()
-            .setId(id.toString())
-            .setProductId(productId?.toString().orEmpty())
-            .setProductName(productName)
-            .setUnitPrice(unitPrice)
-            .setQuantity(quantity)
-            .setTaxRateName(taxRateName)
-            .setTaxRate(taxRate)
-            .setIsReducedTax(isReducedTax)
-            .setSubtotal(subtotal)
-            .setTaxAmount(taxAmount)
-            .setTotal(total)
-            .build()
-
-    private fun PaymentEntity.toProto(): Payment =
-        Payment
-            .newBuilder()
-            .setId(id.toString())
-            .setMethod(method.toProtoPaymentMethod())
-            .setAmount(amount)
-            .setReceived(received ?: 0)
-            .setChange(change ?: 0)
-            .setReference(reference.orEmpty())
-            .build()
-
-    private fun TransactionDiscountEntity.toProto(): TransactionDiscount =
-        TransactionDiscount
-            .newBuilder()
-            .setId(id.toString())
-            .setDiscountId(discountId?.toString().orEmpty())
-            .setName(name)
-            .setDiscountType(discountType)
-            .setValue(value)
-            .setAmount(amount)
-            .setTransactionItemId(transactionItemId?.toString().orEmpty())
-            .build()
-
-    private fun TaxSummaryEntity.toProto(): TaxSummary =
-        TaxSummary
-            .newBuilder()
-            .setTaxRateName(taxRateName)
-            .setTaxRate(taxRate)
-            .setIsReduced(isReduced)
-            .setTaxableAmount(taxableAmount)
-            .setTaxAmount(taxAmount)
-            .build()
+    ): Transaction = toProto(items, payments, discounts, taxSummaries)
 
     // === Utility Extensions ===
 
@@ -966,38 +869,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         }
 
     private fun String.uuidOrNull(): UUID? = if (isBlank()) null else toUUID()
-
-    private fun String.toProtoTransactionType(): TransactionType =
-        when (this) {
-            "SALE" -> TransactionType.TRANSACTION_TYPE_SALE
-            "RETURN" -> TransactionType.TRANSACTION_TYPE_RETURN
-            "VOID" -> TransactionType.TRANSACTION_TYPE_VOID
-            else -> TransactionType.TRANSACTION_TYPE_UNSPECIFIED
-        }
-
-    private fun String.toProtoTransactionStatus(): TransactionStatus =
-        when (this) {
-            "DRAFT" -> TransactionStatus.TRANSACTION_STATUS_DRAFT
-            "COMPLETED" -> TransactionStatus.TRANSACTION_STATUS_COMPLETED
-            "VOIDED" -> TransactionStatus.TRANSACTION_STATUS_VOIDED
-            else -> TransactionStatus.TRANSACTION_STATUS_UNSPECIFIED
-        }
-
-    private fun String.toProtoPaymentMethod(): PaymentMethod =
-        when (this) {
-            "CASH" -> PaymentMethod.PAYMENT_METHOD_CASH
-            "CREDIT_CARD" -> PaymentMethod.PAYMENT_METHOD_CREDIT_CARD
-            "QR_CODE" -> PaymentMethod.PAYMENT_METHOD_QR_CODE
-            else -> PaymentMethod.PAYMENT_METHOD_UNSPECIFIED
-        }
-
-    private fun PaymentMethod.toDbValue(): String =
-        when (this) {
-            PaymentMethod.PAYMENT_METHOD_CASH -> "CASH"
-            PaymentMethod.PAYMENT_METHOD_CREDIT_CARD -> "CREDIT_CARD"
-            PaymentMethod.PAYMENT_METHOD_QR_CODE -> "QR_CODE"
-            else -> throw Status.INVALID_ARGUMENT.withDescription("payment method is required").asRuntimeException()
-        }
 
     // === GiftCard ===
 
