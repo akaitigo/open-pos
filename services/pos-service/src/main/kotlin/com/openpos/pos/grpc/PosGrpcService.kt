@@ -823,9 +823,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         try {
-            val storeId = request.storeId.toUUID()
-            val status = request.status.ifBlank { null }
-            val (reservations, _) = reservationService.listByStoreId(storeId, status, 0, 100)
+            val query = resolveReservationListQuery(request)
+            val (reservations, _) = reservationService.listByStoreId(query.storeId, query.status, 0, 100)
             responseObserver.onNext(
                 openpos.pos.v1.ListReservationsResponse
                     .newBuilder()
@@ -844,14 +843,15 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContextWithoutFilter()
         try {
+            val input = resolveReservationCreateInput(request)
             val entity =
                 reservationService.create(
-                    storeId = request.storeId.toUUID(),
-                    customerName = request.customerName.ifBlank { null },
-                    customerPhone = request.customerPhone.ifBlank { null },
-                    items = request.items,
-                    reservedUntil = Instant.parse(request.reservedUntil),
-                    note = request.note.ifBlank { null },
+                    storeId = input.storeId,
+                    customerName = input.customerName,
+                    customerPhone = input.customerPhone,
+                    items = input.items,
+                    reservedUntil = input.reservedUntil,
+                    note = input.note,
                 )
             responseObserver.onNext(
                 openpos.pos.v1.CreateReservationResponse
@@ -871,9 +871,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         try {
-            val entity =
-                reservationService.findById(request.id.toUUID())
-                    ?: throw Status.NOT_FOUND.withDescription("Reservation not found: ${request.id}").asRuntimeException()
+            val entity = requireReservation(request.id.toUUID(), reservationService::findById)
             responseObserver.onNext(
                 openpos.pos.v1.GetReservationResponse
                     .newBuilder()
@@ -892,9 +890,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         try {
-            val entity =
-                reservationService.fulfill(request.id.toUUID())
-                    ?: throw Status.NOT_FOUND.withDescription("Reservation not found: ${request.id}").asRuntimeException()
+            val entity = requireReservation(request.id.toUUID(), reservationService::fulfill)
             responseObserver.onNext(
                 openpos.pos.v1.FulfillReservationResponse
                     .newBuilder()
@@ -913,9 +909,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         try {
-            val entity =
-                reservationService.cancel(request.id.toUUID())
-                    ?: throw Status.NOT_FOUND.withDescription("Reservation not found: ${request.id}").asRuntimeException()
+            val entity = requireReservation(request.id.toUUID(), reservationService::cancel)
             responseObserver.onNext(
                 openpos.pos.v1.CancelReservationResponse
                     .newBuilder()
