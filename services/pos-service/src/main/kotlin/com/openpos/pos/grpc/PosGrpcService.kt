@@ -367,7 +367,10 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                     payments = payments,
                     idempotencyKey = idempotencyKey,
                 )
-            val receipt = buildReceipt(entity)
+            val items = transactionService.getTransactionItems(entity.id)
+            val persistedPayments = transactionService.getTransactionPayments(entity.id)
+            val taxSummaries = transactionService.getTransactionTaxSummaries(entity.id)
+            val receipt = buildReceiptProto(entity, items, persistedPayments, taxSummaries)
             responseObserver.onNext(
                 FinalizeTransactionResponse
                     .newBuilder()
@@ -507,11 +510,14 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             require(tx.status == "COMPLETED" || tx.status == "VOIDED") {
                 "Receipt is only available for COMPLETED or VOIDED transactions"
             }
+            val items = transactionService.getTransactionItems(tx.id)
+            val payments = transactionService.getTransactionPayments(tx.id)
+            val taxSummaries = transactionService.getTransactionTaxSummaries(tx.id)
 
             responseObserver.onNext(
                 GetReceiptResponse
                     .newBuilder()
-                    .setReceipt(buildReceipt(tx))
+                    .setReceipt(buildReceiptProto(tx, items, payments, taxSummaries))
                     .build(),
             )
             responseObserver.onCompleted()
@@ -580,8 +586,13 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             val items = transactionService.getTransactionItems(tx.id)
             val payments = transactionService.getTransactionPayments(tx.id)
             val taxSummaries = transactionService.getTransactionTaxSummaries(tx.id)
+            val invoiceNumber =
+                storeServiceClient.getInvoiceNumber(tx.organizationId)
+                    ?: throw IllegalArgumentException(
+                        "Invoice registration number is not configured for organization: ${tx.organizationId}",
+                    )
 
-            val receiptData = buildInvoiceReceiptData(tx, items, payments, taxSummaries)
+            val receiptData = buildInvoiceReceiptData(tx, items, payments, taxSummaries, invoiceNumber)
             responseObserver.onNext(
                 GetInvoiceReceiptResponse
                     .newBuilder()
@@ -818,60 +829,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             .setUpdatedAt(updatedAt.toString())
             .build()
 
-    private fun buildInvoiceReceiptData(
-        tx: TransactionEntity,
-        items: List<TransactionItemEntity>,
-        payments: List<PaymentEntity>,
-        taxSummaries: List<TaxSummaryEntity>,
-    ): String {
-        // 組織のインボイス登録番号を store-service から取得
-        val invoiceNumber =
-            storeServiceClient.getInvoiceNumber(tx.organizationId)
-                ?: throw IllegalArgumentException(
-                    "Invoice registration number is not configured for organization: ${tx.organizationId}",
-                )
-
-        val sb = StringBuilder()
-        sb.appendLine("================================")
-        sb.appendLine("        領 収 書")
-        sb.appendLine("  （適格簡易請求書）")
-        sb.appendLine("================================")
-        sb.appendLine("取引番号: ${tx.transactionNumber}")
-        sb.appendLine("日時: ${tx.completedAt}")
-        sb.appendLine("登録番号: $invoiceNumber")
-        sb.appendLine("--------------------------------")
-        for (item in items) {
-            val reducedMark = if (item.isReducedTax) " ※" else ""
-            sb.appendLine("${item.productName}$reducedMark")
-            sb.appendLine("  ${item.unitPrice / 100}円 x ${item.quantity}  ${item.total / 100}円")
-        }
-        sb.appendLine("--------------------------------")
-        sb.appendLine("小計:     ${tx.subtotal / 100}円")
-        sb.appendLine("消費税:   ${tx.taxTotal / 100}円")
-        if (tx.discountTotal > 0) {
-            sb.appendLine("割引:    -${tx.discountTotal / 100}円")
-        }
-        sb.appendLine("合計:     ${tx.total / 100}円")
-        sb.appendLine("--------------------------------")
-        for (payment in payments) {
-            sb.appendLine("${payment.method}: ${payment.amount / 100}円")
-        }
-        sb.appendLine("--------------------------------")
-        sb.appendLine("【税率別内訳（税込）】")
-        for (summary in taxSummaries) {
-            val reducedMark = if (summary.isReduced) "※" else ""
-            sb.appendLine("$reducedMark${summary.taxRateName}")
-            sb.appendLine("  対象: ${summary.taxableAmount / 100}円  税: ${summary.taxAmount / 100}円")
-        }
-        if (taxSummaries.any { it.isReduced }) {
-            sb.appendLine("※は軽減税率(8%)対象商品")
-        }
-        sb.appendLine("================================")
-        sb.appendLine("上記正に領収いたしました")
-        sb.appendLine("================================")
-        return sb.toString()
-    }
-
     private fun JournalEntryEntity.toProto(): JournalEntry =
         JournalEntry
             .newBuilder()
@@ -884,22 +841,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             .setDetails(details)
             .setCreatedAt(createdAt.toString())
             .build()
-
-    private fun buildReceipt(tx: TransactionEntity): Receipt {
-        val items = transactionService.getTransactionItems(tx.id)
-        val payments = transactionService.getTransactionPayments(tx.id)
-        val taxSummaries = transactionService.getTransactionTaxSummaries(tx.id)
-
-        val receiptData = buildReceiptData(tx, items, payments, taxSummaries)
-
-        return Receipt
-            .newBuilder()
-            .setId(UUID.randomUUID().toString())
-            .setTransactionId(tx.id.toString())
-            .setReceiptData(receiptData)
-            .setCreatedAt(Instant.now().toString())
-            .build()
-    }
 
     // === Mapper Extensions ===
 
@@ -1057,52 +998,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             PaymentMethod.PAYMENT_METHOD_QR_CODE -> "QR_CODE"
             else -> throw Status.INVALID_ARGUMENT.withDescription("payment method is required").asRuntimeException()
         }
-
-    private fun buildReceiptData(
-        tx: TransactionEntity,
-        items: List<TransactionItemEntity>,
-        payments: List<PaymentEntity>,
-        taxSummaries: List<TaxSummaryEntity>,
-    ): String {
-        val sb = StringBuilder()
-        sb.appendLine("================================")
-        sb.appendLine("        領 収 書")
-        sb.appendLine("================================")
-        sb.appendLine("取引番号: ${tx.transactionNumber}")
-        sb.appendLine("日時: ${tx.completedAt}")
-        sb.appendLine("--------------------------------")
-        for (item in items) {
-            val reducedMark = if (item.isReducedTax) " ※" else ""
-            sb.appendLine("${item.productName}$reducedMark")
-            sb.appendLine("  ${item.unitPrice / 100}円 x ${item.quantity}  ${item.total / 100}円")
-        }
-        sb.appendLine("--------------------------------")
-        sb.appendLine("小計:     ${tx.subtotal / 100}円")
-        sb.appendLine("消費税:   ${tx.taxTotal / 100}円")
-        if (tx.discountTotal > 0) {
-            sb.appendLine("割引:    -${tx.discountTotal / 100}円")
-        }
-        sb.appendLine("合計:     ${tx.total / 100}円")
-        sb.appendLine("--------------------------------")
-        for (payment in payments) {
-            sb.appendLine("${payment.method}: ${payment.amount / 100}円")
-            val changeVal = payment.change ?: 0
-            if (payment.method == "CASH" && changeVal > 0) {
-                sb.appendLine("お釣り: ${changeVal / 100}円")
-            }
-        }
-        sb.appendLine("--------------------------------")
-        sb.appendLine("【税率別内訳】")
-        for (summary in taxSummaries) {
-            val reducedMark = if (summary.isReduced) "※" else ""
-            sb.appendLine("$reducedMark${summary.taxRateName}: 対象${summary.taxableAmount / 100}円 税${summary.taxAmount / 100}円")
-        }
-        if (taxSummaries.any { it.isReduced }) {
-            sb.appendLine("※は軽減税率対象商品")
-        }
-        sb.appendLine("================================")
-        return sb.toString()
-    }
 
     // === GiftCard ===
 
