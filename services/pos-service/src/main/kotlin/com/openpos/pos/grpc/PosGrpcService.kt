@@ -795,53 +795,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         responseObserver.onCompleted()
     }
 
-    // === Drawer / Settlement Mapper Extensions ===
-
-    private fun DrawerEntity.toProto(): Drawer =
-        Drawer
-            .newBuilder()
-            .setId(id.toString())
-            .setOrganizationId(organizationId.toString())
-            .setStoreId(storeId.toString())
-            .setTerminalId(terminalId.toString())
-            .setOpeningAmount(openingAmount)
-            .setCurrentAmount(currentAmount)
-            .setIsOpen(isOpen)
-            .setOpenedAt(openedAt?.toString().orEmpty())
-            .setClosedAt(closedAt?.toString().orEmpty())
-            .setCreatedAt(createdAt.toString())
-            .setUpdatedAt(updatedAt.toString())
-            .build()
-
-    private fun SettlementEntity.toProto(): Settlement =
-        Settlement
-            .newBuilder()
-            .setId(id.toString())
-            .setOrganizationId(organizationId.toString())
-            .setStoreId(storeId.toString())
-            .setTerminalId(terminalId.toString())
-            .setStaffId(staffId.toString())
-            .setCashExpected(cashExpected)
-            .setCashActual(cashActual)
-            .setDifference(difference)
-            .setSettledAt(settledAt.toString())
-            .setCreatedAt(createdAt.toString())
-            .setUpdatedAt(updatedAt.toString())
-            .build()
-
-    private fun JournalEntryEntity.toProto(): JournalEntry =
-        JournalEntry
-            .newBuilder()
-            .setId(id.toString())
-            .setOrganizationId(organizationId.toString())
-            .setType(type)
-            .setTransactionId(transactionId?.toString().orEmpty())
-            .setStaffId(staffId.toString())
-            .setTerminalId(terminalId.toString())
-            .setDetails(details)
-            .setCreatedAt(createdAt.toString())
-            .build()
-
     // === Mapper Extensions ===
 
     private fun TransactionEntity.toFullProto(): Transaction {
@@ -1095,18 +1048,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         }
     }
 
-    private fun com.openpos.pos.entity.DiscountReasonEntity.toDiscountReasonProto(): openpos.pos.v1.DiscountReason =
-        openpos.pos.v1.DiscountReason
-            .newBuilder()
-            .setId(id.toString())
-            .setOrganizationId(organizationId.toString())
-            .setCode(code)
-            .setDescription(description)
-            .setIsActive(isActive)
-            .setCreatedAt(createdAt.toString())
-            .setUpdatedAt(updatedAt.toString())
-            .build()
-
     // === Reservation (#1035) ===
 
     override fun listReservations(
@@ -1220,62 +1161,4 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         }
     }
 
-    private fun com.openpos.pos.entity.ReservationEntity.toReservationProto(): openpos.pos.v1.Reservation =
-        openpos.pos.v1.Reservation
-            .newBuilder()
-            .setId(id.toString())
-            .setOrganizationId(organizationId.toString())
-            .setStoreId(storeId.toString())
-            .setCustomerName(customerName.orEmpty())
-            .setCustomerPhone(customerPhone.orEmpty())
-            .setItems(items)
-            .setReservedUntil(reservedUntil.toString())
-            .setStatus(status)
-            .setNote(note.orEmpty())
-            .setCreatedAt(createdAt.toString())
-            .setUpdatedAt(updatedAt.toString())
-            .build()
-
-    private fun GiftCardEntity.toGiftCardProto(): openpos.pos.v1.GiftCard =
-        openpos.pos.v1.GiftCard
-            .newBuilder()
-            .setId(id.toString())
-            .setOrganizationId(organizationId.toString())
-            .setCode(code)
-            .setInitialAmount(initialAmount)
-            .setBalance(balance)
-            .setStatus(status)
-            .setIssuedAt(issuedAt.toString())
-            .apply { expiresAt?.let { setExpiresAt(it.toString()) } }
-            .setCreatedAt(createdAt.toString())
-            .setUpdatedAt(updatedAt.toString())
-            .build()
-
-    /**
-     * Instant 形式（ISO-8601）または日付文字列（YYYY-MM-DD）をパースして Instant を返す。
-     * 日付文字列の場合は UTC の開始時刻（00:00:00Z）に変換する。
-     * startDate のパースに使用する（包含的下限）。
-     */
-    private fun parseInstantOrDate(value: String): Instant =
-        try {
-            Instant.parse(value)
-        } catch (_: java.time.format.DateTimeParseException) {
-            LocalDate.parse(value).atStartOfDay(ZoneOffset.UTC).toInstant()
-        }
-
-    /**
-     * endDate 用のパース関数。
-     * 日付文字列（YYYY-MM-DD）の場合は翌日の開始時刻に変換し、排他的上限として使用する。
-     * Instant 形式の場合はそのまま返す（呼び出し元が排他的上限として扱う）。
-     */
-    private fun parseInstantOrDateExclusive(value: String): Instant =
-        try {
-            Instant.parse(value)
-        } catch (_: java.time.format.DateTimeParseException) {
-            LocalDate
-                .parse(value)
-                .plusDays(1)
-                .atStartOfDay(ZoneOffset.UTC)
-                .toInstant()
-        }
 }
