@@ -14,7 +14,6 @@ import com.openpos.pos.service.DiscountReasonService
 import com.openpos.pos.service.DrawerService
 import com.openpos.pos.service.GiftCardService
 import com.openpos.pos.service.JournalService
-import com.openpos.pos.service.OfflineItemInput
 import com.openpos.pos.service.PaymentInput
 import com.openpos.pos.service.ReservationService
 import com.openpos.pos.service.SettlementService
@@ -57,17 +56,14 @@ import openpos.pos.v1.ListTransactionsRequest
 import openpos.pos.v1.ListTransactionsResponse
 import openpos.pos.v1.OpenDrawerRequest
 import openpos.pos.v1.OpenDrawerResponse
-import openpos.pos.v1.Payment
 import openpos.pos.v1.PaymentMethod
 import openpos.pos.v1.PosServiceGrpc
 import openpos.pos.v1.Receipt
 import openpos.pos.v1.RemoveTransactionItemRequest
 import openpos.pos.v1.RemoveTransactionItemResponse
 import openpos.pos.v1.Settlement
-import openpos.pos.v1.StaffSalesItem
 import openpos.pos.v1.SyncOfflineTransactionsRequest
 import openpos.pos.v1.SyncOfflineTransactionsResponse
-import openpos.pos.v1.SyncResult
 import openpos.pos.v1.TaxSummary
 import openpos.pos.v1.Transaction
 import openpos.pos.v1.TransactionDiscount
@@ -79,8 +75,6 @@ import openpos.pos.v1.UpdateTransactionItemResponse
 import openpos.pos.v1.VoidTransactionRequest
 import openpos.pos.v1.VoidTransactionResponse
 import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
 import java.util.UUID
 
 @GrpcService
@@ -671,57 +665,16 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         tenantHelper.setupTenantContextWithoutFilter()
         val results =
             request.transactionsList.map { offlineTx ->
-                try {
-                    val items =
-                        offlineTx.itemsList.map { item ->
-                            OfflineItemInput(
-                                productId = item.productId.toUUID(),
-                                productName = item.productName,
-                                unitPrice = item.unitPrice,
-                                quantity = item.quantity,
-                                taxRateName = item.taxRateName,
-                                taxRate = item.taxRate,
-                                isReducedTax = item.isReducedTax,
-                            )
-                        }
-                    val payments =
-                        offlineTx.paymentsList.map { p ->
-                            PaymentInput(
-                                method = p.method.toDbValue(),
-                                amount = p.amount,
-                                received = if (p.received > 0) p.received else null,
-                                reference = p.reference.ifBlank { null },
-                            )
-                        }
-                    val createdAt =
-                        if (offlineTx.createdAt.isNotBlank()) {
-                            Instant.parse(offlineTx.createdAt)
-                        } else {
-                            null
-                        }
-                    val entity =
-                        transactionService.syncOfflineTransaction(
-                            storeId = offlineTx.storeId.toUUID(),
-                            terminalId = offlineTx.terminalId.toUUID(),
-                            staffId = offlineTx.staffId.toUUID(),
-                            clientId = offlineTx.clientId,
-                            items = items,
-                            payments = payments,
-                            createdAt = createdAt,
-                        )
-                    SyncResult
-                        .newBuilder()
-                        .setClientId(offlineTx.clientId)
-                        .setSuccess(true)
-                        .setTransactionId(entity.id.toString())
-                        .build()
-                } catch (e: Exception) {
-                    SyncResult
-                        .newBuilder()
-                        .setClientId(offlineTx.clientId)
-                        .setSuccess(false)
-                        .setError(e.message ?: "Unknown error")
-                        .build()
+                syncOfflineTransactionResult(offlineTx) { input ->
+                    transactionService.syncOfflineTransaction(
+                        storeId = input.storeId,
+                        terminalId = input.terminalId,
+                        staffId = input.staffId,
+                        clientId = input.clientId,
+                        items = input.items,
+                        payments = input.payments,
+                        createdAt = input.createdAt,
+                    )
                 }
             }
         responseObserver.onNext(
@@ -749,17 +702,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         discounts: List<TransactionDiscountEntity>,
         taxSummaries: List<TaxSummaryEntity>,
     ): Transaction = toProto(items, payments, discounts, taxSummaries)
-
-    // === Utility Extensions ===
-
-    private fun String.toUUID(): UUID =
-        try {
-            UUID.fromString(this)
-        } catch (e: IllegalArgumentException) {
-            throw Status.INVALID_ARGUMENT.withDescription("Invalid UUID: $this").asRuntimeException()
-        }
-
-    private fun String.uuidOrNull(): UUID? = if (isBlank()) null else toUUID()
 
     // === GiftCard ===
 
@@ -868,42 +810,11 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         try {
-            require(request.storeId.isNotBlank()) { "store_id is required" }
-            require(request.hasDateRange()) { "date_range is required" }
-            require(request.dateRange.start.isNotBlank()) { "date_range.start is required" }
-            require(request.dateRange.end.isNotBlank()) { "date_range.end is required" }
-
-            val storeId = request.storeId.toUUID()
-            val startDate = parseInstantOrDate(request.dateRange.start)
-            val endDate = parseInstantOrDateExclusive(request.dateRange.end)
-
-            val aggregated = transactionService.aggregateStaffSales(storeId, startDate, endDate)
-
+            val query = resolveStaffSalesReportQuery(request)
+            val aggregated = transactionService.aggregateStaffSales(query.storeId, query.startDate, query.endDate)
             val orgId = requireNotNull(tenantHelper.organizationIdHolder.organizationId) { "organizationId is not set" }
-            val staffNameMap =
-                try {
-                    storeServiceClient.getStaffNameMap(orgId, storeId)
-                } catch (_: Exception) {
-                    emptyMap()
-                }
-
-            val items =
-                aggregated.map { row ->
-                    val staffId = row[0] as UUID
-                    val txCount = (row[1] as Long).toInt()
-                    val totalAmount = row[2] as Long
-                    val avgTx = if (txCount > 0) totalAmount / txCount else 0L
-                    val staffName = staffNameMap[staffId] ?: staffId.toString()
-
-                    StaffSalesItem
-                        .newBuilder()
-                        .setStaffId(staffId.toString())
-                        .setStaffName(staffName)
-                        .setTotalAmount(totalAmount)
-                        .setTransactionCount(txCount)
-                        .setAverageTransaction(avgTx)
-                        .build()
-                }
+            val staffNameMap = loadStaffNameMapOrEmpty(orgId, query.storeId, storeServiceClient::getStaffNameMap)
+            val items = buildStaffSalesItems(aggregated, staffNameMap)
 
             responseObserver.onNext(
                 GetStaffSalesReportResponse
