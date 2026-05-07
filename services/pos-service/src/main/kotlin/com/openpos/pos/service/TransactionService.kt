@@ -8,10 +8,6 @@ import com.openpos.pos.entity.TransactionDiscountEntity
 import com.openpos.pos.entity.TransactionEntity
 import com.openpos.pos.entity.TransactionItemEntity
 import com.openpos.pos.event.EventPublisher
-import com.openpos.pos.event.SaleCompletedEventDto
-import com.openpos.pos.event.SaleItemDto
-import com.openpos.pos.event.SalePaymentDto
-import com.openpos.pos.event.SaleVoidedEventDto
 import com.openpos.pos.grpc.BusinessPreconditionException
 import com.openpos.pos.grpc.InvalidInputException
 import com.openpos.pos.grpc.ProductServiceClient
@@ -473,56 +469,18 @@ class TransactionService {
         val overpayAmount = paymentTotal - tx.total
         tx.changeAmount = overpayAmount
 
-        for (input in payments) {
-            val payment =
-                PaymentEntity().apply {
-                    this.organizationId = tx.organizationId
-                    this.transactionId = transactionId
-                    this.method = input.method
-                    this.amount = input.amount
-                    if (input.method == "CASH") {
-                        this.received = input.received ?: input.amount
-                        this.change = (input.received ?: input.amount) - input.amount
-                    }
-                    this.reference = input.reference
-                }
-            paymentRepository.persist(payment)
-        }
-
-        taxSummaryRepository.deleteByTransactionId(transactionId)
-        val taxableItems =
-            items.map {
-                TaxableItem(
-                    taxRateName = it.taxRateName,
-                    taxRate = it.taxRate,
-                    isReducedTax = it.isReducedTax,
-                    subtotal = it.subtotal,
-                )
-            }
-        val summaries = taxCalculationService.aggregateTaxSummaries(taxableItems)
-        for (summary in summaries) {
-            val entity =
-                TaxSummaryEntity().apply {
-                    this.organizationId = tx.organizationId
-                    this.transactionId = transactionId
-                    this.taxRateName = summary.taxRateName
-                    this.taxRate = summary.taxRate
-                    this.isReduced = summary.isReduced
-                    this.taxableAmount = summary.taxableAmount
-                    this.taxAmount = summary.taxAmount
-                }
-            taxSummaryRepository.persist(entity)
-        }
+        persistPayments(tx.organizationId, transactionId, payments, paymentRepository)
+        rebuildTaxSummaries(tx.organizationId, transactionId, items, taxCalculationService, taxSummaryRepository)
 
         tx.status = "COMPLETED"
         tx.completedAt = Instant.now()
-        tx.contentHash = computeContentHash(tx, items)
+        tx.contentHash = computeTransactionContentHash(tx, items)
         if (!idempotencyKey.isNullOrBlank()) {
             tx.idempotencyKey = idempotencyKey
         }
         transactionRepository.persist(tx)
 
-        publishSaleCompletedEvent(tx, items)
+        publishSaleCompletedEvent(eventPublisher, paymentRepository, tx, items)
 
         // ビジネスメトリクス更新
         transactionsCompletedCounter.increment()
@@ -566,7 +524,7 @@ class TransactionService {
         transactionRepository.persist(tx)
 
         val items = itemRepository.findByTransactionId(transactionId)
-        publishSaleVoidedEvent(tx, items)
+        publishSaleVoidedEvent(eventPublisher, tx, items)
 
         transactionsVoidedCounter.increment()
 
@@ -754,9 +712,7 @@ class TransactionService {
 
         // 3. 取引合計を計算
         val savedItems = itemRepository.findByTransactionId(tx.id)
-        tx.subtotal = savedItems.sumOf { it.subtotal }
-        tx.taxTotal = savedItems.sumOf { it.taxAmount }
-        tx.total = tx.subtotal + tx.taxTotal
+        updateTransactionTotals(tx, savedItems)
 
         // 4. 支払い検証・登録
         val paymentTotal = payments.sumOf { it.amount }
@@ -765,55 +721,17 @@ class TransactionService {
         }
         tx.changeAmount = paymentTotal - tx.total
 
-        for (input in payments) {
-            val payment =
-                PaymentEntity().apply {
-                    this.organizationId = orgId
-                    this.transactionId = tx.id
-                    this.method = input.method
-                    this.amount = input.amount
-                    if (input.method == "CASH") {
-                        this.received = input.received ?: input.amount
-                        this.change = (input.received ?: input.amount) - input.amount
-                    }
-                    this.reference = input.reference
-                }
-            paymentRepository.persist(payment)
-        }
-
-        // 5. 税サマリ集計
-        val taxableItems =
-            savedItems.map {
-                TaxableItem(
-                    taxRateName = it.taxRateName,
-                    taxRate = it.taxRate,
-                    isReducedTax = it.isReducedTax,
-                    subtotal = it.subtotal,
-                )
-            }
-        val summaries = taxCalculationService.aggregateTaxSummaries(taxableItems)
-        for (summary in summaries) {
-            val entity =
-                TaxSummaryEntity().apply {
-                    this.organizationId = orgId
-                    this.transactionId = tx.id
-                    this.taxRateName = summary.taxRateName
-                    this.taxRate = summary.taxRate
-                    this.isReduced = summary.isReduced
-                    this.taxableAmount = summary.taxableAmount
-                    this.taxAmount = summary.taxAmount
-                }
-            taxSummaryRepository.persist(entity)
-        }
+        persistPayments(orgId, tx.id, payments, paymentRepository)
+        rebuildTaxSummaries(orgId, tx.id, savedItems, taxCalculationService, taxSummaryRepository)
 
         // 6. ステータスを COMPLETED に遷移
         tx.status = "COMPLETED"
         tx.completedAt = createdAt ?: Instant.now()
-        tx.contentHash = computeContentHash(tx, savedItems)
+        tx.contentHash = computeTransactionContentHash(tx, savedItems)
         transactionRepository.persist(tx)
 
         // 7. イベント発行 + メトリクス
-        publishSaleCompletedEvent(tx, savedItems)
+        publishSaleCompletedEvent(eventPublisher, paymentRepository, tx, savedItems)
         transactionsCompletedCounter.increment()
         // Micrometer Counter.increment() accepts double — acceptable for metrics (not financial calc)
         revenueCounter.increment(tx.total.toDouble())
@@ -836,11 +754,7 @@ class TransactionService {
         val items = itemRepository.findByTransactionId(tx.id)
         val discounts = discountRepository.findByTransactionId(tx.id)
 
-        tx.subtotal = items.sumOf { it.subtotal }
-        tx.taxTotal = items.sumOf { it.taxAmount }
-        tx.discountTotal = discounts.sumOf { it.amount }
-        tx.total = tx.subtotal + tx.taxTotal - tx.discountTotal
-        if (tx.total < 0) tx.total = 0
+        updateTransactionTotals(tx, items, discounts)
         transactionRepository.persist(tx)
     }
 
@@ -850,68 +764,6 @@ class TransactionService {
         return "T-$date-$seq"
     }
 
-    /**
-     * 取引内容のSHA-256ハッシュを計算する（電子帳簿保存法 真正性確保）。
-     */
-    private fun computeContentHash(
-        tx: TransactionEntity,
-        items: List<TransactionItemEntity>,
-    ): String {
-        val content =
-            buildString {
-                append(tx.id)
-                append(tx.transactionNumber)
-                append(tx.subtotal)
-                append(tx.taxTotal)
-                append(tx.discountTotal)
-                append(tx.total)
-                items.sortedBy { it.id }.forEach { item ->
-                    append(item.productId?.toString().orEmpty())
-                    append(item.productName)
-                    append(item.quantity)
-                    append(item.unitPrice)
-                    append(item.subtotal)
-                }
-            }
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
-        return digest.digest(content.toByteArray()).joinToString("") { "%02x".format(it) }
-    }
-
-    private fun publishSaleCompletedEvent(
-        tx: TransactionEntity,
-        items: List<TransactionItemEntity>,
-    ) {
-        val payments = paymentRepository.findByTransactionId(tx.id)
-        val event =
-            SaleCompletedEventDto(
-                transactionId = tx.id.toString(),
-                storeId = tx.storeId.toString(),
-                terminalId = tx.terminalId.toString(),
-                items =
-                    items.map { item ->
-                        SaleItemDto(
-                            productId = item.productId?.toString(),
-                            productName = item.productName,
-                            quantity = item.quantity,
-                            unitPrice = item.unitPrice,
-                            subtotal = item.subtotal,
-                        )
-                    },
-                totalAmount = tx.total,
-                taxTotal = tx.taxTotal,
-                discountTotal = tx.discountTotal,
-                payments =
-                    payments.map { p ->
-                        SalePaymentDto(
-                            method = p.method,
-                            amount = p.amount,
-                        )
-                    },
-                transactedAt = tx.completedAt.toString(),
-            )
-        eventPublisher.publish("sale.completed", tx.organizationId, event)
-    }
-
     fun aggregateStaffSales(
         storeId: java.util.UUID,
         startDate: java.time.Instant,
@@ -919,30 +771,6 @@ class TransactionService {
     ): List<Array<Any>> {
         tenantFilterService.enableFilter()
         return transactionRepository.aggregateStaffSales(storeId, startDate, endDate)
-    }
-
-    private fun publishSaleVoidedEvent(
-        tx: TransactionEntity,
-        items: List<TransactionItemEntity>,
-    ) {
-        val event =
-            SaleVoidedEventDto(
-                originalTransactionId = tx.id.toString(),
-                voidTransactionId = tx.id.toString(),
-                storeId = tx.storeId.toString(),
-                items =
-                    items.map { item ->
-                        SaleItemDto(
-                            productId = item.productId?.toString(),
-                            productName = item.productName,
-                            quantity = item.quantity,
-                            unitPrice = item.unitPrice,
-                            subtotal = item.subtotal,
-                        )
-                    },
-                originalTransactedAt = (tx.completedAt ?: tx.createdAt).toString(),
-            )
-        eventPublisher.publish("sale.voided", tx.organizationId, event)
     }
 }
 
