@@ -4,12 +4,8 @@ import com.openpos.pos.config.OrganizationIdInterceptor
 import com.openpos.pos.entity.DrawerEntity
 import com.openpos.pos.entity.GiftCardEntity
 import com.openpos.pos.entity.JournalEntryEntity
-import com.openpos.pos.entity.PaymentEntity
 import com.openpos.pos.entity.SettlementEntity
-import com.openpos.pos.entity.TaxSummaryEntity
-import com.openpos.pos.entity.TransactionDiscountEntity
 import com.openpos.pos.entity.TransactionEntity
-import com.openpos.pos.entity.TransactionItemEntity
 import com.openpos.pos.service.DiscountReasonService
 import com.openpos.pos.service.DrawerService
 import com.openpos.pos.service.GiftCardService
@@ -23,7 +19,6 @@ import io.grpc.stub.StreamObserver
 import io.quarkus.grpc.GrpcService
 import io.smallrye.common.annotation.Blocking
 import jakarta.inject.Inject
-import openpos.common.v1.PaginationResponse
 import openpos.pos.v1.AddTransactionItemRequest
 import openpos.pos.v1.AddTransactionItemResponse
 import openpos.pos.v1.ApplyDiscountRequest
@@ -68,7 +63,6 @@ import openpos.pos.v1.TaxSummary
 import openpos.pos.v1.Transaction
 import openpos.pos.v1.TransactionDiscount
 import openpos.pos.v1.TransactionItem
-import openpos.pos.v1.TransactionStatus
 import openpos.pos.v1.TransactionType
 import openpos.pos.v1.UpdateTransactionItemRequest
 import openpos.pos.v1.UpdateTransactionItemResponse
@@ -134,7 +128,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         responseObserver.onNext(
             CreateTransactionResponse
                 .newBuilder()
-                .setTransaction(entity.toFullProto())
+                .setTransaction(entity.toFullProto(transactionService))
                 .build(),
         )
         responseObserver.onCompleted()
@@ -178,7 +172,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             responseObserver.onNext(
                 AddTransactionItemResponse
                     .newBuilder()
-                    .setTransaction(entity.toFullProto())
+                    .setTransaction(entity.toFullProto(transactionService))
                     .build(),
             )
             responseObserver.onCompleted()
@@ -202,7 +196,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             responseObserver.onNext(
                 UpdateTransactionItemResponse
                     .newBuilder()
-                    .setTransaction(entity.toFullProto())
+                    .setTransaction(entity.toFullProto(transactionService))
                     .build(),
             )
             responseObserver.onCompleted()
@@ -225,7 +219,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             responseObserver.onNext(
                 RemoveTransactionItemResponse
                     .newBuilder()
-                    .setTransaction(entity.toFullProto())
+                    .setTransaction(entity.toFullProto(transactionService))
                     .build(),
             )
             responseObserver.onCompleted()
@@ -266,7 +260,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             responseObserver.onNext(
                 ApplyDiscountResponse
                     .newBuilder()
-                    .setTransaction(entity.toFullProto())
+                    .setTransaction(entity.toFullProto(transactionService))
                     .build(),
             )
             responseObserver.onCompleted()
@@ -306,7 +300,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             responseObserver.onNext(
                 FinalizeTransactionResponse
                     .newBuilder()
-                    .setTransaction(entity.toFullProto())
+                    .setTransaction(entity.toFullProto(transactionService))
                     .setReceipt(receipt)
                     .build(),
             )
@@ -332,7 +326,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             responseObserver.onNext(
                 VoidTransactionResponse
                     .newBuilder()
-                    .setTransaction(entity.toFullProto())
+                    .setTransaction(entity.toFullProto(transactionService))
                     .build(),
             )
             responseObserver.onCompleted()
@@ -353,7 +347,7 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
             responseObserver.onNext(
                 GetTransactionResponse
                     .newBuilder()
-                    .setTransaction(entity.toFullProto())
+                    .setTransaction(entity.toFullProto(transactionService))
                     .build(),
             )
             responseObserver.onCompleted()
@@ -367,41 +361,17 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         responseObserver: StreamObserver<ListTransactionsResponse>,
     ) {
         tenantHelper.setupTenantContext()
-        val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize.coerceAtMost(100) else 20
-
-        val statusFilter =
-            when (request.status) {
-                TransactionStatus.TRANSACTION_STATUS_DRAFT -> "DRAFT"
-                TransactionStatus.TRANSACTION_STATUS_COMPLETED -> "COMPLETED"
-                TransactionStatus.TRANSACTION_STATUS_VOIDED -> "VOIDED"
-                else -> null
-            }
-
-        val startDate =
-            if (request.hasDateRange() && request.dateRange.start.isNotBlank()) {
-                Instant.parse(request.dateRange.start)
-            } else {
-                null
-            }
-        val endDate =
-            if (request.hasDateRange() && request.dateRange.end.isNotBlank()) {
-                Instant.parse(request.dateRange.end)
-            } else {
-                null
-            }
-
+        val query = resolveTransactionListQuery(request)
         val (transactions, totalCount) =
             transactionService.listTransactions(
-                storeId = request.storeId.uuidOrNull(),
-                terminalId = request.terminalId.uuidOrNull(),
-                status = statusFilter,
-                startDate = startDate,
-                endDate = endDate,
-                page = page,
-                pageSize = pageSize,
+                storeId = query.storeId,
+                terminalId = query.terminalId,
+                status = query.status,
+                startDate = query.startDate,
+                endDate = query.endDate,
+                page = query.page,
+                pageSize = query.pageSize,
             )
-        val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
 
         val relations = transactionService.batchLoadRelations(transactions.map { it.id })
 
@@ -417,15 +387,8 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
                             taxSummaries = relations.taxSummaries[tx.id] ?: emptyList(),
                         )
                     },
-                ).setPagination(
-                    PaginationResponse
-                        .newBuilder()
-                        .setPage(page + 1)
-                        .setPageSize(pageSize)
-                        .setTotalCount(totalCount)
-                        .setTotalPages(totalPages)
-                        .build(),
-                ).build(),
+                ).setPagination(buildPaginationResponse(query.page, query.pageSize, totalCount))
+                .build(),
         )
         responseObserver.onCompleted()
     }
@@ -465,39 +428,15 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         responseObserver: StreamObserver<ListJournalEntriesResponse>,
     ) {
         tenantHelper.setupTenantContext()
-        val page = if (request.hasPagination()) request.pagination.page - 1 else 0
-        val pageSize = if (request.hasPagination() && request.pagination.pageSize > 0) request.pagination.pageSize.coerceAtMost(100) else 20
-
-        val typeFilter = request.type.ifBlank { null }
-        val startDate =
-            if (request.hasDateRange() && request.dateRange.start.isNotBlank()) {
-                Instant.parse(request.dateRange.start)
-            } else {
-                null
-            }
-        val endDate =
-            if (request.hasDateRange() && request.dateRange.end.isNotBlank()) {
-                Instant.parse(request.dateRange.end)
-            } else {
-                null
-            }
-
-        val (entries, totalCount) = journalService.listEntries(typeFilter, startDate, endDate, page, pageSize)
-        val totalPages = if (totalCount > 0) ((totalCount + pageSize - 1) / pageSize).toInt() else 0
+        val query = resolveJournalEntriesQuery(request)
+        val (entries, totalCount) = journalService.listEntries(query.type, query.startDate, query.endDate, query.page, query.pageSize)
 
         responseObserver.onNext(
             ListJournalEntriesResponse
                 .newBuilder()
                 .addAllEntries(entries.map { it.toProto() })
-                .setPagination(
-                    PaginationResponse
-                        .newBuilder()
-                        .setPage(page + 1)
-                        .setPageSize(pageSize)
-                        .setTotalCount(totalCount)
-                        .setTotalPages(totalPages)
-                        .build(),
-                ).build(),
+                .setPagination(buildPaginationResponse(query.page, query.pageSize, totalCount))
+                .build(),
         )
         responseObserver.onCompleted()
     }
@@ -685,23 +624,6 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
         )
         responseObserver.onCompleted()
     }
-
-    // === Mapper Extensions ===
-
-    private fun TransactionEntity.toFullProto(): Transaction {
-        val items = transactionService.getTransactionItems(id)
-        val payments = transactionService.getTransactionPayments(id)
-        val discounts = transactionService.getTransactionDiscounts(id)
-        val taxSummaries = transactionService.getTransactionTaxSummaries(id)
-        return toProto(items, payments, discounts, taxSummaries)
-    }
-
-    private fun TransactionEntity.toBatchProto(
-        items: List<TransactionItemEntity>,
-        payments: List<PaymentEntity>,
-        discounts: List<TransactionDiscountEntity>,
-        taxSummaries: List<TaxSummaryEntity>,
-    ): Transaction = toProto(items, payments, discounts, taxSummaries)
 
     // === GiftCard ===
 
