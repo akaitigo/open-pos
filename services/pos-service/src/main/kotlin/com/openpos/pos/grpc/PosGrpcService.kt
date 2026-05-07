@@ -401,18 +401,19 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         try {
-            val tx = transactionService.getTransaction(request.transactionId.toUUID())
-            require(tx.status == "COMPLETED" || tx.status == "VOIDED") {
-                "Receipt is only available for COMPLETED or VOIDED transactions"
-            }
-            val items = transactionService.getTransactionItems(tx.id)
-            val payments = transactionService.getTransactionPayments(tx.id)
-            val taxSummaries = transactionService.getTransactionTaxSummaries(tx.id)
+            val receipt =
+                loadReceiptTransactionView(
+                    transactionId = request.transactionId.toUUID(),
+                    loadTransaction = transactionService::getTransaction,
+                    loadItems = transactionService::getTransactionItems,
+                    loadPayments = transactionService::getTransactionPayments,
+                    loadTaxSummaries = transactionService::getTransactionTaxSummaries,
+                )
 
             responseObserver.onNext(
                 GetReceiptResponse
                     .newBuilder()
-                    .setReceipt(buildReceiptProto(tx, items, payments, taxSummaries))
+                    .setReceipt(receipt.toReceiptProto())
                     .build(),
             )
             responseObserver.onCompleted()
@@ -449,25 +450,20 @@ class PosGrpcService : PosServiceGrpc.PosServiceImplBase() {
     ) {
         tenantHelper.setupTenantContext()
         try {
-            val tx = transactionService.getTransaction(request.transactionId.toUUID())
-            require(tx.status == "COMPLETED") {
-                "Invoice receipt is only available for COMPLETED transactions"
-            }
+            val invoiceReceipt =
+                loadInvoiceReceiptView(
+                    transactionId = request.transactionId.toUUID(),
+                    loadTransaction = transactionService::getTransaction,
+                    loadItems = transactionService::getTransactionItems,
+                    loadPayments = transactionService::getTransactionPayments,
+                    loadTaxSummaries = transactionService::getTransactionTaxSummaries,
+                    getInvoiceNumber = storeServiceClient::getInvoiceNumber,
+                )
 
-            val items = transactionService.getTransactionItems(tx.id)
-            val payments = transactionService.getTransactionPayments(tx.id)
-            val taxSummaries = transactionService.getTransactionTaxSummaries(tx.id)
-            val invoiceNumber =
-                storeServiceClient.getInvoiceNumber(tx.organizationId)
-                    ?: throw IllegalArgumentException(
-                        "Invoice registration number is not configured for organization: ${tx.organizationId}",
-                    )
-
-            val receiptData = buildInvoiceReceiptData(tx, items, payments, taxSummaries, invoiceNumber)
             responseObserver.onNext(
                 GetInvoiceReceiptResponse
                     .newBuilder()
-                    .setReceiptData(receiptData)
+                    .setReceiptData(invoiceReceipt.toReceiptData())
                     .setReceiptType("INVOICE")
                     .build(),
             )
