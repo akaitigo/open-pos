@@ -46,7 +46,7 @@ jobs:
       issues: write
       actions: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
 
@@ -71,7 +71,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - uses: anthropics/claude-code-action@62238ddb33772a079b0a6d8665a1ff3043583067 # v1
+      - uses: anthropics/claude-code-action@70a6e5256e9e2366a1ed5c041904a982ba3a328f # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           label_trigger: 'claude'
