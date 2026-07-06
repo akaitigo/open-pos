@@ -50,7 +50,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+      - uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
         with:
           distribution: temurin
           java-version: '21'
@@ -71,7 +71,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - uses: anthropics/claude-code-action@62238ddb33772a079b0a6d8665a1ff3043583067 # v1
+      - uses: anthropics/claude-code-action@4633baf5267540f3f8cb58b684f79901d564c280 # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           label_trigger: 'claude'
