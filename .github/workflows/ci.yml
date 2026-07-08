@@ -61,6 +61,12 @@ jobs:
               - 'infra/**'
               - 'e2e/**'
               - 'Makefile'
+              # バックエンド依存バンプ（Quarkus 等）の回帰を E2E で検知する（#1241 は
+              # gradle/** がフィルタ外だったため検知漏れした）。詳細: #1257
+              - 'gradle/**'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle.properties'
 
   proto-lint:
     name: Proto Lint
@@ -170,15 +176,17 @@ jobs:
         if: ${{ !cancelled() }}
 
   # E2E is informational (not required for merge).
-  # Reason: GitHub Free runners cannot reliably complete the full Docker build
-  # within the 45-min timeout. E2E MUST be run locally before creating a PR.
-  # See CLAUDE.md "PR 作成前のローカル CI 検証" for the required local command.
+  # 2コアランナーでは 5 サービス並列の docker build が Gradle Worker Daemon の
+  # 起動タイムアウトを誘発するため、逐次ビルド（docker-demo-serial）で実行する。
+  # 逐次化により完走はするが遅い（60-80分想定）ため timeout は 90 分。
+  # E2E MUST still be run locally before creating a PR（往復が速いため）.
+  # See CLAUDE.md "PR 作成前のローカル CI 検証" for the required local command. 詳細: #1257
   e2e:
     name: E2E Test (Playwright)
     needs: [changes]
     if: ${{ needs.changes.outputs.e2e == 'true' && (github.event_name != 'pull_request' || !startsWith(github.event.pull_request.title, 'docs:')) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -205,8 +213,8 @@ jobs:
             pnpm --filter e2e exec playwright install --with-deps chromium &
           fi
           PW_PID=$!
-          # Start demo stack in foreground
-          OPENPOS_AUTH_ENABLED=false make docker-demo
+          # Start demo stack in foreground (serial build: see #1257)
+          OPENPOS_AUTH_ENABLED=false make docker-demo-serial
           # Wait for Playwright install
           wait $PW_PID
       - name: Run E2E Tests

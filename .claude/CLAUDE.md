@@ -189,7 +189,8 @@ pnpm -r run test        # ユニット/機能テスト
 pnpm -r build           # ビルド確認
 
 # E2E テスト（必須 — CI では informational のためローカルで必ず実行）
-# GitHub Free ランナーでは Docker ビルドがタイムアウトするため、CI の required check から除外している。
+# CI の E2E は逐次ビルド（docker-demo-serial）で実走するが遅いため informational（required check 外）。
+# 低リソース環境でビルドが落ちる場合は make docker-demo-serial を使う（詳細: #1257）。
 # PR 作成前にローカルで pass を確認すること。
 make docker-demo && pnpm --filter e2e test
 ```
