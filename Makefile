@@ -1,7 +1,7 @@
 .PHONY: help doctor verify verify-full up up-all up-dev down logs logs-pos \
        dev-gateway dev-product dev-store dev-pos dev-inventory dev-analytics dev-backend dev-backend-stop \
        local-build local-up local-up-fast local-down local-seed local-smoke local-demo reset \
-       docker-build docker-build-core docker-up-core docker-down-core docker-smoke docker-demo \
+       docker-build docker-build-core docker-build-core-serial docker-up-core docker-down-core docker-smoke docker-demo docker-demo-serial \
        demo-up demo-down \
        build build-apps build-services \
        test test-apps test-backend test-frontend test-e2e test-all grpc-test load-test \
@@ -114,6 +114,14 @@ docker-build: ## Build all backend service container images in parallel
 docker-build-core: ## Build the supported local backend container images in parallel
 	docker compose -f infra/compose.yml build product-service store-service pos-service inventory-service api-gateway
 
+# 低リソース環境（CI Free ランナー / 2コア級マシン）向け。並列ビルドは各イメージ内の
+# Gradle + Quarkus augmentation が同時に走り、Gradle Worker Daemon の起動が
+# 120 秒タイムアウトで失敗する（"build machine is extremely loaded"）。詳細: #1257
+docker-build-core-serial: ## Build the backend container images one at a time (for low-resource environments)
+	for svc in product-service store-service pos-service inventory-service api-gateway; do \
+		docker compose -f infra/compose.yml build $$svc || exit 1; \
+	done
+
 docker-up-core: up local-down ## Start the supported local backend services in containers
 	docker compose -f infra/compose.yml up -d --wait product-service store-service pos-service inventory-service api-gateway
 
@@ -125,6 +133,9 @@ docker-smoke: ## Seed demo data and verify the containerized core stack via the 
 	bash scripts/local-demo-smoke.sh
 
 docker-demo: docker-build-core docker-up-core docker-smoke ## Build, start, seed, and verify the containerized core stack
+	@echo "Container demo data is ready. Reload the browser to pick up the latest demo-config.json."
+
+docker-demo-serial: docker-build-core-serial docker-up-core docker-smoke ## docker-demo with serial image builds (for low-resource environments)
 	@echo "Container demo data is ready. Reload the browser to pick up the latest demo-config.json."
 
 # === Build ===
