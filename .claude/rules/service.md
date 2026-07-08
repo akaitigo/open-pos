@@ -28,6 +28,7 @@ com.openpos.{service}/
 - 失敗時: nack → DLQ
 
 ## Redis キャッシュ
-- キー形式: `openpos:{service}:{entity}:{id}`
+- キー形式: `openpos:{service}:{orgId}:{entity}:{id}` — **orgId 必須**（テナント間キャッシュ漏えい防止。セキュリティ評価 P0-1 で全実装改修済み）
+- キー構築はキャッシュサービスのヘルパーを経由し orgId の付与漏れを防ぐ（例: api-gateway の `RedisCacheService.tenantKey(orgId, ...)`）
 - 全キーに TTL 設定（デフォルト 1h）
 - cache-aside パターン遵守
