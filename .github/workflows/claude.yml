@@ -55,7 +55,7 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
       - uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3 # v1.5.0
         with:
