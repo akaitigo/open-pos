@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { HistoryPage } from './history'
@@ -273,6 +273,193 @@ describe('HistoryPage', () => {
     await userEvent.click(screen.getByText('閉じる'))
     await waitFor(() => {
       expect(screen.queryByText('テストレシートデータ')).not.toBeInTheDocument()
+    })
+  })
+  it('読み込み中は履歴なしと表示しない', () => {
+    mockApiGet.mockReturnValue(new Promise(() => {}))
+    render(<HistoryPage />)
+    expect(screen.getByText('取引履歴を読み込み中…')).toBeInTheDocument()
+    expect(screen.queryByText('取引履歴がありません')).not.toBeInTheDocument()
+  })
+
+  it('取得失敗を通知し、再試行後に実際の空一覧を表示する', async () => {
+    mockApiGet.mockRejectedValueOnce(new Error('network unavailable')).mockResolvedValueOnce({
+      data: [],
+      pagination: { page: 1, pageSize: 20, totalCount: 0, totalPages: 0 },
+    })
+    render(<HistoryPage />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('取引履歴を取得できませんでした')
+    expect(screen.queryByText('取引履歴がありません')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '再試行' }))
+    expect(await screen.findByText('取引履歴がありません')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(mockApiGet).toHaveBeenCalledTimes(2)
+  })
+
+  it('ページ取得失敗時に前ページの取引を表示し続けない', async () => {
+    mockApiGet
+      .mockResolvedValueOnce({
+        data: [mockTransaction],
+        pagination: { page: 1, pageSize: 20, totalCount: 40, totalPages: 2 },
+      })
+      .mockRejectedValueOnce(new Error('network unavailable'))
+      .mockResolvedValueOnce({
+        data: [{ ...mockTransaction, id: 'tx-next', transactionNumber: 'TX-NEXT' }],
+        pagination: { page: 2, pageSize: 20, totalCount: 40, totalPages: 2 },
+      })
+    render(<HistoryPage />)
+    await userEvent.click(await screen.findByRole('button', { name: '次のページへ' }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.queryByText('TX-001')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '再試行' }))
+    expect(await screen.findByText('TX-NEXT')).toBeInTheDocument()
+    expect(mockApiGet.mock.calls[2]![2]).toEqual({
+      params: { storeId: 'store-1', page: 2, pageSize: 20 },
+    })
+  })
+
+  it('店舗切替後に遅れて届いた旧店舗の結果を表示しない', async () => {
+    let resolveOld!: (value: unknown) => void
+    mockApiGet
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveOld = resolve
+        }),
+      )
+      .mockResolvedValueOnce({
+        data: [],
+        pagination: { page: 1, pageSize: 20, totalCount: 0, totalPages: 0 },
+      })
+    render(<HistoryPage />)
+    act(() => useAuthStore.setState({ storeId: 'store-2' }))
+    await screen.findByText('取引履歴がありません')
+    await act(async () => resolveOld({ data: [mockTransaction], pagination: { totalPages: 1 } }))
+    expect(screen.queryByText('TX-001')).not.toBeInTheDocument()
+    expect(screen.getByText('取引履歴がありません')).toBeInTheDocument()
+  })
+
+  it('レシート取得失敗を通知し、再操作で取得できる', async () => {
+    mockApiGet
+      .mockResolvedValueOnce({
+        data: [mockTransaction],
+        pagination: { page: 1, pageSize: 20, totalCount: 1, totalPages: 1 },
+      })
+      .mockRejectedValueOnce(new Error('receipt unavailable'))
+      .mockResolvedValueOnce({ receiptData: '再取得レシート' })
+    render(<HistoryPage />)
+    await userEvent.click(await screen.findByTestId('receipt-btn-tx-1'))
+    expect(await screen.findByRole('alert')).toHaveTextContent('レシートを取得できませんでした')
+    await userEvent.click(screen.getByTestId('receipt-btn-tx-1'))
+    expect(await screen.findByText('再取得レシート')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+  describe('receipt request ordering', () => {
+    function deferred() {
+      let resolve!: (value: unknown) => void
+      let reject!: (error: Error) => void
+      const promise = new Promise((yes, no) => {
+        resolve = yes
+        reject = no
+      })
+      return { promise, resolve, reject }
+    }
+
+    async function startRequests(sameTransaction = false) {
+      const older = deferred()
+      const latest = deferred()
+      mockApiGet
+        .mockResolvedValueOnce({
+          data: [
+            mockTransaction,
+            { ...mockTransaction, id: 'tx-other', transactionNumber: 'TX-OTHER' },
+          ],
+          pagination: { page: 1, pageSize: 20, totalCount: 2, totalPages: 1 },
+        })
+        .mockReturnValueOnce(older.promise)
+        .mockReturnValueOnce(latest.promise)
+      const view = render(<HistoryPage />)
+      await userEvent.click(await screen.findByTestId('receipt-btn-tx-1'))
+      await userEvent.click(
+        screen.getByTestId(sameTransaction ? 'receipt-btn-tx-1' : 'receipt-btn-tx-other'),
+      )
+      return { older, latest, view }
+    }
+
+    it.each([false, true])('最新成功後の旧成功を無視する（同一取引=%s）', async (same) => {
+      const { older, latest } = await startRequests(same)
+      await act(async () => latest.resolve({ receiptData: '最新レシート' }))
+      expect(screen.getByText('最新レシート')).toBeInTheDocument()
+      await act(async () => older.resolve({ receiptData: '古いレシート' }))
+      expect(screen.getByText('最新レシート')).toBeInTheDocument()
+      expect(screen.queryByText('古いレシート')).not.toBeInTheDocument()
+    })
+
+    it('最新応答を待っている間も旧成功を表示しない', async () => {
+      const { older, latest } = await startRequests()
+      await act(async () => older.resolve({ receiptData: '古いレシート' }))
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      await act(async () => latest.resolve({ receiptData: '最新レシート' }))
+      expect(screen.getByText('最新レシート')).toBeInTheDocument()
+    })
+
+    it('最新成功後の旧失敗を通知しない', async () => {
+      const { older, latest } = await startRequests()
+      await act(async () => latest.resolve({ receiptData: '最新レシート' }))
+      await act(async () => older.reject(new Error('old error')))
+      expect(screen.getByText('最新レシート')).toBeInTheDocument()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    it.each(['success', 'failure'])('最新失敗後の旧%sを無視する', async (oldResult) => {
+      const { older, latest } = await startRequests()
+      await act(async () => latest.reject(new Error('latest error')))
+      await act(async () => {
+        if (oldResult === 'success') older.resolve({ receiptData: '古いレシート' })
+        else older.reject(new Error('old error'))
+      })
+      expect(screen.getByRole('alert')).toHaveTextContent('レシートを取得できませんでした')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('閉じた後に旧応答でダイアログを再表示しない', async () => {
+      const { older, latest } = await startRequests()
+      await act(async () => latest.resolve({ receiptData: '最新レシート' }))
+      await userEvent.click(screen.getByTestId('receipt-close-btn'))
+      await act(async () => older.resolve({ receiptData: '古いレシート' }))
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('店舗変更後の応答を無視する', async () => {
+      const { older, latest } = await startRequests()
+      mockApiGet.mockResolvedValueOnce({
+        data: [],
+        pagination: { page: 1, pageSize: 20, totalCount: 0, totalPages: 0 },
+      })
+      act(() => useAuthStore.setState({ storeId: 'store-2' }))
+      await screen.findByText('取引履歴がありません')
+      await act(async () => {
+        latest.resolve({ receiptData: '別店舗レシート' })
+        older.reject(new Error('old error'))
+      })
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    it('画面を離れて戻った後に旧応答を表示しない', async () => {
+      const { older, latest, view } = await startRequests()
+      view.unmount()
+      mockApiGet.mockResolvedValueOnce({
+        data: [],
+        pagination: { page: 1, pageSize: 20, totalCount: 0, totalPages: 0 },
+      })
+      render(<HistoryPage />)
+      await screen.findByText('取引履歴がありません')
+      await act(async () => {
+        latest.resolve({ receiptData: '戻る前のレシート' })
+        older.reject(new Error('old error'))
+      })
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
   })
 })

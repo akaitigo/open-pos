@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { formatMoney, PaginatedTransactionsSchema, ReceiptSchema } from '@shared-types/openpos'
@@ -12,34 +12,82 @@ export function HistoryPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
+  const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'error'>('loading')
+  const [retry, setRetry] = useState(0)
+  const [receiptError, setReceiptError] = useState(false)
   const [receiptData, setReceiptData] = useState<string | null>(null)
   const [receiptOpen, setReceiptOpen] = useState(false)
+  const receiptRequestVersion = useRef(0)
 
   useEffect(() => {
+    setReceiptOpen(false)
+    setReceiptData(null)
+    setReceiptError(false)
+    return () => {
+      // Ignore in-flight responses after navigation, store changes or unmount.
+      receiptRequestVersion.current++
+    }
+  }, [storeId, page, retry])
+
+  useEffect(() => {
+    let active = true
+    setTransactions([])
+    setTotalPages(0)
+    setReceiptError(false)
+    setLoadState('loading')
     if (!storeId) return
     api
       .get<PaginatedResponse<Transaction>>('/api/transactions', PaginatedTransactionsSchema, {
         params: { storeId, page, pageSize: 20 },
       })
       .then((result) => {
+        if (!active) return
+        setLoadState('loaded')
         setTransactions(result.data)
         setTotalPages(result.pagination.totalPages)
       })
-  }, [storeId, page])
+      .catch(() => {
+        if (active) setLoadState('error')
+      })
+    return () => {
+      active = false
+    }
+  }, [storeId, page, retry])
 
   async function handleViewReceipt(transactionId: string) {
+    const requestVersion = ++receiptRequestVersion.current
+    setReceiptError(false)
     try {
       const receipt = await api.get(`/api/transactions/${transactionId}/receipt`, ReceiptSchema)
+      if (requestVersion !== receiptRequestVersion.current) return
       setReceiptData(receipt.receiptData)
       setReceiptOpen(true)
     } catch {
-      // receipt not available
+      if (requestVersion !== receiptRequestVersion.current) return
+      setReceiptError(true)
     }
   }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
       <h2 className="text-lg font-semibold">取引履歴</h2>
+
+      {loadState === 'error' && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-4 rounded-lg border border-destructive p-4"
+        >
+          <p>取引履歴を取得できませんでした。通信状況を確認して再試行してください。</p>
+          <Button variant="outline" onClick={() => setRetry((value) => value + 1)}>
+            再試行
+          </Button>
+        </div>
+      )}
+      {receiptError && (
+        <p role="alert" className="text-destructive">
+          レシートを取得できませんでした。通信状況を確認し、もう一度ボタンを押してください。
+        </p>
+      )}
 
       <div data-testid="history-table" className="overflow-auto rounded-lg border">
         <table className="w-full text-sm" aria-label={t('accessibility.transactionHistory')}>
@@ -107,7 +155,14 @@ export function HistoryPage() {
                 </td>
               </tr>
             ))}
-            {transactions.length === 0 && (
+            {loadState === 'loading' && (
+              <tr>
+                <td colSpan={5} className="p-8 text-center text-muted-foreground" role="status">
+                  {storeId ? '取引履歴を読み込み中…' : '店舗を選択してください'}
+                </td>
+              </tr>
+            )}
+            {loadState === 'loaded' && transactions.length === 0 && (
               <tr>
                 <td colSpan={5} className="p-8 text-center text-muted-foreground">
                   取引履歴がありません
@@ -153,6 +208,8 @@ export function HistoryPage() {
         open={receiptOpen}
         receiptData={receiptData}
         onClose={() => {
+          receiptRequestVersion.current++
+          setReceiptError(false)
           setReceiptOpen(false)
           setReceiptData(null)
         }}
