@@ -52,24 +52,24 @@ jobs:
 
       - name: Initialize CodeQL (javascript-typescript)
         if: ${{ matrix.language == 'javascript-typescript' }}
-        uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           languages: ${{ matrix.language }}
           build-mode: none
 
       - name: Initialize CodeQL (java-kotlin)
         if: ${{ matrix.language == 'java-kotlin' && github.event_name != 'pull_request' }}
-        uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           languages: ${{ matrix.language }}
           build-mode: autobuild
 
       - name: Autobuild
         if: ${{ matrix.language == 'java-kotlin' && github.event_name != 'pull_request' }}
-        uses: github/codeql-action/autobuild@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
+        uses: github/codeql-action/autobuild@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
 
       - name: Analyze
         if: ${{ matrix.language != 'java-kotlin' || github.event_name != 'pull_request' }}
-        uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           category: /language:${{ matrix.language }}
