@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.4.21"
-quarkus = "3.40.1"
+quarkus = "3.40.1.1"
 mockito-kotlin = "6.4.0"
 testcontainers = "2.0.5"
 owasp-depcheck = "12.2.2"
